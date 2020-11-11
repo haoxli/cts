@@ -1,33 +1,31 @@
 /**
-* AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/
-
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
-import { SkipTestCase } from '../fixture.js';
+ * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
+ **/ import { SkipTestCase } from '../fixture.js';
 import { now, assert } from '../util/util.js';
 import { LogMessageWithStack } from './log_message.js';
-var PassState; // Holds onto a LiveTestCaseResult owned by the Logger, and writes the results into it.
+var LogSeverity;
+(function (LogSeverity) {
+  LogSeverity[(LogSeverity['Pass'] = 0)] = 'Pass';
+  LogSeverity[(LogSeverity['Skip'] = 1)] = 'Skip';
+  LogSeverity[(LogSeverity['Warn'] = 2)] = 'Warn';
+  LogSeverity[(LogSeverity['ExpectFailed'] = 3)] = 'ExpectFailed';
+  LogSeverity[(LogSeverity['ValidationFailed'] = 4)] = 'ValidationFailed';
+  LogSeverity[(LogSeverity['ThrewException'] = 5)] = 'ThrewException';
+})(LogSeverity || (LogSeverity = {}));
 
-(function (PassState) {
-  PassState[PassState["pass"] = 0] = "pass";
-  PassState[PassState["skip"] = 1] = "skip";
-  PassState[PassState["warn"] = 2] = "warn";
-  PassState[PassState["fail"] = 3] = "fail";
-})(PassState || (PassState = {}));
+const kMaxLogStacks = 2;
 
+/** Holds onto a LiveTestCaseResult owned by the Logger, and writes the results into it. */
 export class TestCaseRecorder {
+  maxLogSeverity = LogSeverity.Pass;
+  startTime = -1;
+  logs = [];
+  logLinesAtCurrentSeverity = 0;
+  debugging = false;
+  /** Used to dedup log messages which have identical stacks. */
+  messagesForPreviouslySeenStacks = new Map();
+
   constructor(result, debugging) {
-    _defineProperty(this, "result", void 0);
-
-    _defineProperty(this, "state", PassState.pass);
-
-    _defineProperty(this, "startTime", -1);
-
-    _defineProperty(this, "logs", []);
-
-    _defineProperty(this, "debugging", false);
-
     this.result = result;
     this.debugging = debugging;
   }
@@ -39,10 +37,20 @@ export class TestCaseRecorder {
 
   finish() {
     assert(this.startTime >= 0, 'finish() before start()');
-    const timeMilliseconds = now() - this.startTime; // Round to next microsecond to avoid storing useless .xxxx00000000000002 in results.
 
+    const timeMilliseconds = now() - this.startTime;
+    // Round to next microsecond to avoid storing useless .xxxx00000000000002 in results.
     this.result.timems = Math.ceil(timeMilliseconds * 1000) / 1000;
-    this.result.status = PassState[this.state]; // Convert numeric enum back to string
+
+    // Convert numeric enum back to string (but expose 'exception' as 'fail')
+    this.result.status =
+      this.maxLogSeverity === LogSeverity.Pass
+        ? 'pass'
+        : this.maxLogSeverity === LogSeverity.Skip
+        ? 'skip'
+        : this.maxLogSeverity === LogSeverity.Warn
+        ? 'warn'
+        : 'fail'; // Everything else is an error
 
     this.result.logs = this.logs;
   }
@@ -55,23 +63,29 @@ export class TestCaseRecorder {
     if (!this.debugging) {
       return;
     }
-
-    this.logs.push(new LogMessageWithStack('DEBUG', ex, false));
-  }
-
-  warn(ex) {
-    this.setState(PassState.warn);
-    this.logs.push(new LogMessageWithStack('WARN', ex));
-  }
-
-  fail(ex) {
-    this.setState(PassState.fail);
-    this.logs.push(new LogMessageWithStack('FAIL', ex));
+    const logMessage = new LogMessageWithStack('DEBUG', ex);
+    logMessage.setStackHidden();
+    this.logImpl(LogSeverity.Pass, logMessage);
   }
 
   skipped(ex) {
-    this.setState(PassState.skip);
-    this.logs.push(new LogMessageWithStack('SKIP', ex));
+    const message = new LogMessageWithStack('SKIP', ex);
+    if (!this.debugging) {
+      message.setStackHidden();
+    }
+    this.logImpl(LogSeverity.Skip, message);
+  }
+
+  warn(ex) {
+    this.logImpl(LogSeverity.Warn, new LogMessageWithStack('WARN', ex));
+  }
+
+  expectationFailed(ex) {
+    this.logImpl(LogSeverity.ExpectFailed, new LogMessageWithStack('EXPECTATION FAILED', ex));
+  }
+
+  validationFailed(ex) {
+    this.logImpl(LogSeverity.ValidationFailed, new LogMessageWithStack('VALIDATION FAILED', ex));
   }
 
   threw(ex) {
@@ -79,14 +93,37 @@ export class TestCaseRecorder {
       this.skipped(ex);
       return;
     }
-
-    this.setState(PassState.fail);
-    this.logs.push(new LogMessageWithStack('EXCEPTION', ex));
+    this.logImpl(LogSeverity.ThrewException, new LogMessageWithStack('EXCEPTION', ex));
   }
 
-  setState(state) {
-    this.state = Math.max(this.state, state);
-  }
+  logImpl(level, logMessage) {
+    // Deduplicate errors with the exact same stack
+    if (logMessage.stack) {
+      const seen = this.messagesForPreviouslySeenStacks.get(logMessage.stack);
+      if (seen) {
+        seen.incrementTimesSeen();
+        return;
+      }
+      this.messagesForPreviouslySeenStacks.set(logMessage.stack, logMessage);
+    }
 
+    // Mark printStack=false for all logs except 2 at the highest severity
+    if (level > this.maxLogSeverity) {
+      this.logLinesAtCurrentSeverity = 0;
+      this.maxLogSeverity = level;
+      if (!this.debugging) {
+        // Go back and turn off printStack for everything of a lower log level
+        for (const log of this.logs) {
+          log.setStackHidden();
+        }
+      }
+    }
+    if (level < this.maxLogSeverity || this.logLinesAtCurrentSeverity >= kMaxLogStacks) {
+      if (!this.debugging) {
+        logMessage.setStackHidden();
+      }
+    }
+    this.logs.push(logMessage);
+    this.logLinesAtCurrentSeverity++;
+  }
 }
-//# sourceMappingURL=test_case_recorder.js.map

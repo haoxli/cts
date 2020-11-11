@@ -1,6 +1,5 @@
-import * as C from '../../../common/constants.js';
 import { assert, unreachable } from '../../../common/framework/util/util.js';
-import { kTextureFormatInfo } from '../../capability_info.js';
+import { kSizedTextureFormatInfo, SizedTextureFormat } from '../../capability_info.js';
 import { align, isAligned } from '../math.js';
 
 export const kBytesPerRowAlignment = 256;
@@ -33,27 +32,32 @@ export function getMipSizePassthroughLayers(
   }
 }
 
-export function getTextureCopyLayout(
-  format: GPUTextureFormat,
-  dimension: GPUTextureDimension,
-  size: [number, number, number],
-  options: LayoutOptions = kDefaultLayoutOptions
-): {
+export interface TextureCopyLayout {
   bytesPerBlock: number;
   byteLength: number;
   minBytesPerRow: number;
   bytesPerRow: number;
   rowsPerImage: number;
-} {
+  mipSize: [number, number, number];
+}
+
+export function getTextureCopyLayout(
+  format: SizedTextureFormat,
+  dimension: GPUTextureDimension,
+  size: [number, number, number],
+  options: LayoutOptions = kDefaultLayoutOptions
+): TextureCopyLayout {
   const { mipLevel } = options;
   let { bytesPerRow, rowsPerImage } = options;
 
   const mipSize = getMipSizePassthroughLayers(dimension, size, mipLevel);
 
-  const { blockWidth, blockHeight, bytesPerBlock } = kTextureFormatInfo[format];
-  assert(!!bytesPerBlock && !!blockWidth && !!blockHeight);
+  const { blockWidth, blockHeight, bytesPerBlock } = kSizedTextureFormatInfo[format];
 
-  assert(isAligned(mipSize[0], blockWidth));
+  // We align mipSize to be the physical size of the texture subresource.
+  mipSize[0] = align(mipSize[0], blockWidth);
+  mipSize[1] = align(mipSize[1], blockHeight);
+
   const minBytesPerRow = (mipSize[0] / blockWidth) * bytesPerBlock;
   const alignedMinBytesPerRow = align(minBytesPerRow, kBytesPerRowAlignment);
   if (bytesPerRow !== undefined) {
@@ -81,19 +85,19 @@ export function getTextureCopyLayout(
     minBytesPerRow,
     bytesPerRow,
     rowsPerImage,
+    mipSize,
   };
 }
 
 export function fillTextureDataWithTexelValue(
   texelValue: ArrayBuffer,
-  format: GPUTextureFormat,
+  format: SizedTextureFormat,
   dimension: GPUTextureDimension,
   outputBuffer: ArrayBuffer,
   size: [number, number, number],
   options: LayoutOptions = kDefaultLayoutOptions
 ): void {
-  const { blockWidth, blockHeight, bytesPerBlock } = kTextureFormatInfo[format];
-  assert(!!bytesPerBlock && !!blockWidth && !!blockHeight);
+  const { blockWidth, blockHeight, bytesPerBlock } = kSizedTextureFormatInfo[format];
   assert(bytesPerBlock === texelValue.byteLength);
 
   const { byteLength, rowsPerImage, bytesPerRow } = getTextureCopyLayout(
@@ -123,7 +127,7 @@ export function fillTextureDataWithTexelValue(
 export function createTextureUploadBuffer(
   texelValue: ArrayBuffer,
   device: GPUDevice,
-  format: GPUTextureFormat,
+  format: SizedTextureFormat,
   dimension: GPUTextureDimension,
   size: [number, number, number],
   options: LayoutOptions = kDefaultLayoutOptions
@@ -139,10 +143,12 @@ export function createTextureUploadBuffer(
     options
   );
 
-  const [buffer, mapping] = device.createBufferMapped({
+  const buffer = device.createBuffer({
+    mappedAtCreation: true,
     size: byteLength,
-    usage: C.BufferUsage.CopySrc,
+    usage: GPUBufferUsage.COPY_SRC,
   });
+  const mapping = buffer.getMappedRange();
 
   assert(texelValue.byteLength === bytesPerBlock);
   fillTextureDataWithTexelValue(texelValue, format, dimension, mapping, size, options);

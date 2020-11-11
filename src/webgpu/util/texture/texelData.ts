@@ -1,5 +1,8 @@
 import { assert, unreachable } from '../../../common/framework/util/util.js';
-import { kTextureFormatInfo } from '../../capability_info.js';
+import {
+  kUncompressedTextureFormatInfo,
+  UncompressedTextureFormat,
+} from '../../capability_info.js';
 import {
   assertInIntegerRange,
   float32ToFloatBits,
@@ -109,6 +112,13 @@ const float32 = {
   bitLength: 32,
 };
 
+const componentUnimplemented = {
+  write: () => {
+    unreachable('TexelComponentInfo not implemented for this texture format');
+  },
+  bitLength: 0,
+};
+
 const repeatComponents = (
   componentOrder: TexelComponent[],
   perComponentInfo: SingleComponentInfo
@@ -126,7 +136,8 @@ const repeatComponents = (
 };
 
 const kRepresentationInfo: {
-  [k in GPUTextureFormat]: {
+  // TODO: Figure out if/how to extend this to more texture formats
+  [k in UncompressedTextureFormat]: {
     componentOrder: TexelComponent[];
     componentInfo: TexelComponentInfo;
     sRGB: boolean;
@@ -169,7 +180,9 @@ const kRepresentationInfo: {
   'rgba32float':            { ...repeatComponents(kRGBA, float32), sRGB: false },
 
   'rgb10a2unorm':           { componentOrder: kRGBA, componentInfo: { R: unorm10, G: unorm10, B: unorm10, A: unorm2 }, sRGB: false },
-  'rg11b10float':           { componentOrder: kRGB, componentInfo: { R: float11, G: float11, B: float10 }, sRGB: false },
+  'rg11b10ufloat':          { componentOrder: kRGB, componentInfo: { R: float11, G: float11, B: float10 }, sRGB: false },
+  // TODO: the e5 is shared between all components; figure out how to write it.
+  'rgb9e5ufloat':           { componentOrder: kRGB, componentInfo: { R: componentUnimplemented, G: componentUnimplemented, B: componentUnimplemented }, sRGB: false },
 
   'depth32float':           { componentOrder: [TexelComponent.Depth], componentInfo: { Depth: float32 }, sRGB: false },
   'depth24plus':            { componentOrder: [TexelComponent.Depth], componentInfo: { Depth: null }, sRGB: false },
@@ -187,7 +200,7 @@ class TexelDataRepresentationImpl implements TexelDataRepresentation {
   private isGPULittleEndian = true;
 
   constructor(
-    private readonly format: GPUTextureFormat,
+    private readonly format: UncompressedTextureFormat,
     readonly componentOrder: TexelComponent[],
     readonly componentInfo: TexelComponentInfo,
     private readonly sRGB: boolean
@@ -315,7 +328,7 @@ class TexelDataRepresentationImpl implements TexelDataRepresentation {
       ];
     }
 
-    const bytesPerBlock = kTextureFormatInfo[this.format].bytesPerBlock;
+    const bytesPerBlock = kUncompressedTextureFormatInfo[this.format].bytesPerBlock;
     assert(!!bytesPerBlock);
 
     const data = new ArrayBuffer(bytesPerBlock);
@@ -328,8 +341,10 @@ class TexelDataRepresentationImpl implements TexelDataRepresentation {
   }
 }
 
-const kRepresentationCache: Map<GPUTextureFormat, TexelDataRepresentationImpl> = new Map();
-export function getTexelDataRepresentation(format: GPUTextureFormat): TexelDataRepresentation {
+const kRepresentationCache: Map<UncompressedTextureFormat, TexelDataRepresentationImpl> = new Map();
+export function getTexelDataRepresentation(
+  format: UncompressedTextureFormat
+): TexelDataRepresentation {
   if (!kRepresentationCache.has(format)) {
     const { componentOrder, componentInfo, sRGB } = kRepresentationInfo[format];
     kRepresentationCache.set(

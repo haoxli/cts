@@ -1,5 +1,6 @@
 import { parseQuery } from './query/parseQuery.js';
-import { RunCaseIterable } from './test_group.js';
+import { TestQuery } from './query/query.js';
+import { IterableTestGroup } from './test_group.js';
 import { TestSuiteListing } from './test_suite_listing.js';
 import { loadTreeForQuery, TestTree, TestTreeLeaf } from './tree.js';
 
@@ -13,7 +14,7 @@ interface ListingFile {
 // A .spec.ts file, as imported.
 export interface SpecFile {
   readonly description: string;
-  readonly g: RunCaseIterable;
+  readonly g: IterableTestGroup;
 }
 
 // Base class for DefaultTestFileLoader and FakeTestFileLoader.
@@ -25,15 +26,15 @@ export abstract class TestFileLoader {
     return this.import(`${suite}/${path.join('/')}.spec.js`);
   }
 
-  async loadTree(query: string, subqueriesToExpand: string[] = []): Promise<TestTree> {
+  async loadTree(query: TestQuery, subqueriesToExpand: string[] = []): Promise<TestTree> {
     return loadTreeForQuery(
       this,
-      parseQuery(query),
+      query,
       subqueriesToExpand.map(q => parseQuery(q))
     );
   }
 
-  async loadTests(query: string): Promise<IterableIterator<TestTreeLeaf>> {
+  async loadCases(query: TestQuery): Promise<IterableIterator<TestTreeLeaf>> {
     const tree = await this.loadTree(query);
     return tree.iterateLeaves();
   }

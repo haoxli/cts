@@ -1,26 +1,20 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/
-
-// Returns the stack trace of an Error, but without the extra boilerplate at the bottom
+**/ // Returns the stack trace of an Error, but without the extra boilerplate at the bottom
 // (e.g. RunCaseSpecific, processTicksAndRejections, etc.), for logging.
-export function extractImportantStackTrace(e) {
-  if (!e.stack) {
-    return '';
+export function extractImportantStackTrace(e) {if (!e.stack) {return '';
   }
-
   const lines = e.stack.split('\n');
-
   for (let i = lines.length - 1; i >= 0; --i) {
     const line = lines[i];
-
     if (line.indexOf('.spec.') !== -1) {
       return lines.slice(0, i + 1).join('\n');
     }
   }
-
   return e.stack;
-} // *** Examples ***
+}
+
+// *** Examples ***
 //
 // Node fail()
 // > Error:

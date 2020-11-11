@@ -1,10 +1,8 @@
 import { promises as fs } from 'fs';
 
-import { listing } from '../../webgpu/listing.js';
 import { DefaultTestFileLoader } from '../framework/file_loader.js';
-import { TestQueryMultiTest } from '../framework/query/query.js';
-import { kBigSeparator, kWildcard } from '../framework/query/separators.js';
-import { TestSuiteListingEntry } from '../framework/test_suite_listing.js';
+import { TestQueryMultiTest, TestQueryMultiFile } from '../framework/query/query.js';
+import { assert } from '../framework/util/util.js';
 
 function printUsageAndExit(rc: number): void {
   console.error(`\
@@ -47,7 +45,7 @@ const [
 
 (async () => {
   if (process.argv.length === 4) {
-    const entries = (await listing) as TestSuiteListingEntry[];
+    const entries = await (await import('../../webgpu/listing.js')).listing;
     const lines = entries
       // Exclude READMEs.
       .filter(l => !('readme' in l))
@@ -59,9 +57,9 @@ const [
       .split('\n')
       .filter(a => a.length)
       .sort((a, b) => b.length - a.length);
-    const expectationLines = (await fs.readFile(expectationsFile, 'utf8'))
-      .split('\n')
-      .filter(l => l.length);
+    const expectationLines = new Set(
+      (await fs.readFile(expectationsFile, 'utf8')).split('\n').filter(l => l.length)
+    );
 
     const expectations: Map<string, string[]> = new Map();
     for (const prefix of argsPrefixes) {
@@ -77,20 +75,28 @@ const [
           continue expLoop;
         }
       }
-      throw new Error('All input lines must start with one of the prefixes. ' + exp);
+      console.log('note: ignored expectation: ' + exp);
     }
 
     const loader = new DefaultTestFileLoader();
     const lines: Array<string | undefined> = [];
     for (const prefix of argsPrefixes) {
-      const tree = await loader.loadTree(
-        suite + kBigSeparator + kWildcard,
-        expectations.get(prefix)!
-      );
+      const rootQuery = new TestQueryMultiFile(suite, []);
+      const tree = await loader.loadTree(rootQuery, expectations.get(prefix)!);
 
       lines.push(undefined); // output blank line between prefixes
       for (const q of tree.iterateCollapsedQueries()) {
-        lines.push(prefix + q.toString());
+        const urlQueryString = prefix + q.toString(); // "?worker=0&q=..."
+        // Check for a safe-ish path length limit. Filename must be <= 255, and on Windows the whole
+        // path must be <= 259. Leave room for e.g.:
+        // 'c:\b\s\w\xxxxxxxx\layout-test-results\external\wpt\webgpu\cts_worker=0_q=...-actual.txt'
+        assert(
+          urlQueryString.length < 185,
+          'Generated test variant would produce too-long -actual.txt filename. \
+Try broadening suppressions to avoid long test variant names. ' +
+            urlQueryString
+        );
+        lines.push(urlQueryString);
       }
     }
     await generateFile(lines);

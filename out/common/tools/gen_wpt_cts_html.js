@@ -1,12 +1,8 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/
-
-import { promises as fs } from 'fs';
-import { listing } from '../../webgpu/listing.js';
-import { DefaultTestFileLoader } from '../framework/file_loader.js';
-import { TestQueryMultiTest } from '../framework/query/query.js';
-import { kBigSeparator, kWildcard } from '../framework/query/separators.js';
+**/import { promises as fs } from 'fs';import { DefaultTestFileLoader } from '../framework/file_loader.js';
+import { TestQueryMultiTest, TestQueryMultiFile } from '../framework/query/query.js';
+import { assert } from '../framework/util/util.js';
 
 function printUsageAndExit(rc) {
   console.error(`\
@@ -36,20 +32,36 @@ if (process.argv.length !== 4 && process.argv.length !== 8) {
   printUsageAndExit(0);
 }
 
-const [,, outFile, templateFile, argsPrefixesFile, expectationsFile, expectationsPrefix, suite] = process.argv;
+const [,,
+
+
+outFile,
+templateFile,
+argsPrefixesFile,
+expectationsFile,
+expectationsPrefix,
+suite] =
+process.argv;
 
 (async () => {
   if (process.argv.length === 4) {
-    const entries = await listing;
-    const lines = entries // Exclude READMEs.
-    .filter(l => !('readme' in l)).map(l => '?q=' + new TestQueryMultiTest('webgpu', l.file, []).toString());
+    const entries = await (await import('../../webgpu/listing.js')).listing;
+    const lines = entries
+    // Exclude READMEs.
+    .filter(l => !('readme' in l)).
+    map(l => '?q=' + new TestQueryMultiTest('webgpu', l.file, []).toString());
     await generateFile(lines);
   } else {
     // Prefixes sorted from longest to shortest
-    const argsPrefixes = (await fs.readFile(argsPrefixesFile, 'utf8')).split('\n').filter(a => a.length).sort((a, b) => b.length - a.length);
-    const expectationLines = (await fs.readFile(expectationsFile, 'utf8')).split('\n').filter(l => l.length);
-    const expectations = new Map();
+    const argsPrefixes = (await fs.readFile(argsPrefixesFile, 'utf8')).
+    split('\n').
+    filter(a => a.length).
+    sort((a, b) => b.length - a.length);
+    const expectationLines = new Set(
+    (await fs.readFile(expectationsFile, 'utf8')).split('\n').filter(l => l.length));
 
+
+    const expectations = new Map();
     for (const prefix of argsPrefixes) {
       expectations.set(prefix, []);
     }
@@ -58,28 +70,35 @@ const [,, outFile, templateFile, argsPrefixesFile, expectationsFile, expectation
       // Take each expectation for the longest prefix it matches.
       for (const argsPrefix of argsPrefixes) {
         const prefix = expectationsPrefix + argsPrefix;
-
         if (exp.startsWith(prefix)) {
           expectations.get(argsPrefix).push(exp.substring(prefix.length));
           continue expLoop;
         }
       }
-
-      throw new Error('All input lines must start with one of the prefixes. ' + exp);
+      console.log('note: ignored expectation: ' + exp);
     }
 
     const loader = new DefaultTestFileLoader();
     const lines = [];
-
     for (const prefix of argsPrefixes) {
-      const tree = await loader.loadTree(suite + kBigSeparator + kWildcard, expectations.get(prefix));
-      lines.push(undefined); // output blank line between prefixes
+      const rootQuery = new TestQueryMultiFile(suite, []);
+      const tree = await loader.loadTree(rootQuery, expectations.get(prefix));
 
+      lines.push(undefined); // output blank line between prefixes
       for (const q of tree.iterateCollapsedQueries()) {
-        lines.push(prefix + q.toString());
+        const urlQueryString = prefix + q.toString(); // "?worker=0&q=..."
+        // Check for a safe-ish path length limit. Filename must be <= 255, and on Windows the whole
+        // path must be <= 259. Leave room for e.g.:
+        // 'c:\b\s\w\xxxxxxxx\layout-test-results\external\wpt\webgpu\cts_worker=0_q=...-actual.txt'
+        assert(
+        urlQueryString.length < 185,
+        'Generated test variant would produce too-long -actual.txt filename. \
+Try broadening suppressions to avoid long test variant names. ' +
+        urlQueryString);
+
+        lines.push(urlQueryString);
       }
     }
-
     await generateFile(lines);
   }
 })();
@@ -87,6 +106,7 @@ const [,, outFile, templateFile, argsPrefixesFile, expectationsFile, expectation
 async function generateFile(lines) {
   let result = '';
   result += '<!-- AUTO-GENERATED - DO NOT EDIT. See WebGPU CTS: tools/gen_wpt_cts_html. -->\n';
+
   result += await fs.readFile(templateFile, 'utf8');
 
   for (const line of lines) {

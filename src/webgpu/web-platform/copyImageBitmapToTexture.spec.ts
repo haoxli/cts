@@ -4,13 +4,27 @@ copy imageBitmap To texture tests.
 
 import { poptions, params } from '../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../common/framework/test_group.js';
+import { unreachable } from '../../common/framework/util/util.js';
+import { kUncompressedTextureFormatInfo, UncompressedTextureFormat } from '../capability_info.js';
 import { GPUTest } from '../gpu_test.js';
+import { getTexelDataRepresentation } from '../util/texture/texelData.js';
 
 function calculateRowPitch(width: number, bytesPerPixel: number): number {
   const bytesPerRow = width * bytesPerPixel;
   // Rounds up to a multiple of 256 according to WebGPU requirements.
   return (((bytesPerRow - 1) >> 8) + 1) << 8;
 }
+
+enum Color {
+  Red,
+  Green,
+  Blue,
+  White,
+  OpaqueBlack,
+  TransparentBlack,
+}
+// Cache for generated pixels.
+const generatedPixelCache: Map<GPUTextureFormat, Map<Color, Uint8Array>> = new Map();
 
 class F extends GPUTest {
   checkCopyImageBitmapResult(
@@ -22,10 +36,11 @@ class F extends GPUTest {
   ): void {
     const exp = new Uint8Array(expected.buffer, expected.byteOffset, expected.byteLength);
     const rowPitch = calculateRowPitch(width, bytesPerPixel);
-    const dst = this.createCopyForMapRead(src, rowPitch * height);
+    const dst = this.createCopyForMapRead(src, 0, rowPitch * height);
 
     this.eventualAsyncExpectation(async niceStack => {
-      const actual = new Uint8Array(await dst.mapReadAsync());
+      await dst.mapAsync(GPUMapMode.READ);
+      const actual = new Uint8Array(dst.getMappedRange());
       const check = this.checkBufferWithRowPitch(
         actual,
         exp,
@@ -36,7 +51,7 @@ class F extends GPUTest {
       );
       if (check !== undefined) {
         niceStack.message = check;
-        this.rec.fail(niceStack);
+        this.rec.expectationFailed(niceStack);
       }
       dst.destroy();
     });
@@ -50,27 +65,33 @@ class F extends GPUTest {
     rowPitch: number,
     bytesPerPixel: number
   ): string | undefined {
-    const lines = [];
-    let failedPixels = 0;
-    for (let i = 0; i < height; ++i) {
+    const failedByteIndices: string[] = [];
+    const failedByteExpectedValues: string[] = [];
+    const failedByteActualValues: string[] = [];
+    iLoop: for (let i = 0; i < height; ++i) {
       const bytesPerRow = width * bytesPerPixel;
       for (let j = 0; j < bytesPerRow; ++j) {
         const indexExp = j + i * bytesPerRow;
         const indexActual = j + rowPitch * i;
         if (actual[indexActual] !== exp[indexExp]) {
-          if (failedPixels > 4) {
-            break;
+          if (failedByteIndices.length >= 4) {
+            failedByteIndices.push('...');
+            failedByteExpectedValues.push('...');
+            failedByteActualValues.push('...');
+            break iLoop;
           }
-          failedPixels++;
-          lines.push(`at [${indexExp}], expected ${exp[indexExp]}, got ${actual[indexActual]}`);
+          failedByteIndices.push(`(${i},${j})`);
+          failedByteExpectedValues.push(exp[indexExp].toString());
+          failedByteActualValues.push(actual[indexActual].toString());
         }
       }
-      if (failedPixels > 4) {
-        lines.push('... and more');
-        break;
-      }
     }
-    return failedPixels > 0 ? lines.join('\n') : undefined;
+    if (failedByteIndices.length > 0) {
+      return `at [${failedByteIndices.join(', ')}], \
+expected [${failedByteExpectedValues.join(', ')}], \
+got [${failedByteActualValues.join(', ')}]`;
+    }
+    return undefined;
   }
 
   doTestAndCheckResult(
@@ -112,6 +133,56 @@ class F extends GPUTest {
       bytesPerPixel
     );
   }
+
+  generatePixel(color: Color, format: UncompressedTextureFormat): Uint8Array {
+    let entry = generatedPixelCache.get(format);
+    if (entry === undefined) {
+      entry = new Map();
+      generatedPixelCache.set(format, entry);
+    }
+
+    // None of the dst texture format is 'uint' or 'sint', so we can always use float value.
+    if (!entry.has(color)) {
+      let pixels;
+      switch (color) {
+        case Color.Red:
+          pixels = new Uint8Array(
+            getTexelDataRepresentation(format).getBytes({ R: 1.0, G: 0, B: 0, A: 1.0 })
+          );
+          break;
+        case Color.Green:
+          pixels = new Uint8Array(
+            getTexelDataRepresentation(format).getBytes({ R: 0, G: 1.0, B: 0, A: 1.0 })
+          );
+          break;
+        case Color.Blue:
+          pixels = new Uint8Array(
+            getTexelDataRepresentation(format).getBytes({ R: 0, G: 0, B: 1.0, A: 1.0 })
+          );
+          break;
+        case Color.White:
+          pixels = new Uint8Array(
+            getTexelDataRepresentation(format).getBytes({ R: 0, G: 0, B: 0, A: 1.0 })
+          );
+          break;
+        case Color.OpaqueBlack:
+          pixels = new Uint8Array(
+            getTexelDataRepresentation(format).getBytes({ R: 1.0, G: 1.0, B: 1.0, A: 1.0 })
+          );
+          break;
+        case Color.TransparentBlack:
+          pixels = new Uint8Array(
+            getTexelDataRepresentation(format).getBytes({ R: 1.0, G: 1.0, B: 1.0, A: 0 })
+          );
+          break;
+        default:
+          unreachable();
+      }
+      entry.set(color, pixels);
+    }
+
+    return entry.get(color)!;
+  }
 }
 
 export const g = makeTestGroup(F);
@@ -123,28 +194,44 @@ g.test('from_ImageData')
       .combine(poptions('height', [1, 2, 4, 15, 255, 256]))
       .combine(poptions('alpha', ['none', 'premultiply']))
       .combine(poptions('orientation', ['none', 'flipY']))
+      .combine(
+        poptions('dstColorFormat', [
+          'rgba8unorm',
+          'bgra8unorm',
+          'rgba8unorm-srgb',
+          'bgra8unorm-srgb',
+          'rgb10a2unorm',
+          'rgba16float',
+          'rgba32float',
+          'rg8unorm',
+          'rg16float',
+        ] as const)
+      )
   )
   .fn(async t => {
-    const { width, height, alpha, orientation } = t.params;
+    const { width, height, alpha, orientation, dstColorFormat } = t.params;
 
-    // The texture format is rgba8unorm, so the bytes per pixel is 4.
-    const bytesPerPixel = 4;
+    const format = 'rgba8unorm';
+    const srcBytesPerPixel = kUncompressedTextureFormatInfo[format].bytesPerBlock;
 
-    const imagePixels = new Uint8ClampedArray(bytesPerPixel * width * height);
-    if (alpha === 'premultiply') {
-      // Make expected value simple to construct:
-      // Input is (255, 255, 255, a), which will be stored into the ImageBitmap
-      // as (a, a, a, a).
-      for (let i = 0; i < width * height * bytesPerPixel; ++i) {
-        imagePixels[i] = i % 4 !== 3 ? 255 : i % 256;
+    // Generate input contents by iterating 'Color' enum
+    const imagePixels = new Uint8ClampedArray(srcBytesPerPixel * width * height);
+    const startPixel = Color.Red;
+    for (let i = 0, currentPixel = startPixel; i < width * height; ++i) {
+      const pixels = t.generatePixel(currentPixel, format);
+      if (currentPixel === Color.TransparentBlack) {
+        currentPixel = Color.Red;
+      } else {
+        ++currentPixel;
       }
-    } else {
-      for (let i = 0; i < width * height * bytesPerPixel; ++i) {
-        imagePixels[i] = i % 4 === 3 ? 255 : i % 256;
+      for (let j = 0; j < srcBytesPerPixel; ++j) {
+        imagePixels[i * srcBytesPerPixel + j] = pixels[j];
       }
     }
 
+    // Generate correct expected values
     const imageData = new ImageData(imagePixels, width, height);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const imageBitmap = await (createImageBitmap as any)(imageData, {
       premultiplyAlpha: alpha,
       imageOrientation: orientation,
@@ -156,41 +243,49 @@ g.test('from_ImageData')
         height: imageBitmap.height,
         depth: 1,
       },
-      format: 'rgba8unorm',
+      format: dstColorFormat,
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
     });
 
-    // Construct expected value
-    const expectedPixels = new Uint8ClampedArray(bytesPerPixel * width * height);
-    for (let i = 0; i < width * height * bytesPerPixel; ++i) {
-      expectedPixels[i] = imagePixels[i];
+    // Construct expected value for different dst color format
+    const dstBytesPerPixel = kUncompressedTextureFormatInfo[dstColorFormat].bytesPerBlock!;
+    const dstPixels = new Uint8ClampedArray(dstBytesPerPixel * width * height);
+    let expectedPixels = new Uint8ClampedArray(dstBytesPerPixel * width * height);
+    for (let i = 0, currentPixel = startPixel; i < width * height; ++i) {
+      const pixels = t.generatePixel(currentPixel, dstColorFormat);
+      for (let j = 0; j < dstBytesPerPixel; ++j) {
+        // All pixels are 0 due to premultiply alpha
+        if (alpha === 'premultiply' && currentPixel === Color.TransparentBlack) {
+          dstPixels[i * dstBytesPerPixel + j] = 0;
+        } else {
+          dstPixels[i * dstBytesPerPixel + j] = pixels[j];
+        }
+      }
+
+      if (currentPixel === Color.TransparentBlack) {
+        currentPixel = Color.Red;
+      } else {
+        ++currentPixel;
+      }
     }
 
     if (orientation === 'flipY') {
       for (let i = 0; i < height; ++i) {
-        for (let j = 0; j < width * bytesPerPixel; ++j) {
-          const pos_image_pixel = (height - i - 1) * width * bytesPerPixel + j;
-          const pos_expected_value = i * width * bytesPerPixel + j;
-          expectedPixels[pos_expected_value] = imagePixels[pos_image_pixel];
+        for (let j = 0; j < width * dstBytesPerPixel; ++j) {
+          const posImagePixel = (height - i - 1) * width * dstBytesPerPixel + j;
+          const posExpectedValue = i * width * dstBytesPerPixel + j;
+          expectedPixels[posExpectedValue] = dstPixels[posImagePixel];
         }
       }
-    }
-
-    if (alpha === 'premultiply') {
-      for (let i = 0; i < width * height * bytesPerPixel; ++i) {
-        const alpha_value_position = 3 - (i % 4) + i;
-        if (i % 4 !== 3) {
-          // Expected value is (a, a, a, a)
-          expectedPixels[i] = expectedPixels[alpha_value_position];
-        }
-      }
+    } else {
+      expectedPixels = dstPixels;
     }
 
     t.doTestAndCheckResult(
       { imageBitmap, origin: { x: 0, y: 0 } },
       { texture: dst },
       { width: imageBitmap.width, height: imageBitmap.height, depth: 1 },
-      bytesPerPixel,
+      dstBytesPerPixel,
       expectedPixels
     );
   });

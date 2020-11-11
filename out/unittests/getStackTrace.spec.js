@@ -1,23 +1,26 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/
-
-export const description = `
+**/export const description = `
 Tests for getStackTrace.
-`;
-import { makeTestGroup } from '../common/framework/test_group.js';
+`;import { makeTestGroup } from '../common/framework/test_group.js';
 import { extractImportantStackTrace } from '../common/framework/util/stack.js';
+
 import { UnitTest } from './unit_test.js';
+
 export const g = makeTestGroup(UnitTest);
-g.test('stacks').params([{
+
+g.test('stacks').
+params([
+{
   case: 'node_fail',
   _expectedLines: 3,
   _stack: `Error:
    at CaseRecorder.fail (/Users/kainino/src/cts/src/common/framework/logger.ts:99:30)
    at RunCaseSpecific.exports.g.test.t [as fn] (/Users/kainino/src/cts/src/unittests/logger.spec.ts:80:7)
    at RunCaseSpecific.run (/Users/kainino/src/cts/src/common/framework/test_group.ts:121:18)
-   at processTicksAndRejections (internal/process/task_queues.js:86:5)`
-}, {
+   at processTicksAndRejections (internal/process/task_queues.js:86:5)` },
+
+{
   // TODO: make sure this test case actually matches what happens on windows
   case: 'node_fail_backslash',
   _expectedLines: 3,
@@ -25,8 +28,9 @@ g.test('stacks').params([{
    at CaseRecorder.fail (C:\\Users\\kainino\\src\\cts\\src\\common\\framework\\logger.ts:99:30)
    at RunCaseSpecific.exports.g.test.t [as fn] (C:\\Users\\kainino\\src\\cts\\src\\unittests\\logger.spec.ts:80:7)
    at RunCaseSpecific.run (C:\\Users\\kainino\\src\\cts\\src\\common\\framework\\test_group.ts:121:18)
-   at processTicksAndRejections (internal\\process\\task_queues.js:86:5)`
-}, {
+   at processTicksAndRejections (internal\\process\\task_queues.js:86:5)` },
+
+{
   case: 'node_fail_processTicksAndRejections',
   _expectedLines: 5,
   _stack: `Error: expectation had no effect: suite1:foo:
@@ -37,27 +41,31 @@ g.test('stacks').params([{
     at RunCaseSpecific.run (/Users/kainino/src/cts/src/common/framework/test_group.ts:144:9)
     at /Users/kainino/src/cts/src/common/runtime/cmdline.ts:62:25
     at async Promise.all (index 29)
-    at /Users/kainino/src/cts/src/common/runtime/cmdline.ts:78:5`
-}, {
+    at /Users/kainino/src/cts/src/common/runtime/cmdline.ts:78:5` },
+
+{
   case: 'node_throw',
   _expectedLines: 2,
   _stack: `Error: hello
     at RunCaseSpecific.g.test.t [as fn] (/Users/kainino/src/cts/src/unittests/test_group.spec.ts:51:11)
     at RunCaseSpecific.run (/Users/kainino/src/cts/src/common/framework/test_group.ts:121:18)
-    at processTicksAndRejections (internal/process/task_queues.js:86:5)`
-}, {
+    at processTicksAndRejections (internal/process/task_queues.js:86:5)` },
+
+{
   case: 'firefox_fail',
   _expectedLines: 3,
   _stack: `fail@http://localhost:8080/out/common/framework/logger.js:104:30
 expect@http://localhost:8080/out/common/framework/default_fixture.js:59:16
 @http://localhost:8080/out/unittests/util.spec.js:35:5
-run@http://localhost:8080/out/common/framework/test_group.js:119:18`
-}, {
+run@http://localhost:8080/out/common/framework/test_group.js:119:18` },
+
+{
   case: 'firefox_throw',
   _expectedLines: 1,
   _stack: `@http://localhost:8080/out/unittests/test_group.spec.js:48:11
-run@http://localhost:8080/out/common/framework/test_group.js:119:18`
-}, {
+run@http://localhost:8080/out/common/framework/test_group.js:119:18` },
+
+{
   case: 'safari_fail',
   _expectedLines: 3,
   _stack: `fail@http://localhost:8080/out/common/framework/logger.js:104:39
@@ -66,16 +74,18 @@ http://localhost:8080/out/unittests/util.spec.js:35:11
 http://localhost:8080/out/common/framework/test_group.js:119:20
 asyncFunctionResume@[native code]
 [native code]
-promiseReactionJob@[native code]`
-}, {
+promiseReactionJob@[native code]` },
+
+{
   case: 'safari_throw',
   _expectedLines: 1,
   _stack: `http://localhost:8080/out/unittests/test_group.spec.js:48:20
 http://localhost:8080/out/common/framework/test_group.js:119:20
 asyncFunctionResume@[native code]
 [native code]
-promiseReactionJob@[native code]`
-}, {
+promiseReactionJob@[native code]` },
+
+{
   case: 'chrome_fail',
   _expectedLines: 4,
   _stack: `Error
@@ -84,8 +94,9 @@ promiseReactionJob@[native code]`
     at RunCaseSpecific.fn (http://localhost:8080/out/unittests/util.spec.js:35:5)
     at RunCaseSpecific.run (http://localhost:8080/out/common/framework/test_group.js:119:18)
     at async runCase (http://localhost:8080/out/common/runtime/standalone.js:37:17)
-    at async http://localhost:8080/out/common/runtime/standalone.js:102:7`
-}, {
+    at async http://localhost:8080/out/common/runtime/standalone.js:102:7` },
+
+{
   case: 'chrome_throw',
   _expectedLines: 6,
   _stack: `Error: hello
@@ -96,8 +107,9 @@ promiseReactionJob@[native code]`
     at async RunCaseSpecific.fn (http://localhost:8080/out/unittests/test_group.spec.js:53:15)
     at async RunCaseSpecific.run (http://localhost:8080/out/common/framework/test_group.js:119:7)
     at async runCase (http://localhost:8080/out/common/runtime/standalone.js:37:17)
-    at async http://localhost:8080/out/common/runtime/standalone.js:102:7`
-}, {
+    at async http://localhost:8080/out/common/runtime/standalone.js:102:7` },
+
+{
   case: 'multiple_lines',
   _expectedLines: 8,
   _stack: `Error: hello
@@ -110,13 +122,16 @@ promiseReactionJob@[native code]`
     at async RunCaseSpecific.fn (http://localhost:8080/out/unittests/test_group.spec.js:53:15)
     at async RunCaseSpecific.run (http://localhost:8080/out/common/framework/test_group.js:119:7)
     at async runCase (http://localhost:8080/out/common/runtime/standalone.js:37:17)
-    at async http://localhost:8080/out/common/runtime/standalone.js:102:7`
-}]).fn(t => {
+    at async http://localhost:8080/out/common/runtime/standalone.js:102:7` }]).
+
+
+fn(t => {
   const ex = new Error();
   ex.stack = t.params._stack;
   t.expect(ex.stack === t.params._stack);
   const stringified = extractImportantStackTrace(ex);
   const parts = stringified.split('\n');
+
   t.expect(parts.length === t.params._expectedLines);
   const last = parts[parts.length - 1];
   t.expect(last.indexOf('/unittests/') !== -1 || last.indexOf('\\unittests\\') !== -1);

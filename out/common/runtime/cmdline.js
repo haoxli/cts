@@ -1,17 +1,19 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/
-
 import * as fs from 'fs';
 import * as process from 'process';
+
 import { DefaultTestFileLoader } from '../framework/file_loader.js';
 import { Logger } from '../framework/logging/logger.js';
+
+import { parseQuery } from '../framework/query/parseQuery.js';
 import { assert, unreachable } from '../framework/util/util.js';
 
 function usage(rc) {
   console.log('Usage:');
   console.log('  tools/run [OPTIONS...] QUERIES...');
-  console.log('  tools/run unittests: webgpu:buffers/');
+  console.log("  tools/run 'unittests:*' 'webgpu:buffers,*'");
   console.log('Options:');
   console.log('  --verbose     Print result/log of every test as it runs.');
   console.log('  --debug       Include debug messages in logging.');
@@ -27,8 +29,7 @@ if (!fs.existsSync('src/common/runtime/cmdline.ts')) {
 let verbose = false;
 let debug = false;
 let printJSON = false;
-const filterArgs = [];
-
+const queries = [];
 for (const a of process.argv.slice(2)) {
   if (a.startsWith('-')) {
     if (a === '--verbose') {
@@ -41,23 +42,26 @@ for (const a of process.argv.slice(2)) {
       usage(1);
     }
   } else {
-    filterArgs.push(a);
+    queries.push(a);
   }
 }
 
-if (filterArgs.length === 0) {
+if (queries.length === 0) {
   usage(0);
 }
 
 (async () => {
   try {
     const loader = new DefaultTestFileLoader();
-    assert(filterArgs.length === 1, 'currently, there must be exactly one query on the cmd line');
-    const testcases = await loader.loadTests(filterArgs[0]);
+    assert(queries.length === 1, 'currently, there must be exactly one query on the cmd line');
+    const testcases = await loader.loadCases(parseQuery(queries[0]));
+
     const log = new Logger(debug);
+
     const failed = [];
     const warned = [];
     const skipped = [];
+
     let total = 0;
 
     for (const testcase of testcases) {
@@ -70,30 +74,26 @@ if (filterArgs.length === 0) {
       }
 
       total++;
-
       switch (res.status) {
         case 'pass':
           break;
-
         case 'fail':
           failed.push([name, res]);
           break;
-
         case 'warn':
           warned.push([name, res]);
           break;
-
         case 'skip':
           skipped.push([name, res]);
           break;
-
         default:
-          unreachable('unrecognized status');
-      }
+          unreachable('unrecognized status');}
+
     }
 
-    assert(total > 0, 'found no tests!'); // TODO: write results out somewhere (a file?)
+    assert(total > 0, 'found no tests!');
 
+    // TODO: write results out somewhere (a file?)
     if (printJSON) {
       console.log(log.asJSON(2));
     }
@@ -103,13 +103,11 @@ if (filterArgs.length === 0) {
       console.log('** Skipped **');
       printResults(skipped);
     }
-
     if (warned.length) {
       console.log('');
       console.log('** Warnings **');
       printResults(warned);
     }
-
     if (failed.length) {
       console.log('');
       console.log('** Failures **');
@@ -117,14 +115,11 @@ if (filterArgs.length === 0) {
     }
 
     const passed = total - warned.length - failed.length - skipped.length;
-
     const pct = x => (100 * x / total).toFixed(2);
-
     const rpt = x => {
       const xs = x.toString().padStart(1 + Math.log10(total), ' ');
       return `${xs} / ${total} = ${pct(x).padStart(6, ' ')}%`;
     };
-
     console.log('');
     console.log(`** Summary **
 Passed  w/o warnings = ${rpt(passed)}
@@ -144,7 +139,6 @@ Failed               = ${rpt(failed.length)}`);
 function printResults(results) {
   for (const [name, r] of results) {
     console.log(`[${r.status}] ${name} (${r.timems}ms). Log:`);
-
     if (r.logs) {
       for (const l of r.logs) {
         console.log('  - ' + l.toJSON().replace(/\n/g, '\n    '));

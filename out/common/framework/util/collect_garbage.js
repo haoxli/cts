@@ -1,11 +1,11 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/
+**/import { resolveOnTimeout } from './util.js';
 
-import { resolveOnTimeout } from './util.js';
+
 export async function attemptGarbageCollection() {
-  const w = self;
 
+  const w = self;
   if (w.GCController) {
     w.GCController.collect();
     return;
@@ -17,8 +17,11 @@ export async function attemptGarbageCollection() {
   }
 
   try {
-    w.QueryInterface(Components.interfaces.nsIInterfaceRequestor).getInterface(Components.interfaces.nsIDOMWindowUtils).garbageCollect();
+    w.QueryInterface(Components.interfaces.nsIInterfaceRequestor).
+    getInterface(Components.interfaces.nsIDOMWindowUtils).
+    garbageCollect();
     return;
+
   } catch (e) {}
 
   if (w.gc) {
@@ -32,16 +35,13 @@ export async function attemptGarbageCollection() {
   }
 
   let i;
-
   function gcRec(n) {
     if (n < 1) return;
-    let temp = {
-      i: 'ab' + i + i / 100000
-    };
+    let temp = { i: 'ab' + i + i / 100000 };
     temp = temp + 'foo';
+    temp; // dummy use of unused variable
     gcRec(n - 1);
   }
-
   for (i = 0; i < 1000; i++) {
     gcRec(10);
   }

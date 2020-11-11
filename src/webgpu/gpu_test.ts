@@ -1,8 +1,10 @@
 import { Fixture } from '../common/framework/fixture.js';
-import { DevicePool, TestOOMedShouldAttemptGC } from '../common/framework/gpu/device_pool.js';
 import { attemptGarbageCollection } from '../common/framework/util/collect_garbage.js';
 import { assert } from '../common/framework/util/util.js';
 
+import { EncodableTextureFormat } from './capability_info.js';
+import { DevicePool, DeviceProvider, TestOOMedShouldAttemptGC } from './util/device_pool.js';
+import { align } from './util/math.js';
 import {
   fillTextureDataWithTexelValue,
   getTextureCopyLayout,
@@ -33,38 +35,66 @@ type TypedArrayBufferViewConstructor =
 const devicePool = new DevicePool();
 
 export class GPUTest extends Fixture {
-  private objects: { device: GPUDevice; queue: GPUQueue } | undefined = undefined;
-  initialized = false;
+  private provider: DeviceProvider | undefined;
+  /** Must not be replaced once acquired. */
+  private acquiredDevice: GPUDevice | undefined;
 
   get device(): GPUDevice {
-    assert(this.objects !== undefined);
-    return this.objects.device;
+    assert(
+      this.provider !== undefined,
+      'No provider available right now; did you "await" selectDeviceOrSkipTestCase?'
+    );
+    if (!this.acquiredDevice) {
+      this.acquiredDevice = this.provider.acquire();
+    }
+    return this.acquiredDevice;
   }
 
   get queue(): GPUQueue {
-    assert(this.objects !== undefined);
-    return this.objects.queue;
+    return this.device.defaultQueue;
   }
 
   async init(): Promise<void> {
     await super.init();
 
-    const device = await devicePool.acquire();
-    const queue = device.defaultQueue;
-    this.objects = { device, queue };
+    this.provider = await devicePool.reserve();
+  }
+
+  /**
+   * When a GPUTest test accesses `.device` for the first time, a "default" GPUDevice
+   * (descriptor = `undefined`) is provided by default.
+   * However, some tests or cases need particular extensions to be enabled. Call this function with
+   * a descriptor (or undefined) to select a GPUDevice matching that descriptor.
+   *
+   * If the request descriptor can't be supported, throws an exception to skip the entire test case.
+   */
+  async selectDeviceOrSkipTestCase(descriptor: GPUDeviceDescriptor | undefined): Promise<void> {
+    assert(this.provider !== undefined);
+    // Make sure the device isn't replaced after it's been retrieved once.
+    assert(
+      !this.acquiredDevice,
+      "Can't selectDeviceOrSkipTestCase() after the device has been used"
+    );
+
+    const oldProvider = this.provider;
+    this.provider = undefined;
+    await devicePool.release(oldProvider);
+
+    this.provider = await devicePool.reserve(descriptor);
+    this.acquiredDevice = this.provider.acquire();
   }
 
   // Note: finalize is called even if init was unsuccessful.
   async finalize(): Promise<void> {
     await super.finalize();
 
-    if (this.objects) {
+    if (this.provider) {
       let threw: undefined | Error;
       {
-        const objects = this.objects;
-        this.objects = undefined;
+        const provider = this.provider;
+        this.provider = undefined;
         try {
-          await devicePool.release(objects.device);
+          await devicePool.release(provider);
         } catch (ex) {
           threw = ex;
         }
@@ -81,14 +111,17 @@ export class GPUTest extends Fixture {
     }
   }
 
-  createCopyForMapRead(src: GPUBuffer, size: number): GPUBuffer {
+  createCopyForMapRead(src: GPUBuffer, srcOffset: number, size: number): GPUBuffer {
+    assert(srcOffset % 4 === 0);
+    assert(size % 4 === 0);
+
     const dst = this.device.createBuffer({
       size,
       usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
     });
 
     const c = this.device.createCommandEncoder();
-    c.copyBufferToBuffer(src, 0, dst, 0, size);
+    c.copyBufferToBuffer(src, srcOffset, dst, 0, size);
 
     this.queue.submit([c.finish()]);
 
@@ -97,16 +130,38 @@ export class GPUTest extends Fixture {
 
   // TODO: add an expectContents for textures, which logs data: uris on failure
 
-  expectContents(src: GPUBuffer, expected: TypedArrayBufferView): void {
-    const dst = this.createCopyForMapRead(src, expected.buffer.byteLength);
+  // Offset and size passed to createCopyForMapRead must be divisible by 4. For that
+  // we might need to copy more bytes from the buffer than we want to map.
+  // begin and end values represent the part of the copied buffer that stores the contents
+  // we initially wanted to map.
+  // The copy will not cause an OOB error because the buffer size must be 4-aligned.
+  createAlignedCopyForMapRead(
+    src: GPUBuffer,
+    size: number,
+    offset: number
+  ): { dst: GPUBuffer; begin: number; end: number } {
+    const alignedOffset = Math.floor(offset / 4) * 4;
+    const offsetDifference = offset - alignedOffset;
+    const alignedSize = align(size + offsetDifference, 4);
+    const dst = this.createCopyForMapRead(src, alignedOffset, alignedSize);
+    return { dst, begin: offsetDifference, end: offsetDifference + size };
+  }
+
+  expectContents(src: GPUBuffer, expected: TypedArrayBufferView, srcOffset: number = 0): void {
+    const { dst, begin, end } = this.createAlignedCopyForMapRead(
+      src,
+      expected.byteLength,
+      srcOffset
+    );
 
     this.eventualAsyncExpectation(async niceStack => {
       const constructor = expected.constructor as TypedArrayBufferViewConstructor;
-      const actual = new constructor(await dst.mapReadAsync());
-      const check = this.checkBuffer(actual, expected);
+      await dst.mapAsync(GPUMapMode.READ);
+      const actual = new constructor(dst.getMappedRange());
+      const check = this.checkBuffer(actual.subarray(begin, end), expected);
       if (check !== undefined) {
         niceStack.message = check;
-        this.rec.fail(niceStack);
+        this.rec.expectationFailed(niceStack);
       }
       dst.destroy();
     });
@@ -115,7 +170,7 @@ export class GPUTest extends Fixture {
   expectBuffer(actual: Uint8Array, exp: Uint8Array): void {
     const check = this.checkBuffer(actual, exp);
     if (check !== undefined) {
-      this.rec.fail(new Error(check));
+      this.rec.expectationFailed(new Error(check));
     }
   }
 
@@ -130,19 +185,27 @@ export class GPUTest extends Fixture {
     if (actual.byteLength !== size) {
       return 'size mismatch';
     }
-    const lines = [];
-    let failedPixels = 0;
+    const failedByteIndices: string[] = [];
+    const failedByteExpectedValues: string[] = [];
+    const failedByteActualValues: string[] = [];
     for (let i = 0; i < size; ++i) {
       const tol = typeof tolerance === 'function' ? tolerance(i) : tolerance;
       if (Math.abs(actual[i] - exp[i]) > tol) {
-        if (failedPixels > 4) {
-          lines.push('... and more');
+        if (failedByteIndices.length >= 4) {
+          failedByteIndices.push('...');
+          failedByteExpectedValues.push('...');
+          failedByteActualValues.push('...');
           break;
         }
-        failedPixels++;
-        lines.push(`at [${i}], expected ${exp[i]}, got ${actual[i]}`);
+        failedByteIndices.push(i.toString());
+        failedByteExpectedValues.push(exp[i].toString());
+        failedByteActualValues.push(actual[i].toString());
       }
     }
+    const summary = `at [${failedByteIndices.join(', ')}], \
+expected [${failedByteExpectedValues.join(', ')}], \
+got [${failedByteActualValues.join(', ')}]`;
+    const lines = [summary];
 
     // TODO: Could make a more convenient message, which could look like e.g.:
     //
@@ -159,7 +222,7 @@ export class GPUTest extends Fixture {
     // Or, maybe these diffs aren't actually very useful (given we have the prints just above here),
     // and we should remove them. More important will be logging of texture data in a visual format.
 
-    if (size <= 256 && failedPixels > 0) {
+    if (size <= 256 && failedByteIndices.length > 0) {
       const expHex = Array.from(new Uint8Array(exp.buffer, exp.byteOffset, exp.byteLength))
         .map(x => x.toString(16).padStart(2, '0'))
         .join('');
@@ -171,7 +234,7 @@ export class GPUTest extends Fixture {
       lines.push('ACTUAL:\t  ' + actual.join(' '));
       lines.push('\t0x' + actHex);
     }
-    if (failedPixels) {
+    if (failedByteIndices.length) {
       return lines.join('\n');
     }
     return undefined;
@@ -179,7 +242,7 @@ export class GPUTest extends Fixture {
 
   expectSingleColor(
     src: GPUTexture,
-    format: GPUTextureFormat,
+    format: EncodableTextureFormat,
     {
       size,
       exp,
@@ -194,7 +257,7 @@ export class GPUTest extends Fixture {
       layout?: TextureLayoutOptions;
     }
   ): void {
-    const { byteLength, bytesPerRow, rowsPerImage } = getTextureCopyLayout(
+    const { byteLength, bytesPerRow, rowsPerImage, mipSize } = getTextureCopyLayout(
       format,
       dimension,
       size,
@@ -209,13 +272,51 @@ export class GPUTest extends Fixture {
 
     const commandEncoder = this.device.createCommandEncoder();
     commandEncoder.copyTextureToBuffer(
-      { texture: src, mipLevel: layout?.mipLevel, arrayLayer: slice },
+      { texture: src, mipLevel: layout?.mipLevel, origin: { x: 0, y: 0, z: slice } },
       { buffer, bytesPerRow, rowsPerImage },
-      size
+      mipSize
     );
     this.queue.submit([commandEncoder.finish()]);
     const arrayBuffer = new ArrayBuffer(byteLength);
     fillTextureDataWithTexelValue(expectedTexelData, format, dimension, arrayBuffer, size, layout);
     this.expectContents(buffer, new Uint8Array(arrayBuffer));
+  }
+
+  expectGPUError<R>(filter: GPUErrorFilter, fn: () => R, shouldError: boolean = true): R {
+    // If no error is expected, we let the scope surrounding the test catch it.
+    if (!shouldError) {
+      return fn();
+    }
+
+    this.device.pushErrorScope(filter);
+    const returnValue = fn();
+    const promise = this.device.popErrorScope();
+
+    this.eventualAsyncExpectation(async niceStack => {
+      const error = await promise;
+
+      let failed = false;
+      switch (filter) {
+        case 'out-of-memory':
+          failed = !(error instanceof GPUOutOfMemoryError);
+          break;
+        case 'validation':
+          failed = !(error instanceof GPUValidationError);
+          break;
+      }
+
+      if (failed) {
+        niceStack.message = `Expected ${filter} error`;
+        this.rec.expectationFailed(niceStack);
+      } else {
+        niceStack.message = `Captured ${filter} error`;
+        if (error instanceof GPUValidationError) {
+          niceStack.message += ` - ${error.message}`;
+        }
+        this.rec.debug(niceStack);
+      }
+    });
+
+    return returnValue;
   }
 }

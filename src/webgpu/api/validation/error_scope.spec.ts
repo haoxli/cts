@@ -3,9 +3,9 @@ error scope validation tests.
 `;
 
 import { Fixture } from '../../../common/framework/fixture.js';
-import { getGPU } from '../../../common/framework/gpu/implementation.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { assert, raceWithRejectOnTimeout } from '../../../common/framework/util/util.js';
+import { getGPU } from '../../util/navigator_gpu.js';
 
 class F extends Fixture {
   _device: GPUDevice | undefined = undefined;
@@ -19,7 +19,10 @@ class F extends Fixture {
     super.init();
     const gpu = getGPU();
     const adapter = await gpu.requestAdapter();
-    this._device = await adapter.requestDevice();
+    assert(adapter !== null);
+    const device = await adapter.requestDevice();
+    assert(device !== null);
+    this._device = device;
   }
 
   createErrorBuffer(): void {
