@@ -7,7 +7,7 @@ import { assert } from '../common/framework/util/util.js';
 import { DevicePool, TestOOMedShouldAttemptGC } from './util/device_pool.js';
 import { align } from './util/math.js';
 import { fillTextureDataWithTexelValue, getTextureCopyLayout } from './util/texture/layout.js';
-import { getTexelDataRepresentation } from './util/texture/texelData.js';
+import { kTexelRepresentationInfo } from './util/texture/texel_data.js';
 
 const devicePool = new DevicePool();
 
@@ -139,6 +139,32 @@ export class GPUTest extends Fixture {
     });
   }
 
+  // We can expand this function in order to support multiple valid values or two mixed vectors
+  // if needed. See the discussion at https://github.com/gpuweb/cts/pull/384#discussion_r533101429
+  expectContentsTwoValidValues(src, expected1, expected2, srcOffset = 0) {
+    assert(expected1.byteLength === expected2.byteLength);
+    const { dst, begin, end } = this.createAlignedCopyForMapRead(
+      src,
+      expected1.byteLength,
+      srcOffset
+    );
+
+    this.eventualAsyncExpectation(async niceStack => {
+      const constructor = expected1.constructor;
+      await dst.mapAsync(GPUMapMode.READ);
+      const actual = new constructor(dst.getMappedRange());
+      const check1 = this.checkBuffer(actual.subarray(begin, end), expected1);
+      const check2 = this.checkBuffer(actual.subarray(begin, end), expected2);
+      if (check1 !== undefined && check2 !== undefined) {
+        niceStack.message = `Expected one of the following two checks to succeed:
+  - ${check1}
+  - ${check2}`;
+        this.rec.expectationFailed(niceStack);
+      }
+      dst.destroy();
+    });
+  }
+
   expectBuffer(actual, exp) {
     const check = this.checkBuffer(actual, exp);
     if (check !== undefined) {
@@ -216,7 +242,8 @@ got [${failedByteActualValues.join(', ')}]`;
       layout
     );
 
-    const expectedTexelData = getTexelDataRepresentation(format).getBytes(exp);
+    const rep = kTexelRepresentationInfo[format];
+    const expectedTexelData = rep.pack(rep.encode(exp));
 
     const buffer = this.device.createBuffer({
       size: byteLength,
@@ -238,6 +265,37 @@ got [${failedByteActualValues.join(', ')}]`;
     const arrayBuffer = new ArrayBuffer(byteLength);
     fillTextureDataWithTexelValue(expectedTexelData, format, dimension, arrayBuffer, size, layout);
     this.expectContents(buffer, new Uint8Array(arrayBuffer));
+  }
+
+  // TODO: Add check for values of depth/stencil, probably through sampling of shader
+  // TODO(natashalee): Can refactor this and expectSingleColor to use a similar base expect
+  expectSinglePixelIn2DTexture(src, format, { x, y }, { exp, slice = 0, layout }) {
+    const { byteLength, bytesPerRow, rowsPerImage, mipSize } = getTextureCopyLayout(
+      format,
+      '2d',
+      [1, 1, 1],
+      layout
+    );
+
+    const buffer = this.device.createBuffer({
+      size: byteLength,
+      usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
+    });
+
+    const commandEncoder = this.device.createCommandEncoder();
+    commandEncoder.copyTextureToBuffer(
+      {
+        texture: src,
+        mipLevel: layout === null || layout === void 0 ? void 0 : layout.mipLevel,
+        origin: { x, y, z: slice },
+      },
+      { buffer, bytesPerRow, rowsPerImage },
+      mipSize
+    );
+
+    this.queue.submit([commandEncoder.finish()]);
+
+    this.expectContents(buffer, exp);
   }
 
   expectGPUError(filter, fn, shouldError = true) {
@@ -276,5 +334,19 @@ got [${failedByteActualValues.join(', ')}]`;
     });
 
     return returnValue;
+  }
+
+  makeBufferWithContents(dataArray, usage) {
+    const buffer = this.device.createBuffer({
+      mappedAtCreation: true,
+      size: dataArray.byteLength,
+      usage,
+    });
+
+    const mappedBuffer = buffer.getMappedRange();
+    const constructor = dataArray.constructor;
+    new constructor(mappedBuffer).set(dataArray);
+    buffer.unmap();
+    return buffer;
   }
 }
