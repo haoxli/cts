@@ -24,7 +24,7 @@ export const listing = [
       "operation",
       "async_ordering"
     ],
-    "readme": "Test ordering of async resolutions between the following promises (where there are constraints on the ordering).\nSpec issue: https://github.com/gpuweb/gpuweb/issues/962\n\nTODO: plan and implement\n- createReadyPipeline() (not sure if this actually has any ordering constraints)\n- cmdbuf.executionTime\n- device.popErrorScope()\n- device.lost\n- fence.onCompletion()\n- buffer.mapAsync()\n- shadermodule.compilationInfo()"
+    "readme": "Test ordering of async resolutions between the following promises (where there are constraints on the ordering).\nSpec issue: https://github.com/gpuweb/gpuweb/issues/962\n\nTODO: plan and implement\n- createReadyPipeline() (not sure if this actually has any ordering constraints)\n- cmdbuf.executionTime\n- device.popErrorScope()\n- device.lost\n- queue.onSubmittedWorkDone()\n- buffer.mapAsync()\n- shadermodule.compilationInfo()"
   },
   {
     "file": [
@@ -68,7 +68,7 @@ export const listing = [
       "buffers",
       "threading"
     ],
-    "description": "TODO:\n- Copy GPUBuffer to another thread while {pending, mapped mappedAtCreation} on {same,diff} thread"
+    "description": "TODO:\n- Copy GPUBuffer to another thread while {pending, mapped mappedAtCreation} on {same,diff} thread\n- Destroy on one thread while {pending, mapped, mappedAtCreation, mappedAtCreation+unmap+mapped}\n  on another thread."
   },
   {
     "file": [
@@ -78,16 +78,6 @@ export const listing = [
       "basic"
     ],
     "description": "Basic tests."
-  },
-  {
-    "file": [
-      "api",
-      "operation",
-      "command_buffer",
-      "compute",
-      "basic"
-    ],
-    "description": "Basic command buffer compute tests."
   },
   {
     "file": [
@@ -132,39 +122,9 @@ export const listing = [
       "operation",
       "command_buffer",
       "render",
-      "basic"
-    ],
-    "description": "Basic command buffer rendering tests."
-  },
-  {
-    "file": [
-      "api",
-      "operation",
-      "command_buffer",
-      "render",
       "dynamic_state"
     ],
-    "description": "Tests of the behavior of the viewport/scissor/blend/reference states.\n\nTODO:\n- {viewport, scissor rect, blend color, stencil reference, setIndexBuffer, setVertexBuffer}:\n  Test rendering result with {various values}.\n    - Set the state in different ways to make sure it gets the correct value in the end: {\n        - state unset (= default)\n        - state explicitly set once to {default value, another value}\n        - persistence: [set, draw, draw] (fn should differentiate from [set, draw] + [draw])\n        - overwriting: [set(1), draw, set(2), draw] (fn should differentiate from [set(1), set(2), draw, draw])\n        - overwriting: [set(1), set(2), draw] (fn should differentiate from [set(1), draw] but not [set(2), draw])\n        - }"
-  },
-  {
-    "file": [
-      "api",
-      "operation",
-      "command_buffer",
-      "render",
-      "indexed_draw"
-    ],
-    "description": "TODO: plan and implement\n- Test indexed draws with the combinations:\n  - Renderable cases:\n    - indexCount {=, >} the required points of primitive topology and\n      {<, =} the size of index buffer\n    - instanceCount is {1, largeish}\n    - {firstIndex, baseVertex, firstInstance} = 0\n    - firstIndex  {<, =} the size of index buffer\n  - Not renderable cases:\n    - indexCount = 0\n    - indexCount < the required points of primitive topology\n    - instanceCount = {undefined, 0}\n    - firstIndex out of buffer range\n    - firstIndex largeish\n  - x = {drawIndexed, drawIndexedIndirect}\n  - x = index formats\n- ?"
-  },
-  {
-    "file": [
-      "api",
-      "operation",
-      "command_buffer",
-      "render",
-      "rendering"
-    ],
-    "description": ""
+    "description": "Tests of the behavior of the viewport/scissor/blend/reference states.\n\nTODO:\n- {viewport, scissor rect, blend color, stencil reference}:\n  Test rendering result with {various values}.\n    - Set the state in different ways to make sure it gets the correct value in the end: {\n        - state unset (= default)\n        - state explicitly set once to {default value, another value}\n        - persistence: [set, draw, draw] (fn should differentiate from [set, draw] + [draw])\n        - overwriting: [set(1), draw, set(2), draw] (fn should differentiate from [set(1), set(2), draw, draw])\n        - overwriting: [set(1), set(2), draw] (fn should differentiate from [set(1), draw] but not [set(2), draw])\n        - }"
   },
   {
     "file": [
@@ -180,11 +140,10 @@ export const listing = [
     "file": [
       "api",
       "operation",
-      "command_buffer",
-      "render",
-      "storeop"
+      "compute",
+      "basic"
     ],
-    "description": "renderPass store op test that drawn quad is either stored or cleared based on storeop\n\nTODO: is this duplicated with api,operation,render_pass,storeOp?"
+    "description": "Basic command buffer compute tests."
   },
   {
     "file": [
@@ -207,6 +166,15 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "device",
+      "lost"
+    ],
+    "description": "Tests for GPUDevice.lost."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "error_scope"
     ],
     "readme": "TODO: plan and implement\n- test very deeply nested error scopes, make sure errors go to the right place, e.g.\n    - validation, ..., validation, out-of-memory\n    - out-of-memory, validation, ..., validation\n    - out-of-memory, ..., out-of-memory, validation\n    - validation, out-of-memory, ..., out-of-memory\n- use error scopes on two different threads and make sure errors go to the right place\n- unhandled errors always go to the \"original\" device object\n    - test they go nowhere if the original was dropped (attemptGarbageCollection to make sure)"
@@ -217,7 +185,7 @@ export const listing = [
       "operation",
       "fences"
     ],
-    "description": ""
+    "description": "TODO: fences are removed; replace still-relevant tests with equivalents for (multiple?) queues"
   },
   {
     "file": [
@@ -259,10 +227,38 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "memory_sync",
+      "texture",
+      "rw_and_wr"
+    ],
+    "description": "Memory Synchronization Tests for Texture: read before write and read after write.\n\nTODO"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "memory_sync",
+      "texture",
+      "ww"
+    ],
+    "description": "Memory Synchronization Tests for Texture: write after write.\n\nTODO"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "onuncapturederror"
+    ],
+    "description": "Tests for GPUDevice.onuncapturederror."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "queue",
       "writeBuffer"
     ],
-    "description": "TODO:\n- source.origin is unaligned\n- ?"
+    "description": "TODO:\n- source.origin is unaligned\n- data given as ArrayBuffer\n- data given as each TypedArray variant"
   },
   {
     "file": [
@@ -289,6 +285,15 @@ export const listing = [
       "storeOp"
     ],
     "description": "API Operation Tests for RenderPass StoreOp.\n\n  Test Coverage:\n\n  - Tests that color and depth-stencil store operations {'clear', 'store'} work correctly for a\n    render pass with both a color attachment and depth-stencil attachment.\n      TODO: use depth24plus-stencil8\n\n  - Tests that store operations {'clear', 'store'} work correctly for a render pass with multiple\n    color attachments.\n      TODO: test with more interesting loadOp values\n\n  - Tests that store operations {'clear', 'store'} work correctly for a render pass with a color\n    attachment for:\n      - All renderable color formats\n      - mip level set to {'0', mip > '0'}\n      - array layer set to {'0', layer > '1'} for 2D textures\n      TODO: depth slice set to {'0', slice > '0'} for 3D textures\n\n  - Tests that store operations {'clear', 'store'} work correctly for a render pass with a\n    depth-stencil attachment for:\n      - All renderable depth-stencil formats\n      - mip level set to {'0', mip > '0'}\n      - array layer set to {'0', layer > '1'} for 2D textures\n      TODO: test depth24plus and depth24plus-stencil8 formats\n      TODO: test that depth and stencil aspects are set seperately\n      TODO: depth slice set to {'0', slice > '0'} for 3D textures\n      TODO: test with more interesting loadOp values"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "render_pass",
+      "storeop2"
+    ],
+    "description": "renderPass store op test that drawn quad is either stored or cleared based on storeop\n\nTODO: is this duplicated with api,operation,render_pass,storeOp?"
   },
   {
     "file": [
@@ -339,10 +344,64 @@ export const listing = [
     "file": [
       "api",
       "operation",
+      "rendering",
+      "basic"
+    ],
+    "description": "Basic command buffer rendering tests."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "rendering",
+      "blending"
+    ],
+    "description": "Test blending results.\n\nTODO:\n- Test result for all combinations of args (make sure each case is distinguishable from others\n- Test underflow/overflow has consistent behavior\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "rendering",
+      "draw"
+    ],
+    "description": "Tests for the general aspects of draw/drawIndexed/drawIndirect/drawIndexedIndirect.\n\nTODO: plan and implement\n- draws (note bind group state is not tested here):\n    - various zero-sized draws\n    - draws with vertexCount not aligned to primitive topology (line-list or triangle-list) (should not error)\n    - index buffer is {unset, set}\n    - vertex buffers are {unset, set} (some that the pipeline uses, some it doesn't)\n      (note: to test this, the shader in the pipeline doesn't have to actually use inputs)\n    - x= {draw, drawIndexed, drawIndirect, drawIndexedIndirect}\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "rendering",
+      "indexed_draw"
+    ],
+    "description": "Tests for the indexing-specific aspects of drawIndexed/drawIndexedIndirect.\n\nTODO: plan and implement\n- Test indexed draws with the combinations:\n  - Renderable cases:\n    - indexCount {=, >} the required points of primitive topology and\n      {<, =} the size of index buffer\n    - instanceCount is {1, largeish}\n    - {firstIndex, baseVertex, firstInstance} = 0\n    - firstIndex  {<, =} the size of index buffer\n  - Not renderable cases:\n    - indexCount = 0\n    - indexCount < the required points of primitive topology\n    - instanceCount = {undefined, 0}\n    - firstIndex out of buffer range\n    - firstIndex largeish\n  - x = {drawIndexed, drawIndexedIndirect}\n  - x = index formats\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "rendering",
+      "indirect_draw"
+    ],
+    "description": "Tests for the indirect-specific aspects of drawIndirect/drawIndexedIndirect.\n\nTODO: plan and implement\n- indirect draws:\n    - indirectBuffer is {valid, invalid, destroyed, doesn't have usage)\n    - indirectOffset is {\n        - 0, 1, 4\n        - b.size - sizeof(args struct)\n        - b.size - sizeof(args struct) + min alignment (1 or 2 or 4)\n        - }\n    - x= {drawIndirect, drawIndexedIndirect}\n- ?"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "resource_init",
+      "buffer"
+    ],
+    "description": "Test uninitialized buffers are initialized to zero when read\n(or read-written, e.g. with depth write or atomics).\n\nTODO"
+  },
+  {
+    "file": [
+      "api",
+      "operation",
       "resource_init",
       "texture_zero"
     ],
-    "description": "Test uninitialized textures are initialized to zero when read."
+    "description": "Test uninitialized textures are initialized to zero when read.\n\nTODO:\n- 1d, 3d\n- test by sampling depth/stencil\n- test by copying out of stencil"
   },
   {
     "file": [
@@ -358,9 +417,36 @@ export const listing = [
       "api",
       "operation",
       "sampling",
+      "filter_mode"
+    ],
+    "description": "Tests the behavior of different filtering modes in minFilter/magFilter/mipmapFilter.\n\nTODO:\n- Test exact sampling results with small tolerance. Tests should differentiate between different\n  values for all three filter modes to make sure none are missed or incorrect in implementations.\n- (Likely unnecessary with the above.) Test exactly the expected number of samples are used.\n  Test this by setting up a rendering and asserting how many different shades result."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "sampling",
       "lod_clamp"
     ],
     "description": "Tests the behavior of LOD clamping (lodMinClamp, lodMaxClamp).\n\nTODO:\n- Write a test that can test the exact clamping behavior\n- Test a bunch of values, including very large/small ones."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "texture_view",
+      "read"
+    ],
+    "description": "Test the result of reading textures through texture views with various options.\n\nAll x= every possible view read method: {\n  - {unfiltered, filtered (if valid), comparison (if valid)} sampling\n  - storage read {vertex, fragment, compute}\n  - no-op render pass that loads and then stores\n  - depth comparison\n  - stencil comparison\n}\nTODO: Write helper for this if not already available (see resource_init, buffer_sync_test for related code)."
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "texture_view",
+      "write"
+    ],
+    "description": "Test the result of writing textures through texture views with various options.\n\nAll x= every possible view write method: {\n  - storage write {fragment, compute}\n  - render pass store\n  - render pass resolve\n}\nTODO: Write helper for this if not already available (see resource_init, buffer_sync_test for related code)."
   },
   {
     "file": [
@@ -453,7 +539,7 @@ export const listing = [
       "buffer",
       "threading"
     ],
-    "description": "TODO:\n- Try to map on one thread while {pending, mapped, mappedAtCreation} on another thread.\n- Invalid to postMessage a mapped range's ArrayBuffer or ArrayBufferView\n  {with, without} it being in the transfer array.\n- Copy GPUBuffer to another thread while {pending, mapped mappedAtCreation} on {same,diff} thread\n  (valid), then try to map on that thread (invalid)"
+    "description": "TODO:\n- Try to map on one thread while {pending, mapped, mappedAtCreation, mappedAtCreation+unmap+mapped}\n  on another thread.\n- Invalid to postMessage a mapped range's ArrayBuffer or ArrayBufferView\n  {with, without} it being in the transfer array.\n- Copy GPUBuffer to another thread while {pending, mapped mappedAtCreation} on {same,diff} thread\n  (valid), then try to map on that thread (invalid)"
   },
   {
     "file": [
@@ -462,7 +548,7 @@ export const listing = [
       "capability_checks",
       "features"
     ],
-    "readme": "Test every method or option that shouldn't be valid without an feature enabled.\n\n- x= that feature {enabled, disabled}\n\nOne file for each feature name.\n\nTODO: implement"
+    "readme": "Test every method or option that shouldn't be valid without a feature enabled.\n\n- x= that feature {enabled, disabled}\n\nOne file for each feature name.\n\nTODO: implement"
   },
   {
     "file": [
@@ -472,22 +558,6 @@ export const listing = [
       "limits"
     ],
     "readme": "Test everything that shouldn't be valid without a higher-than-specified limit.\n\n- x= that limit {default, max supported (if different), lower than default (TODO: if allowed)}\n\nOne file for each limit name.\n\nTODO: implement"
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "copyBufferToBuffer"
-    ],
-    "description": "copyBufferToBuffer tests.\n\nTest Plan:\n* Buffer is valid/invalid\n  - the source buffer is invalid\n  - the destination buffer is invalid\n* Buffer usages\n  - the source buffer is created without GPUBufferUsage::COPY_SRC\n  - the destination buffer is created without GPUBufferUsage::COPY_DEST\n* CopySize\n  - copySize is not a multiple of 4\n  - copySize is 0\n* copy offsets\n  - sourceOffset is not a multiple of 4\n  - destinationOffset is not a multiple of 4\n* Arthimetic overflow\n  - (sourceOffset + copySize) is overflow\n  - (destinationOffset + copySize) is overflow\n* Out of bounds\n  - (sourceOffset + copySize) > size of source buffer\n  - (destinationOffset + copySize) > size of destination buffer\n* Source buffer and destination buffer are the same buffer"
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "copyTextureToTexture"
-    ],
-    "description": "copyTextureToTexture tests.\n\nTest Plan: (TODO(jiawei.shao@intel.com): add tests on aspects and 1D/3D textures)\n* the source and destination texture\n  - the {source, destination} texture is {invalid, valid}.\n  - mipLevel {>, =, <} the mipmap level count of the {source, destination} texture.\n  - the source texture is created {with, without} GPUTextureUsage::CopySrc.\n  - the destination texture is created {with, without} GPUTextureUsage::CopyDst.\n* sample count\n  - the sample count of the source texture {is, isn't} equal to the one of the destination texture\n  - when the sample count is greater than 1:\n    - it {is, isn't} a copy of the whole subresource of the source texture.\n    - it {is, isn't} a copy of the whole subresource of the destination texture.\n* texture format\n  - the format of the source texture {is, isn't} equal to the one of the destination texture.\n    - including: depth24plus-stencil8 to/from {depth24plus, stencil8}.\n  - for each depth and/or stencil format: a copy between two textures with same format:\n    - it {is, isn't} a copy of the whole subresource of the {source, destination} texture.\n* copy ranges\n  - if the texture dimension is 2D:\n    - (srcOrigin.x + copyExtent.width) {>, =, <} the width of the subresource size of source\n      textureCopyView.\n    - (srcOrigin.y + copyExtent.height) {>, =, <} the height of the subresource size of source\n      textureCopyView.\n    - (srcOrigin.z + copyExtent.depth) {>, =, <} the depth of the subresource size of source\n      textureCopyView.\n    - (dstOrigin.x + copyExtent.width) {>, =, <} the width of the subresource size of destination\n      textureCopyView.\n    - (dstOrigin.y + copyExtent.height) {>, =, <} the height of the subresource size of destination\n      textureCopyView.\n    - (dstOrigin.z + copyExtent.depth) {>, =, <} the depth of the subresource size of destination\n      textureCopyView.\n* when the source and destination texture are the same one:\n  - the set of source texture subresources {has, doesn't have} overlaps with the one of destination\n    texture subresources."
   },
   {
     "file": [
@@ -545,7 +615,7 @@ export const listing = [
       "validation",
       "createQuerySet"
     ],
-    "description": "TODO"
+    "description": "Tests for validation inside createQuerySet.\n\nTODO"
   },
   {
     "file": [
@@ -569,7 +639,7 @@ export const listing = [
       "validation",
       "createTexture"
     ],
-    "description": "createTexture validation tests.\n\nTODO: review existing tests and merge with this plan:\n> All x= every texture format\n>\n> - {any dimension, mipLevelCount} = 0\n>     - x= every texture format\n> - sampleCount = {0, 1, 4, 8, 16, 256} with format/dimension that supports multisample\n>     - x= every texture format\n> - sampleCount = {1, 4}\n>     - with format that supports multisample, with all possible dimensions\n>     - with dimension that support multisample, with all possible formats\n>     - with format-dimension that support multisample, with {mipLevelCount, array layer count} = {1, 2}\n> - 1d, {width, height, depth} > whatever the max is\n>     - height max is 1 (unless 1d-array is added)\n>     - depth max is 1\n>     - x= every texture format\n> - 2d, {width, height, depth} > whatever the max is\n>     - depth (array layers) max differs from width/height\n>     - x= every texture format\n> - 3d, {width, height, depth} > whatever the max is\n>     - x= every texture format\n> - usage flags\n>     - {0, ... each single usage flag}\n>     - x= every texture format\n> - every possible pair of usage flags\n>     - with one common texture format\n> - any other conditions from the spec\n> - ...?"
+    "description": "createTexture validation tests.\n\nTODO: review existing tests and merge with this plan:\n> All x= every texture format\n>\n> - {any dimension, mipLevelCount} = 0\n>     - x= every texture format\n> - sampleCount = {0, 1, 4, 8, 16, 256} with format/dimension that supports multisample\n>     - x= every texture format\n> - sampleCount = {1, 4}\n>     - with format that supports multisample, with all possible dimensions\n>     - with dimension that support multisample, with all possible formats\n>     - with format-dimension that support multisample, with {mipLevelCount, array layer count} = {1, 2}\n> - 1d, {width, height, depth} > whatever the max is\n>     - height max is 1 (unless 1d-array is added)\n>     - depth max is 1\n>     - x= every texture format\n> - 2d, {width, height, depth} > whatever the max is\n>     - depth (array layers) max differs from width/height\n>     - x= every texture format\n> - 3d, {width, height, depth} > whatever the max is\n>     - x= every texture format\n> - usage flags\n>     - {0, ... each single usage flag}\n>     - x= every texture format\n> - every possible pair of usage flags\n>     - with one common texture format\n> - any other conditions from the spec\n> - ...?\n\nTODO: move destroy tests out of this file"
   },
   {
     "file": [
@@ -594,7 +664,17 @@ export const listing = [
       "encoding",
       "beginRenderPass"
     ],
-    "description": "TODO: check for duplication (render_pass/, etc.), plan, and implement. Notes:\n> - color attachments {zero, one, multiple}\n>     - many different formats (some are non-renderable)\n>     - is a view on a texture with multiple mip levels or array layers\n>     - two attachments use the same view, or views of {intersecting, disjoint} ranges\n>     - {without, with} resolve target\n>         - resolve format compatibility with multisampled format\n>     - {all possible load ops, load color {in range, negative, too large}}\n>     - all possible store ops\n> - depth/stencil attachment\n>     - {unset, all possible formats}\n>     - {all possible {depth, stencil} load ops, load values {in range, negative, too large}}\n>     - all possible {depth, stencil} store ops\n>     - depthReadOnly {t,f}, stencilReadOnly {t,f}"
+    "description": "TODO: check for duplication (render_pass/, etc.), plan, and implement.\nNote possibly a lot of this should be operation tests instead.\nNotes:\n> - color attachments {zero, one, multiple}\n>     - many different formats (some are non-renderable)\n>     - is a view on a texture with multiple mip levels or array layers\n>     - two attachments use the same view, or views of {intersecting, disjoint} ranges\n>     - {without, with} resolve target\n>         - resolve format compatibility with multisampled format\n>     - {all possible load ops, load color {in range, negative, too large}}\n>     - all possible store ops\n> - depth/stencil attachment\n>     - {unset, all possible formats}\n>     - {all possible {depth, stencil} load ops, load values {in range, negative, too large}}\n>     - all possible {depth, stencil} store ops\n>     - depthReadOnly {t,f}, stencilReadOnly {t,f}"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "buffer_texture_copies"
+    ],
+    "description": "copyTextureToBuffer and copyBufferToTexture validation tests not covered by\ncopy_between_linear_data_and_texture or destroyed,*.\n\nTODO: plan"
   },
   {
     "file": [
@@ -612,6 +692,26 @@ export const listing = [
       "validation",
       "encoding",
       "cmds",
+      "copyBufferToBuffer"
+    ],
+    "description": "copyBufferToBuffer tests.\n\nTest Plan:\n* Buffer is valid/invalid\n  - the source buffer is invalid\n  - the destination buffer is invalid\n* Buffer usages\n  - the source buffer is created without GPUBufferUsage::COPY_SRC\n  - the destination buffer is created without GPUBufferUsage::COPY_DEST\n* CopySize\n  - copySize is not a multiple of 4\n  - copySize is 0\n* copy offsets\n  - sourceOffset is not a multiple of 4\n  - destinationOffset is not a multiple of 4\n* Arthimetic overflow\n  - (sourceOffset + copySize) is overflow\n  - (destinationOffset + copySize) is overflow\n* Out of bounds\n  - (sourceOffset + copySize) > size of source buffer\n  - (destinationOffset + copySize) > size of destination buffer\n* Source buffer and destination buffer are the same buffer"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "copyTextureToTexture"
+    ],
+    "description": "copyTextureToTexture tests.\n\nTest Plan: (TODO(jiawei.shao@intel.com): add tests on aspects and 1D/3D textures)\n* the source and destination texture\n  - the {source, destination} texture is {invalid, valid}.\n  - mipLevel {>, =, <} the mipmap level count of the {source, destination} texture.\n  - the source texture is created {with, without} GPUTextureUsage::CopySrc.\n  - the destination texture is created {with, without} GPUTextureUsage::CopyDst.\n* sample count\n  - the sample count of the source texture {is, isn't} equal to the one of the destination texture\n  - when the sample count is greater than 1:\n    - it {is, isn't} a copy of the whole subresource of the source texture.\n    - it {is, isn't} a copy of the whole subresource of the destination texture.\n* texture format\n  - the format of the source texture {is, isn't} equal to the one of the destination texture.\n    - including: depth24plus-stencil8 to/from {depth24plus, stencil8}.\n  - for each depth and/or stencil format: a copy between two textures with same format:\n    - it {is, isn't} a copy of the whole subresource of the {source, destination} texture.\n* copy ranges\n  - if the texture dimension is 2D:\n    - (srcOrigin.x + copyExtent.width) {>, =, <} the width of the subresource size of source\n      textureCopyView.\n    - (srcOrigin.y + copyExtent.height) {>, =, <} the height of the subresource size of source\n      textureCopyView.\n    - (srcOrigin.z + copyExtent.depth) {>, =, <} the depth of the subresource size of source\n      textureCopyView.\n    - (dstOrigin.x + copyExtent.width) {>, =, <} the width of the subresource size of destination\n      textureCopyView.\n    - (dstOrigin.y + copyExtent.height) {>, =, <} the height of the subresource size of destination\n      textureCopyView.\n    - (dstOrigin.z + copyExtent.depth) {>, =, <} the depth of the subresource size of destination\n      textureCopyView.\n* when the source and destination texture are the same one:\n  - the set of source texture subresources {has, doesn't have} overlaps with the one of destination\n    texture subresources."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
       "debug"
     ],
     "description": "API validation test for debug groups and markers\n\nTest Coverage:\n  - For each encoder type (GPUCommandEncoder, GPUComputeEncoder, GPURenderPassEncoder,\n  GPURenderBundleEncoder):\n    - Test that all pushDebugGroup must have a corresponding popDebugGroup\n      - Push and pop counts of 0, 1, and 2 will be used.\n      - An error must be generated for non matching counts.\n    - Test calling pushDebugGroup with empty and non-empty strings.\n    - Test inserting a debug marker with empty and non-empty strings."
@@ -622,19 +722,9 @@ export const listing = [
       "validation",
       "encoding",
       "cmds",
-      "dynamic_render_state"
-    ],
-    "description": "API validation tests for dynamic state commands (setViewport/ScissorRect/BlendColor...).\n\nTODO: ensure existing tests cover these notes. Note many of these may be operation tests instead.\n> - setViewport\n>     - {x, y} = {0, invalid values if any}\n>     - {width, height, minDepth, maxDepth} = {\n>         - least possible value that's valid\n>         - greatest possible negative value that's invalid\n>         - greatest possible positive value that's valid\n>         - least possible positive value that's invalid if any\n>         - }\n>     - minDepth {<, =, >} maxDepth\n> - setScissorRect\n>     - {width, height} = 0\n>     - {x+width, y+height} = attachment size + 1\n> - setBlendColor\n>     - color {slightly, very} out of range\n>     - used with a simple pipeline that {does, doesn't} use it\n> - setStencilReference\n>     - {0, max}\n>     - used with a simple pipeline that {does, doesn't} use it\n\nTODO: setIndexBuffer, setVertexBuffer state (maybe in another file)."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "encoding",
-      "cmds",
       "index_access"
     ],
-    "description": "indexed draws validation tests.\n\nTODO: review and make sure these notes are covered:\n> - indexed draws:\n>     - index access out of bounds (make sure this doesn't overlap with robust access)\n>         - bound index buffer **range** is {exact size, just under exact size} needed for draws with:\n>             - indexCount largeish\n>             - firstIndex {=, >} 0\n>     - x= {drawIndexed, drawIndexedIndirect}"
+    "description": "indexed draws validation tests.\n\nTODO: review and make sure these notes are covered:\n> - indexed draws:\n>     - index access out of bounds (make sure this doesn't overlap with robust access)\n>         - bound index buffer **range** is {exact size, just under exact size} needed for draws with:\n>             - indexCount largeish\n>             - firstIndex {=, >} 0\n>     - x= {drawIndexed, drawIndexedIndirect}\n\nTODO: Since there are no errors here, these should be \"robustness\" operation tests (with multiple\nvalid results)."
   },
   {
     "file": [
@@ -642,9 +732,32 @@ export const listing = [
       "validation",
       "encoding",
       "cmds",
-      "render"
+      "render",
+      "dynamic_state"
     ],
-    "description": "Does **not** test usage scopes (resource_usages/) or programmable pass stuff (programmable_pass).\n\nTODO: check for duplication (render_pass.spec.ts, etc.), plan, and implement. Notes:\n> All x= {render pass, render bundle}\n>\n> - setPipeline\n>     - {valid, invalid} GPURenderPipeline\n> - setIndexBuffer\n>     - buffer is {valid, invalid, destroyed, doesn't have usage)\n>     - (offset, size) is\n>         - (0, 0)\n>         - (0, 1)\n>         - (0, 4)\n>         - (0, 5)\n>         - (0, b.size)\n>         - (min alignment, b.size - 4)\n>         - (4, b.size - 4)\n>         - (b.size - 4, 4)\n>         - (b.size, min size)\n>         - (0, min size), and if that's valid:\n>             - (b.size - min size, min size)\n> - setVertexBuffer\n>     - slot is {0, max, max+1}\n>     - buffer is {valid, invalid, destroyed, doesn't have usage)\n>     - (offset, size) is like above\n> - draws (note bind group state is not tested here):\n>     - various zero-sized draws\n>     - draws with vertexCount not aligned to primitive topology (line-list or triangle-list) (should not error)\n>     - index buffer is {unset, set}\n>     - vertex buffers are {unset, set} (some that the pipeline uses, some it doesn't)\n>       (note: to test this, the shader in the pipeline doesn't have to actually use inputs)\n>     - x= {draw, drawIndexed, drawIndirect, drawIndexedIndirect}\n> - indirect draws:\n>     - indirectBuffer is {valid, invalid, destroyed, doesn't have usage)\n>     - indirectOffset is {\n>         - 0, 1, 4\n>         - b.size - sizeof(args struct)\n>         - b.size - sizeof(args struct) + min alignment (1 or 2 or 4)\n>         - }\n>     - x= {drawIndirect, drawIndexedIndirect}"
+    "description": "API validation tests for dynamic state commands (setViewport/ScissorRect/BlendColor...).\n\nTODO: ensure existing tests cover these notes. Note many of these may be operation tests instead.\n> - setViewport\n>     - {x, y} = {0, invalid values if any}\n>     - {width, height, minDepth, maxDepth} = {\n>         - least possible value that's valid\n>         - greatest possible negative value that's invalid\n>         - greatest possible positive value that's valid\n>         - least possible positive value that's invalid if any\n>         - }\n>     - minDepth {<, =, >} maxDepth\n> - setScissorRect\n>     - {width, height} = 0\n>     - {x+width, y+height} = attachment size + 1\n> - setBlendColor\n>     - color {slightly, very} out of range\n>     - used with a simple pipeline that {does, doesn't} use it\n> - setStencilReference\n>     - {0, max}\n>     - used with a simple pipeline that {does, doesn't} use it"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "render",
+      "other"
+    ],
+    "description": "Does **not** test usage scopes (resource_usages/), programmable pass stuff (programmable,*),\nor state tracking (state_tracking).\n\nTODO: plan and implement. Notes:\n> All x= {render pass, render bundle}\n>\n> - setPipeline\n>     - {valid, invalid} GPURenderPipeline\n> - setIndexBuffer\n>     - buffer is {valid, invalid, doesn't have usage)\n>     - (offset, size) is\n>         - (0, 0)\n>         - (0, 1)\n>         - (0, 4)\n>         - (0, 5)\n>         - (0, b.size)\n>         - (min alignment, b.size - 4)\n>         - (4, b.size - 4)\n>         - (b.size - 4, 4)\n>         - (b.size, min size)\n>         - (0, min size), and if that's valid:\n>             - (b.size - min size, min size)\n> - setVertexBuffer\n>     - slot is {0, max, max+1}\n>     - buffer is {valid, invalid,  doesn't have usage)\n>     - (offset, size) is like above"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "render",
+      "state_tracking"
+    ],
+    "description": "Validation tests for setVertexBuffer/setIndexBuffer state (not validation). See also operation tests."
   },
   {
     "file": [
@@ -655,6 +768,16 @@ export const listing = [
       "render_pass"
     ],
     "description": "Validation tests for render pass encoding.\nDoes **not** test usage scopes (resource_usages/), GPUProgrammablePassEncoder (programmable_pass),\ndynamic state (dynamic_render_state.spec.ts), or GPURenderEncoderBase (render.spec.ts).\n\nTODO:\n- executeBundles:\n    - with {zero, one, multiple} bundles where {zero, one} of them are invalid objects"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "setBindGroup"
+    ],
+    "description": "setBindGroup validation tests.\n\nTODO: merge these notes and implement.\n> (Note: If there are errors with using certain binding types in certain passes, test those in the file for that pass type, not here.)\n>\n> All x= {compute pass, render pass, render bundle}\n>\n> - setBindGroup\n>     - x= {compute pass, render pass}\n>     - index {0, max, max+1}\n>     - GPUBindGroup object {valid, invalid, valid but refers to destroyed {buffer, texture}}\n>     - bind group {with, without} dynamic offsets with {too few, too many} dynamicOffsets entries\n>         - x= {sequence, Uint32Array} overload\n>     - iff minBufferBindingSize is specified, buffer size is correctly validated against it (make sure static offset + dynamic offset are both accounted for)\n> - state tracking (probably separate file)\n>     - x= {compute pass, render pass}\n>     - {null, compatible, incompatible} current pipeline (should have no effect without draw/dispatch)\n>     - setBindGroup in different orders (e.g. 0,1,2 vs 2,0,1)"
   },
   {
     "file": [
@@ -673,17 +796,7 @@ export const listing = [
       "programmable",
       "pipeline_bind_group_compat"
     ],
-    "description": "TODO:\n- test compatibility between bind groups and pipelines\n    - bind groups required by the pipeline layout are required.\n    - bind groups unused by the pipeline layout can be set or not.\n        (Even if e.g. bind groups 0 and 2 are used, but 1 is unused.)\n    - bindGroups[i].layout is \"group-equivalent\" (value-equal) to pipelineLayout.bgls[i].\n    - in the test fn, test once without the dispatch/draw (should always be valid) and once with\n      the dispatch/draw, to make sure the validation happens in dispatch/draw.\n    - x= {dispatch, all draws} (dispatch/draw should be size 0 to make sure validation still happens if no-op)\n    - x= all relevant stages"
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "encoding",
-      "programmable",
-      "setBindGroup"
-    ],
-    "description": "setBindGroup validation tests.\n\nTODO: merge these notes and implement.\n> (Note: If there are errors with using certain binding types in certain passes, test those in the file for that pass type, not here.)\n>\n> All x= {compute pass, render pass, render bundle}\n>\n> - setBindGroup\n>     - x= {compute pass, render pass}\n>     - index {0, max, max+1}\n>     - GPUBindGroup object {valid, invalid, valid but refers to destroyed {buffer, texture}}\n>     - bind group {with, without} dynamic offsets with {too few, too many} dynamicOffsets entries\n>         - x= {sequence, Uint32Array} overload\n>     - {null, compatible, incompatible} current pipeline (should have no effect without draw/dispatch)\n>     - iff minBufferBindingSize is specified, buffer size is correctly validated against it (make sure static offset + dynamic offset are both accounted for)\n>     - setBindGroup in different orders (e.g. 0,1,2 vs 2,0,1)"
+    "description": "TODO:\n- test compatibility between bind groups and pipelines\n    - bind groups required by the pipeline layout are required.\n    - bind groups unused by the pipeline layout can be set or not.\n        (Even if e.g. bind groups 0 and 2 are used, but 1 is unused.)\n    - bindGroups[i].layout is \"group-equivalent\" (value-equal) to pipelineLayout.bgls[i].\n    - in the test fn, test once without the dispatch/draw (should always be valid) and once with\n      the dispatch/draw, to make sure the validation happens in dispatch/draw.\n    - x= {dispatch, all draws} (dispatch/draw should be size 0 to make sure validation still happens if no-op)\n    - x= all relevant stages\n\nTODO: subsume existing test, rewrite fixture as needed."
   },
   {
     "file": [
@@ -750,16 +863,6 @@ export const listing = [
       "api",
       "validation",
       "encoding",
-      "render",
-      "setVertexBuffer"
-    ],
-    "description": "setVertexBuffer validation tests."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "encoding",
       "render_bundle"
     ],
     "description": "TODO:\n- test creating a render bundle, and if it's valid, test that executing it is not an error\n    - color formats {all possible formats} {zero, one, multiple}\n    - depth/stencil format {unset, all possible formats}\n- ?"
@@ -778,7 +881,7 @@ export const listing = [
       "validation",
       "fences"
     ],
-    "description": "fences validation tests.\n\nTODO: Add some more tests/cases (may replace some existing tests), e.g.:\n  For fence values 0 < x < y < z:\n  - initialValue=0, signal(0)\n  - initialValue=x, signal(x)\n  - initialValue=x, signal(y)\n  - initialValue=y, signal(x)\n  - initialValue=x, signal(y), signal(y)\n  - initialValue=x, signal(y), signal(z), wait(z)\n  - initialValue=x, signal(z), signal(y)\n  - initialValue=x, wait(x)\n  - initialValue=y, wait(x)\n  - initialValue=x, wait(y)\n  - initialValue=x, signal(y), wait(x)\n  - initialValue=x, signal(y), wait(y)\n  - etc."
+    "description": "fences validation tests.\n\nTODO: per-test descriptions, make names more succinct\nTODO: fences are removed; replace still-relevant tests with equivalents for (multiple?) queues\nTODO: Add some more tests/cases (may replace some existing tests), e.g.:\n  For fence values 0 < x < y < z:\n  - initialValue=0, signal(0)\n  - initialValue=x, signal(x)\n  - initialValue=x, signal(y)\n  - initialValue=y, signal(x)\n  - initialValue=x, signal(y), signal(y)\n  - initialValue=x, signal(y), signal(z), wait(z)\n  - initialValue=x, signal(z), signal(y)\n  - initialValue=x, wait(x)\n  - initialValue=y, wait(x)\n  - initialValue=x, wait(y)\n  - initialValue=x, signal(y), wait(x)\n  - initialValue=x, signal(y), wait(y)\n  - etc."
   },
   {
     "file": [
@@ -821,7 +924,7 @@ export const listing = [
       "queue",
       "buffer_mapped"
     ],
-    "description": "Tests for map-state of mappable buffers used in submitted command buffers.\n\n- x= just before queue op, buffer in {BufferMapStatesToTest}\n- x= in every possible place for mappable buffer:\n  {writeBuffer, copyB2B {src,dst}, copyB2T, copyT2B, ..?}\n\nTODO: implement"
+    "description": "Tests for map-state of mappable buffers used in submitted command buffers.\n\n- x= just before queue op, buffer in {BufferMapStatesToTest}\n- x= in every possible place for mappable buffer:\n  {submit, writeBuffer, copyB2B {src,dst}, copyB2T, copyT2B, ..?}\n\nTODO: generalize existing test"
   },
   {
     "file": [
@@ -830,7 +933,7 @@ export const listing = [
       "queue",
       "copyImageBitmapToTexture"
     ],
-    "description": "copyImageBitmapToTexture Validation Tests in Queue.\nTODO: Should this be the same file as, or next to, web_platform/copyImageBitmapToTexture.spec.ts?\n\nTODO: Split this test plan per-test.\n\nTest Plan:\n- For source.imageBitmap:\n  - imageBitmap generated from ImageData:\n    - Check that an error is generated when imageBitmap is closed.\n\n- For destination.texture:\n  - For 2d destination textures:\n    - Check that an error is generated when texture is in destroyed state.\n    - Check that an error is generated when texture is an error texture.\n    - Check that an error is generated when texture is created without usage COPY_DST.\n    - Check that an error is generated when sample count is not 1.\n    - Check that an error is generated when mipLevel is too large.\n    - Check that an error is generated when texture format is not valid.\n\n- For copySize:\n  - Noop copy shouldn't throw any exception or return any validation error.\n  - Check that an error is generated when destination.texture.origin + copySize is too large.\n\nTODO: 1d, 3d texture and 2d array textures."
+    "description": "copyImageBitmapToTexture Validation Tests in Queue.\nTODO: Should this be the same file as, or next to, web_platform/copyImageBitmapToTexture.spec.ts?\n\nTODO: Split this test plan per-test.\n\nTest Plan:\n- For source.imageBitmap:\n  - imageBitmap generated from ImageData:\n    - Check that an error is generated when imageBitmap is closed.\n\n- For destination.texture:\n  - For 2d destination textures:\n    - Check that an error is generated when texture is in destroyed state.\n    - Check that an error is generated when texture is an error texture.\n    - Check that an error is generated when texture is created without usage COPY_DST.\n    - Check that an error is generated when sample count is not 1.\n    - Check that an error is generated when mipLevel is too large.\n    - Check that an error is generated when texture format is not valid.\n\n- For copySize:\n  - No-op copy shouldn't throw any exception or return any validation error.\n  - Check that an error is generated when destination.texture.origin + copySize is too large.\n\nTODO: copying into slices of 2d array textures. 1d and 3d as well if they're not invalid."
   },
   {
     "file": [
@@ -840,7 +943,7 @@ export const listing = [
       "destroyed",
       "buffer"
     ],
-    "description": "Tests using a destroyed buffer on a queue.\n\n- used in {writeBuffer,\n  setBindGroup, copyB2B {src,dst}, copyB2T, copyT2B,\n  setIndexBuffer, {draw,dispatch}Indirect, ..?}\n- x= if applicable, {in pass, in bundle}\n- x= {destroyed, not destroyed (control case)}\n\nTODO: implement. (Search for other places some of these cases may have already been tested.)"
+    "description": "Tests using a destroyed buffer on a queue.\n\n- used in {writeBuffer,\n  setBindGroup, copyB2B {src,dst}, copyB2T, copyT2B,\n  setIndexBuffer, {draw,dispatch}Indirect, ..?}\n- x= if applicable, {in pass, in bundle}\n- x= {destroyed, not destroyed (control case)}\n\nTODO: implement. (Search for other places some of these cases may have already been tested.)\nConsider whether these tests should be distributed throughout the suite, instead of centralized."
   },
   {
     "file": [
@@ -850,7 +953,7 @@ export const listing = [
       "destroyed",
       "query_set"
     ],
-    "description": "Tests using a destroyed query set on a queue.\n\n- used in {resolveQuerySet, timestamp {compute, render, non-pass},\n    pipeline statistics {compute, render}, occlusion}\n- x= {destroyed, not destroyed (control case)}\n\nTODO: implement. (Search for other places some of these cases may have already been tested.)"
+    "description": "Tests using a destroyed query set on a queue.\n\n- used in {resolveQuerySet, timestamp {compute, render, non-pass},\n    pipeline statistics {compute, render}, occlusion}\n- x= {destroyed, not destroyed (control case)}\n\nTODO: implement. (Search for other places some of these cases may have already been tested.)\nConsider whether these tests should be distributed throughout the suite, instead of centralized."
   },
   {
     "file": [
@@ -860,7 +963,7 @@ export const listing = [
       "destroyed",
       "texture"
     ],
-    "description": "Tests using a destroyed texture on a queue.\n\n- used in {writeTexture,\n  setBindGroup, copyT2T {src,dst}, copyB2T, copyT2B, copyImageBitmapToTexture,\n  color attachment {0,>0}, {D,S,DS} attachment, ..?}\n- x= if applicable, {in pass, in bundle}\n- x= {destroyed, not destroyed (control case)}\n\nTODO: implement. (Search for other places some of these cases may have already been tested.)"
+    "description": "Tests using a destroyed texture on a queue.\n\n- used in {writeTexture,\n  setBindGroup, copyT2T {src,dst}, copyB2T, copyT2B, copyImageBitmapToTexture,\n  color attachment {0,>0}, {D,S,DS} attachment, ..?}\n- x= if applicable, {in pass, in bundle}\n- x= {destroyed, not destroyed (control case)}\n\nTODO: implement. (Search for other places some of these cases may have already been tested.)\nConsider whether these tests should be distributed throughout the suite, instead of centralized."
   },
   {
     "file": [
@@ -869,23 +972,7 @@ export const listing = [
       "queue",
       "writeBuffer"
     ],
-    "description": "Tests writeBuffer validation.\n\n- buffer missing usage flag\n- bufferOffset {ok, unaligned, too large for buffer}\n- dataOffset {ok, too large for data}\n- buffer size {ok, too small for copy}\n- data size {ok, too small for copy}\n- size {aligned, unaligned}\n- size unspecified; default {ok, too large for buffer}\n\nNote: destroyed buffer is tested in destroyed/.\n\nTODO: implement."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "queue_submit"
-    ],
-    "description": "queue submit validation tests."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "render_pass"
-    ],
-    "description": "render pass validation tests."
+    "description": "Tests writeBuffer validation.\n\n- buffer missing usage flag\n- bufferOffset {ok, unaligned, too large for buffer}\n- dataOffset {ok, too large for data}\n- buffer size {ok, too small for copy}\n- data size {ok, too small for copy}\n- size {aligned, unaligned}\n- size unspecified; default {ok, too large for buffer}\n\nNote: destroyed buffer is tested in destroyed/.\n\nTODO: implement usage flag validation.\nTODO: validate large write sizes that may overflow."
   },
   {
     "file": [
@@ -902,7 +989,7 @@ export const listing = [
       "render_pass",
       "resolve"
     ],
-    "description": "API Validation Tests for RenderPass Resolve.\n\n  Test Coverage:\n    - When resolveTarget is not null:\n      - Test that the colorAttachment is multisampled:\n        - A single sampled colorAttachment should generate an error.\n      - Test that the resolveTarget is single sampled:\n        - A multisampled resolveTarget should generate an error.\n      - Test that the resolveTarget has usage OUTPUT_ATTACHMENT:\n        - A resolveTarget without usage OUTPUT_ATTACHMENT should generate an error.\n      - Test that the resolveTarget's texture view describes a single subresource:\n        - A resolveTarget texture view with base mip {0, base mip > 0} and mip count of 1 should be\n          valid.\n          - An error should be generated when the resolve target view mip count is not 1 and base\n            mip is {0, base mip > 0}.\n        - A resolveTarget texture view with base array layer {0, base array layer > 0} and array\n          layer count of 1 should be valid.\n          - An error should be generated when the resolve target view array layer count is not 1 and\n            base array layer is {0, base array layer > 0}.\n      - Test that the resolveTarget's format is the same as the colorAttachment:\n        - An error should be generated when the resolveTarget's format does not match the\n          colorAttachment's format.\n      - Test that the resolveTarget's size is the same the colorAttachment:\n        - An error should be generated when the resolveTarget's height or width are not equal to\n          the colorAttachment's height or width."
+    "description": "Validation tests for render pass resolve."
   },
   {
     "file": [
@@ -919,7 +1006,16 @@ export const listing = [
       "validation",
       "render_pass_descriptor"
     ],
-    "description": "render pass descriptor validation tests."
+    "description": "render pass descriptor validation tests.\n\nTODO: per-test descriptions, make test names more succinct\nTODO: review for completeness"
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "resource_usages",
+      "buffer"
+    ],
+    "readme": "TODO: look at texture,*"
   },
   {
     "file": [
@@ -929,7 +1025,7 @@ export const listing = [
       "texture",
       "in_pass_encoder"
     ],
-    "description": "Texture Usages Validation Tests in Render Pass and Compute Pass.\n\nTest Coverage:\n  - For each combination of two texture usages:\n    - For various subresource ranges (different mip levels or array layers) that overlap a given\n      subresources or not for color formats:\n      - For various places that resources are used, for example, used in bundle or used in render\n        pass directly.\n        - Check that an error is generated when read-write or write-write usages are binding to the\n          same texture subresource. Otherwise, no error should be generated. One exception is race\n          condition upon two writeonly-storage-texture usages, which is valid.\n\n  - For each combination of two texture usages:\n    - For various aspects (all, depth-only, stencil-only) that overlap a given subresources or not\n      for depth/stencil formats:\n      - Check that an error is generated when read-write or write-write usages are binding to the\n        same aspect. Otherwise, no error should be generated.\n\n  - Test combinations of two shader stages:\n    - Texture usages in bindings with invisible shader stages should be validated. Invisible shader\n      stages include shader stage with visibility none, compute shader stage in render pass, and\n      vertex/fragment shader stage in compute pass.\n\n  - Tests replaced bindings:\n    - Texture usages via bindings replaced by another setBindGroup() upon the same bindGroup index\n      in render pass should be validated. However, replaced bindings should not be validated in\n      compute pass.\n\n  - Test texture usages in bundle:\n    - Texture usages in bundle should be validated if that bundle is executed in the current scope.\n\n  - Test texture usages with unused bindings:\n    - Texture usages should be validated even its bindings is not used in pipeline.\n\n  - Test texture usages validation scope:\n    - Texture usages should be validated per each render pass. And they should be validated per each\n      dispatch call in compute."
+    "description": "Texture Usages Validation Tests in Render Pass and Compute Pass.\n\nTODO: description per test\n\nTest Coverage:\n  - For each combination of two texture usages:\n    - For various subresource ranges (different mip levels or array layers) that overlap a given\n      subresources or not for color formats:\n      - For various places that resources are used, for example, used in bundle or used in render\n        pass directly.\n        - Check that an error is generated when read-write or write-write usages are binding to the\n          same texture subresource. Otherwise, no error should be generated. One exception is race\n          condition upon two writeonly-storage-texture usages, which is valid.\n\n  - For each combination of two texture usages:\n    - For various aspects (all, depth-only, stencil-only) that overlap a given subresources or not\n      for depth/stencil formats:\n      - Check that an error is generated when read-write or write-write usages are binding to the\n        same aspect. Otherwise, no error should be generated.\n\n  - Test combinations of two shader stages:\n    - Texture usages in bindings with invisible shader stages should be validated. Invisible shader\n      stages include shader stage with visibility none, compute shader stage in render pass, and\n      vertex/fragment shader stage in compute pass.\n\n  - Tests replaced bindings:\n    - Texture usages via bindings replaced by another setBindGroup() upon the same bindGroup index\n      in render pass should be validated. However, replaced bindings should not be validated in\n      compute pass.\n\n  - Test texture usages in bundle:\n    - Texture usages in bundle should be validated if that bundle is executed in the current scope.\n\n  - Test texture usages with unused bindings:\n    - Texture usages should be validated even its bindings is not used in pipeline.\n\n  - Test texture usages validation scope:\n    - Texture usages should be validated per each render pass. And they should be validated per each\n      dispatch call in compute."
   },
   {
     "file": [
@@ -1067,6 +1163,14 @@ export const listing = [
     "file": [
       "web_platform",
       "canvas",
+      "configureSwapChain"
+    ],
+    "description": "Tests for GPUCanvasContext.configureSwapChain.\n\nTODO: Test all options of configureSwapChain."
+  },
+  {
+    "file": [
+      "web_platform",
+      "canvas",
       "context_creation"
     ],
     "description": ""
@@ -1074,9 +1178,25 @@ export const listing = [
   {
     "file": [
       "web_platform",
+      "canvas",
+      "getCurrentTexture"
+    ],
+    "description": "Tests for GPUSwapChain.getCurrentTexture."
+  },
+  {
+    "file": [
+      "web_platform",
+      "canvas",
+      "getSwapChainPreferredFormat"
+    ],
+    "description": "Tests for GPUCanvasContext.getSwapChainPreferredFormat."
+  },
+  {
+    "file": [
+      "web_platform",
       "copyImageBitmapToTexture"
     ],
-    "description": "copyImageBitmapToTexture from various sources."
+    "description": "copyImageBitmapToTexture from ImageBitmaps created from various sources.\n\nTODO: additional sources"
   },
   {
     "file": [

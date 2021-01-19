@@ -30,6 +30,8 @@ TODO: review existing tests and merge with this plan:
 >     - with one common texture format
 > - any other conditions from the spec
 > - ...?
+
+TODO: move destroy tests out of this file
 `;import { poptions } from '../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { kAllTextureFormats, kAllTextureFormatInfo } from '../../capability_info.js';

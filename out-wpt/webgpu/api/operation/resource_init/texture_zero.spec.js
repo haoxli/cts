@@ -1,6 +1,13 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ export const description = 'Test uninitialized textures are initialized to zero when read.'; // TODO: This is a test file, it probably shouldn't export anything.
+ **/ export const description = `
+Test uninitialized textures are initialized to zero when read.
+
+TODO:
+- 1d, 3d
+- test by sampling depth/stencil
+- test by copying out of stencil
+`; // TODO: This is a test file, it probably shouldn't export anything.
 // Everything that's exported should be moved to another file.
 
 import { params, poptions, pbool } from '../../../../common/framework/params_builder.js';

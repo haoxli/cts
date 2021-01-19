@@ -1,7 +1,9 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ export const description = `
-copyImageBitmapToTexture from various sources.
+copyImageBitmapToTexture from ImageBitmaps created from various sources.
+
+TODO: additional sources
 `;
 import { poptions, params } from '../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../common/framework/test_group.js';

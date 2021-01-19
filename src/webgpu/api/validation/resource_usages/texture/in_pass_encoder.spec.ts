@@ -1,6 +1,8 @@
 export const description = `
 Texture Usages Validation Tests in Render Pass and Compute Pass.
 
+TODO: description per test
+
 Test Coverage:
   - For each combination of two texture usages:
     - For various subresource ranges (different mip levels or array layers) that overlap a given
@@ -922,10 +924,10 @@ g.test('unused_bindings_in_pipeline')
     // TODO: revisit the shader code once 'image' can be supported in wgsl.
     const wgslFragment = pp`
       ${pp._if(useBindGroup0)}
-      [[set(0), binding(0)]] var<image> image0 : texture_storage_ro_2d<rgba8unorm>;
+      [[set(0), binding(0)]] var<image> image0 : [[access(read)]] texture_storage_2d<rgba8unorm>;
       ${pp._endif}
       ${pp._if(useBindGroup1)}
-      [[set(1), binding(0)]] var<image> image1 : texture_storage_ro_2d<rgba8unorm>;
+      [[set(1), binding(0)]] var<image> image1 : [[access(read)]] texture_storage_2d<rgba8unorm>;
       ${pp._endif}
       [[stage(fragment)]] fn main() -> void {}
     `;
@@ -933,10 +935,10 @@ g.test('unused_bindings_in_pipeline')
     // TODO: revisit the shader code once 'image' can be supported in wgsl.
     const wgslCompute = pp`
       ${pp._if(useBindGroup0)}
-      [[set(0), binding(0)]] var<image> image0 : texture_storage_ro_2d<rgba8unorm>;
+      [[set(0), binding(0)]] var<image> image0 : [[access(read)]] texture_storage_2d<rgba8unorm>;
       ${pp._endif}
       ${pp._if(useBindGroup1)}
-      [[set(1), binding(0)]] var<image> image1 : texture_storage_ro_2d<rgba8unorm>;
+      [[set(1), binding(0)]] var<image> image1 : [[access(read)]] texture_storage_2d<rgba8unorm>;
       ${pp._endif}
       [[stage(compute)]] fn main() -> void {}
     `;

@@ -27,6 +27,10 @@ export class TestQueryMultiFile {
     this.filePathParts = [...file];
   }
 
+  get depthInLevel() {
+    return this.filePathParts.length;
+  }
+
   toString() {
     return encodeURIComponentSelectively(this.toStringHelper().join(kBigSeparator));
   }
@@ -50,6 +54,10 @@ export class TestQueryMultiTest extends TestQueryMultiFile {
     super(suite, file);
     assert(file.length > 0, 'multi-test (or finer) query must have file-path');
     this.testPathParts = [...test];
+  }
+
+  get depthInLevel() {
+    return this.testPathParts.length;
   }
 
   toStringHelper() {
@@ -78,6 +86,10 @@ export class TestQueryMultiCase extends TestQueryMultiTest {
     this.params = { ...params };
   }
 
+  get depthInLevel() {
+    return Object.keys(this.params).length;
+  }
+
   toStringHelper() {
     const paramsParts = stringifyPublicParams(this.params);
     return [
@@ -97,6 +109,10 @@ export class TestQueryMultiCase extends TestQueryMultiTest {
 export class TestQuerySingleCase extends TestQueryMultiCase {
   level = 4;
   isMultiCase = false;
+
+  get depthInLevel() {
+    return 0;
+  }
 
   toStringHelper() {
     const paramsParts = stringifyPublicParams(this.params);
