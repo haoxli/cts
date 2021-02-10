@@ -226,7 +226,7 @@ class CopyBetweenLinearDataAndTextureTest extends GPUTest {
       appliedCheckSize
     );
 
-    this.device.defaultQueue.submit([encoder.finish()]);
+    this.device.queue.submit([encoder.finish()]);
   }
 
   /** Put data into a part of the texture with an appropriate method. */
@@ -263,7 +263,7 @@ class CopyBetweenLinearDataAndTextureTest extends GPUTest {
 
     switch (method) {
       case 'WriteTexture': {
-        this.device.defaultQueue.writeTexture(
+        this.device.queue.writeTexture(
           appliedCopyView,
           partialData,
           appliedDataLayout,
@@ -289,7 +289,7 @@ class CopyBetweenLinearDataAndTextureTest extends GPUTest {
           appliedCopySize
         );
 
-        this.device.defaultQueue.submit([encoder.finish()]);
+        this.device.queue.submit([encoder.finish()]);
 
         break;
       }
@@ -367,7 +367,7 @@ class CopyBetweenLinearDataAndTextureTest extends GPUTest {
       mipSize
     );
 
-    this.device.defaultQueue.submit([encoder.finish()]);
+    this.device.queue.submit([encoder.finish()]);
 
     return buffer;
   }

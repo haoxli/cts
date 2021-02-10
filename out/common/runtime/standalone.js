@@ -243,6 +243,17 @@ onChange)
   attr('alt', 'Open').
   attr('title', 'Open').
   appendTo(div);
+  if ('testCreationStack' in n && n.testCreationStack) {
+    $('<button>').
+    addClass('testcaselogbtn').
+    attr('alt', 'Log test creation stack to console').
+    attr('title', 'Log test creation stack to console').
+    appendTo(div).
+    on('click', () => {
+
+      console.log(n.testCreationStack);
+    });
+  }
   const nodetitle = $('<div>').addClass('nodetitle').appendTo(div);
   $('<input>').
   attr('type', 'text').

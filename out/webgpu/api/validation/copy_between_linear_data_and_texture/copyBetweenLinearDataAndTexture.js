@@ -1,7 +1,9 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import { poptions } from '../../../../common/framework/params_builder.js';import { assert } from '../../../../common/framework/util/util.js';import { kSizedTextureFormatInfo } from '../../../capability_info.js';
+import { align } from '../../../util/math.js';
 import { ValidationTest } from '../validation_test.js';
+
 
 export const kAllTestMethods = [
 'WriteTexture',
@@ -16,25 +18,60 @@ export class CopyBetweenLinearDataAndTextureTest extends ValidationTest {
     return info.bytesPerBlock * copyWidth / info.blockWidth;
   }
 
-  requiredBytesInCopy(
+  /**
+     * Validate a copy and compute the number of bytes it needs. If the copy is invalid, computes a
+     * guess assuming `bytesPerRow` and `rowsPerImage` should be optimal.
+     */
+  dataBytesForCopy(
   layout,
   format,
-  copyExtent)
-  {
+  copyExtent,
+  { method })
+  {var _layout$offset;
     const info = kSizedTextureFormatInfo[format];
-    assert(layout.rowsPerImage % info.blockHeight === 0);
-    assert(copyExtent.height % info.blockHeight === 0);
     assert(copyExtent.width % info.blockWidth === 0);
-    if (copyExtent.width === 0 || copyExtent.height === 0 || copyExtent.depth === 0) {
-      return 0;
-    } else {
-      const texelBlockRowsPerImage = layout.rowsPerImage / info.blockHeight;
-      const bytesPerImage = layout.bytesPerRow * texelBlockRowsPerImage;
-      const bytesInLastSlice =
-      layout.bytesPerRow * (copyExtent.height / info.blockHeight - 1) +
-      copyExtent.width / info.blockWidth * info.bytesPerBlock;
-      return bytesPerImage * (copyExtent.depth - 1) + bytesInLastSlice;
+    const widthInBlocks = copyExtent.width / info.blockWidth;
+    assert(copyExtent.height % info.blockHeight === 0);
+    const heightInBlocks = copyExtent.height / info.blockHeight;
+    const bytesInLastRow = widthInBlocks * info.bytesPerBlock;
+
+    let valid = true;
+    const offset = (_layout$offset = layout.offset) !== null && _layout$offset !== void 0 ? _layout$offset : 0;
+    if (method !== 'WriteTexture') {
+      if (offset % info.bytesPerBlock !== 0) valid = false;
+      if (layout.bytesPerRow && layout.bytesPerRow % 256 !== 0) valid = false;
     }
+    if (layout.bytesPerRow !== undefined && bytesInLastRow > layout.bytesPerRow) valid = false;
+    if (layout.rowsPerImage !== undefined && heightInBlocks > layout.rowsPerImage) valid = false;
+
+    let requiredBytesInCopy = 0;
+    {var _bytesPerRow, _rowsPerImage;
+      let { bytesPerRow, rowsPerImage } = layout;
+
+      // If heightInBlocks > 1, layout.bytesPerRow must be specified.
+      if (heightInBlocks > 1 && bytesPerRow === undefined) valid = false;
+      // If copyExtent.depth > 1, layout.bytesPerRow and layout.rowsPerImage must be specified.
+      if (copyExtent.depth > 1 && rowsPerImage === undefined) valid = false;
+      // If specified, layout.bytesPerRow must be greater than or equal to bytesInLastRow.
+      if (bytesPerRow !== undefined && bytesPerRow < bytesInLastRow) valid = false;
+      // If specified, layout.rowsPerImage must be greater than or equal to heightInBlocks.
+      if (rowsPerImage !== undefined && rowsPerImage < heightInBlocks) valid = false;
+
+      (_bytesPerRow = bytesPerRow) !== null && _bytesPerRow !== void 0 ? _bytesPerRow : bytesPerRow = align(info.bytesPerBlock * widthInBlocks, 256);
+      (_rowsPerImage = rowsPerImage) !== null && _rowsPerImage !== void 0 ? _rowsPerImage : rowsPerImage = heightInBlocks;
+
+      if (copyExtent.depth > 1) {
+        const bytesPerImage = bytesPerRow * rowsPerImage;
+        const bytesBeforeLastImage = bytesPerImage * (copyExtent.depth - 1);
+        requiredBytesInCopy += bytesBeforeLastImage;
+      }
+      if (copyExtent.depth > 0) {
+        if (heightInBlocks > 1) requiredBytesInCopy += bytesPerRow * (heightInBlocks - 1);
+        if (heightInBlocks > 0) requiredBytesInCopy += bytesInLastRow;
+      }
+    }
+
+    return { minDataSize: offset + requiredBytesInCopy, valid };
   }
 
   testRun(
@@ -42,18 +79,25 @@ export class CopyBetweenLinearDataAndTextureTest extends ValidationTest {
   textureDataLayout,
   size,
   {
-    dataSize,
     method,
+    dataSize,
     success,
-    submit = false // If submit is true, the validaton error is expected to come from the submit and encoding should succeed.
-  })
+    submit = false })
+
+
+
+
+
+
+
+
   {
     switch (method) {
       case 'WriteTexture':{
           const data = new Uint8Array(dataSize);
 
           this.expectValidationError(() => {
-            this.device.defaultQueue.writeTexture(textureCopyView, data, textureDataLayout, size);
+            this.device.queue.writeTexture(textureCopyView, data, textureDataLayout, size);
           }, !success);
 
           break;
@@ -70,7 +114,7 @@ export class CopyBetweenLinearDataAndTextureTest extends ValidationTest {
           if (submit) {
             const cmd = encoder.finish();
             this.expectValidationError(() => {
-              this.device.defaultQueue.submit([cmd]);
+              this.device.queue.submit([cmd]);
             }, !success);
           } else {
             this.expectValidationError(() => {
@@ -92,7 +136,7 @@ export class CopyBetweenLinearDataAndTextureTest extends ValidationTest {
           if (submit) {
             const cmd = encoder.finish();
             this.expectValidationError(() => {
-              this.device.defaultQueue.submit([cmd]);
+              this.device.queue.submit([cmd]);
             }, !success);
           } else {
             this.expectValidationError(() => {

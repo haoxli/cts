@@ -11,7 +11,7 @@ export const g = makeTestGroup(GPUTest);
 g.test('empty').fn(async t => {
   const encoder = t.device.createCommandEncoder();
   const cmd = encoder.finish();
-  t.device.defaultQueue.submit([cmd]);
+  t.device.queue.submit([cmd]);
 });
 
 g.test('b2t2b').fn(async t => {
@@ -50,7 +50,7 @@ g.test('b2t2b').fn(async t => {
     { width: 1, height: 1, depth: 1 }
   );
 
-  t.device.defaultQueue.submit([encoder.finish()]);
+  t.device.queue.submit([encoder.finish()]);
 
   t.expectContents(dst, data);
 });
@@ -100,7 +100,7 @@ g.test('b2t2t2b').fn(async t => {
     { width: 1, height: 1, depth: 1 }
   );
 
-  t.device.defaultQueue.submit([encoder.finish()]);
+  t.device.queue.submit([encoder.finish()]);
 
   t.expectContents(dst, data);
 });

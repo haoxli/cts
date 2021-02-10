@@ -410,7 +410,7 @@ export const listing = [
       "sampling",
       "anisotropy"
     ],
-    "description": "Tests the behavior of anisotropic filtering.\n\nTODO:\nNote that anisotropic filtering is never guaranteed to occur, but we might be able to test some\nthings. If there are no guarantees we can issue warnings instead of failures. Ideas:\n  - No *more* than the provided maxAnisotropy samples are used, by testing how many unique\n    sample values come out of the sample operation.\n  - Result with and without anisotropic filtering is different (if the hardware supports it).\n  - Check anisotropy is done in the correct direciton (by having a 2D gradient and checking we get\n    more of the color in the correct direction).\nMore generally:\n  - Test very large and very small values (even if tests are very weak)."
+    "description": "Tests the behavior of anisotropic filtering.\n\nTODO:\nNote that anisotropic filtering is never guaranteed to occur, but we might be able to test some\nthings. If there are no guarantees we can issue warnings instead of failures. Ideas:\n  - No *more* than the provided maxAnisotropy samples are used, by testing how many unique\n    sample values come out of the sample operation.\n  - Check anisotropy is done in the correct direciton (by having a 2D gradient and checking we get\n    more of the color in the correct direction)."
   },
   {
     "file": [
@@ -555,6 +555,16 @@ export const listing = [
       "api",
       "validation",
       "capability_checks",
+      "features",
+      "queries"
+    ],
+    "description": ""
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
       "limits"
     ],
     "readme": "Test everything that shouldn't be valid without a higher-than-specified limit.\n\n- x= that limit {default, max supported (if different), lower than default (TODO: if allowed)}\n\nOne file for each limit name.\n\nTODO: implement"
@@ -608,14 +618,6 @@ export const listing = [
       "createPipelineLayout"
     ],
     "description": "createPipelineLayout validation tests.\n\nTODO: review existing tests, write descriptions, and make sure tests are complete."
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "createQuerySet"
-    ],
-    "description": "Tests for validation inside createQuerySet.\n\nTODO"
   },
   {
     "file": [
@@ -704,7 +706,7 @@ export const listing = [
       "cmds",
       "copyTextureToTexture"
     ],
-    "description": "copyTextureToTexture tests.\n\nTest Plan: (TODO(jiawei.shao@intel.com): add tests on aspects and 1D/3D textures)\n* the source and destination texture\n  - the {source, destination} texture is {invalid, valid}.\n  - mipLevel {>, =, <} the mipmap level count of the {source, destination} texture.\n  - the source texture is created {with, without} GPUTextureUsage::CopySrc.\n  - the destination texture is created {with, without} GPUTextureUsage::CopyDst.\n* sample count\n  - the sample count of the source texture {is, isn't} equal to the one of the destination texture\n  - when the sample count is greater than 1:\n    - it {is, isn't} a copy of the whole subresource of the source texture.\n    - it {is, isn't} a copy of the whole subresource of the destination texture.\n* texture format\n  - the format of the source texture {is, isn't} equal to the one of the destination texture.\n    - including: depth24plus-stencil8 to/from {depth24plus, stencil8}.\n  - for each depth and/or stencil format: a copy between two textures with same format:\n    - it {is, isn't} a copy of the whole subresource of the {source, destination} texture.\n* copy ranges\n  - if the texture dimension is 2D:\n    - (srcOrigin.x + copyExtent.width) {>, =, <} the width of the subresource size of source\n      textureCopyView.\n    - (srcOrigin.y + copyExtent.height) {>, =, <} the height of the subresource size of source\n      textureCopyView.\n    - (srcOrigin.z + copyExtent.depth) {>, =, <} the depth of the subresource size of source\n      textureCopyView.\n    - (dstOrigin.x + copyExtent.width) {>, =, <} the width of the subresource size of destination\n      textureCopyView.\n    - (dstOrigin.y + copyExtent.height) {>, =, <} the height of the subresource size of destination\n      textureCopyView.\n    - (dstOrigin.z + copyExtent.depth) {>, =, <} the depth of the subresource size of destination\n      textureCopyView.\n* when the source and destination texture are the same one:\n  - the set of source texture subresources {has, doesn't have} overlaps with the one of destination\n    texture subresources."
+    "description": "copyTextureToTexture tests.\n\nTest Plan: (TODO(jiawei.shao@intel.com): add tests on 1D/3D textures)\n* the source and destination texture\n  - the {source, destination} texture is {invalid, valid}.\n  - mipLevel {>, =, <} the mipmap level count of the {source, destination} texture.\n  - the source texture is created {with, without} GPUTextureUsage::CopySrc.\n  - the destination texture is created {with, without} GPUTextureUsage::CopyDst.\n* sample count\n  - the sample count of the source texture {is, isn't} equal to the one of the destination texture\n  - when the sample count is greater than 1:\n    - it {is, isn't} a copy of the whole subresource of the source texture.\n    - it {is, isn't} a copy of the whole subresource of the destination texture.\n* texture format\n  - the format of the source texture {is, isn't} equal to the one of the destination texture.\n    - including: depth24plus-stencil8 to/from {depth24plus, stencil8}.\n  - for each depth and/or stencil format: a copy between two textures with same format:\n    - it {is, isn't} a copy of the whole subresource of the {source, destination} texture.\n* copy ranges\n  - if the texture dimension is 2D:\n    - (srcOrigin.x + copyExtent.width) {>, =, <} the width of the subresource size of source\n      textureCopyView.\n    - (srcOrigin.y + copyExtent.height) {>, =, <} the height of the subresource size of source\n      textureCopyView.\n    - (srcOrigin.z + copyExtent.depth) {>, =, <} the depth of the subresource size of source\n      textureCopyView.\n    - (dstOrigin.x + copyExtent.width) {>, =, <} the width of the subresource size of destination\n      textureCopyView.\n    - (dstOrigin.y + copyExtent.height) {>, =, <} the height of the subresource size of destination\n      textureCopyView.\n    - (dstOrigin.z + copyExtent.depth) {>, =, <} the depth of the subresource size of destination\n      textureCopyView.\n* when the source and destination texture are the same one:\n  - the set of source texture subresources {has, doesn't have} overlaps with the one of destination\n    texture subresources."
   },
   {
     "file": [
@@ -905,6 +907,15 @@ export const listing = [
       "api",
       "validation",
       "query_set",
+      "create"
+    ],
+    "description": "Tests for validation in createQuerySet."
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "query_set",
       "destroy"
     ],
     "description": "Destroying a query set more than once is allowed."
@@ -1088,7 +1099,7 @@ export const listing = [
       "validation",
       "vertex_state"
     ],
-    "description": "vertexState validation tests.\n\nTODO: review existing tests, write descriptions, and make sure tests are complete.\n      Make sure the following is covered.\n> - In createRenderPipeline():\n> - An attribute is unused by the shader\n> - If invalid, test these (if valid, they should be operation tests instead):\n>     - Vertex buffer with zero attributes\n>     - Overlapping attributes\n>         - Verify correct sizing of every vertex format\n>     - Overlapping vertex buffer elements (an attribute offset + its size > arrayStride)\n>     - Shader tries to use an attribute location that's not bound\n>     - Alignment constraints on attributes, if any\n>     - Alignment constraints on arrayStride, if any"
+    "description": "vertexState validation tests.\n\nTODO: implement the combinations tests below.\n\nTest the number of vertex buffers allowed:\n - For buffers = 0, 1, limit, limit + 1\n  - Test using empty vertex buffers except the last one with 0 or 1 element\n   - Test should fail IFF buffers > limit\n(note this also tests that empty vertex buffers are allowed)\n\nTest the limit of attributes:\n - For attributePerBuffer = 0, 1, 4:\n  - For totalAttribs = 4, limit, limit + 1\n   - Generate buffers with attribsPerBuffer until we reach totalAttribs (or complete the last one to reach it)\n    - Test should fail IFF totalAttribs > limit\n\nTest the shaderLocation must be unique:\n - TBD based on answer to https://github.com/gpuweb/gpuweb/issues/1418\n\nTest each declaration in the shader must have an attribute with that shaderLocation:\n - For each shaderLocation TBD:\n  - For buffersIndex = 0 1, limit-1\n   - For attribute index = 0, 1, 4\n    - Create a vertexState with/without the attribute with that shader location at buffer[bufferIndex].attribs[attribIndex]\n     - Check error IFF vertexState doesn't have the shaderLocation\n\nTest each declaration must have a format compatible with the attribute:\n - For each vertex format\n  - For each type of shader declaration\n   - Check error IFF shader declaration not compatible with the attribute's format.\n\nOne-off test that many attributes can overlap.\n\nAll tests below are for a vertex buffer index 0, 1, limit-1.\n\nTest the max stride check:\n - For stride = 0, 4, 256, limit - 4, limit, limit +1\n  - Check error IFF stride > limit\n\nTest the stride alignment check:\n - For stride = 0, 2, 4, limit -4, limit -2, limit:\n  - Check error IFF stride not aligned to 4\n\nTest check that the end attribute must be contained in the stride:\n - For stride = 0 (special case), 4, 128, limit\n   - For each vertex format\n    - For offset stride, stride - componentsize(format), stride - sizeof(format), stride - sizeof(format) + componentsize(format), 0, 2^32 - componentsize(format), 2^32, 2**60\n      - Check error IFF offset + sizeof(format) > stride (or 2048 for 0)\n\nTest that an attribute must be aligned to the component size:\n - For each vertex format\n  - For stride = 2*sizeof(format), 128, limit\n    - For offset = componentsize(format), componentsize(format) / 2, stride - sizeof(format) - componentsize(format), stride - sizeof(format)\n     - Check error IFF offset not aligned to componentsize(format);"
   },
   {
     "file": [
@@ -1144,6 +1155,23 @@ export const listing = [
       "validation"
     ],
     "readme": "Positive and negative tests for all the validation rules of the shading language."
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "variable_and_const"
+    ],
+    "description": "Positive and negative validation tests for variable and const."
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "wgsl",
+      "basic"
+    ],
+    "description": "Basic WGSL validation tests to test the ShaderValidationTest fixture."
   },
   {
     "file": [

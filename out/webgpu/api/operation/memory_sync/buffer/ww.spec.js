@@ -34,7 +34,7 @@ fn(async t => {
   const encoder = t.device.createCommandEncoder();
   await t.encodeWriteOp(encoder, firstWriteOp, buffer, 1);
   await t.encodeWriteOp(encoder, secondWriteOp, buffer, 2);
-  t.device.defaultQueue.submit([encoder.finish()]);
+  t.device.queue.submit([encoder.finish()]);
 
   t.verifyData(buffer, 2);
 });
@@ -53,7 +53,7 @@ fn(async t => {
   const command_buffers = [];
   command_buffers.push(await t.createCommandBufferWithWriteOp(firstWriteOp, buffer, 1));
   command_buffers.push(await t.createCommandBufferWithWriteOp(secondWriteOp, buffer, 2));
-  t.device.defaultQueue.submit(command_buffers);
+  t.device.queue.submit(command_buffers);
 
   t.verifyData(buffer, 2);
 });
@@ -109,7 +109,7 @@ fn(async t => {
   }
 
   passEncoder.endPass();
-  t.device.defaultQueue.submit([encoder.finish()]);
+  t.device.queue.submit([encoder.finish()]);
   t.verifyDataTwoValidValues(buffer, 1, 2);
 });
 
@@ -137,7 +137,7 @@ fn(async t => {
 
   passEncoder.executeBundles([renderEncoder.finish()]);
   passEncoder.endPass();
-  t.device.defaultQueue.submit([encoder.finish()]);
+  t.device.queue.submit([encoder.finish()]);
   t.verifyDataTwoValidValues(buffer, 1, 2);
 });
 
@@ -161,7 +161,7 @@ fn(async t => {
   }
 
   pass.endPass();
-  t.device.defaultQueue.submit([encoder.finish()]);
+  t.device.queue.submit([encoder.finish()]);
   t.verifyData(buffer, 2);
 });
 //# sourceMappingURL=ww.spec.js.map

@@ -136,7 +136,7 @@ function getRequiredTextureUsage(format, sampleCount, uninitializeMethod, readMe
     case UninitializeMethod.Creation:
       break;
     case UninitializeMethod.StoreOpClear:
-      usage |= GPUConst.TextureUsage.OUTPUT_ATTACHMENT;
+      usage |= GPUConst.TextureUsage.RENDER_ATTACHMENT;
       break;
     default:
       unreachable();
@@ -156,7 +156,7 @@ function getRequiredTextureUsage(format, sampleCount, uninitializeMethod, readMe
     case ReadMethod.DepthTest:
     case ReadMethod.StencilTest:
     case ReadMethod.ColorBlending:
-      usage |= GPUConst.TextureUsage.OUTPUT_ATTACHMENT;
+      usage |= GPUConst.TextureUsage.RENDER_ATTACHMENT;
       break;
     default:
       unreachable();
@@ -165,14 +165,14 @@ function getRequiredTextureUsage(format, sampleCount, uninitializeMethod, readMe
   if (sampleCount > 1) {
     // Copies to multisampled textures are not allowed. We need OutputAttachment to initialize
     // canary data in multisampled textures.
-    usage |= GPUConst.TextureUsage.OUTPUT_ATTACHMENT;
+    usage |= GPUConst.TextureUsage.RENDER_ATTACHMENT;
   }
 
   if (!kUncompressedTextureFormatInfo[format].copyDst) {
     // Copies are not possible. We need OutputAttachment to initialize
     // canary data.
     assert(kUncompressedTextureFormatInfo[format].renderable);
-    usage |= GPUConst.TextureUsage.OUTPUT_ATTACHMENT;
+    usage |= GPUConst.TextureUsage.RENDER_ATTACHMENT;
   }
 
   return usage;
@@ -455,7 +455,7 @@ const paramsBuilder = params()
     const info = kUncompressedTextureFormatInfo[format];
 
     return (
-      ((usage & GPUConst.TextureUsage.OUTPUT_ATTACHMENT) !== 0 && !info.renderable) ||
+      ((usage & GPUConst.TextureUsage.RENDER_ATTACHMENT) !== 0 && !info.renderable) ||
       ((usage & GPUConst.TextureUsage.STORAGE) !== 0 && !info.storage)
     );
   })

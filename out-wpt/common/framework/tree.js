@@ -184,7 +184,13 @@ export async function loadTreeForQuery(loader, queryToLoad, subqueriesToExpand) 
       }
 
       // subtreeL2 is suite:a,b:c,d:*
-      const subtreeL2 = addSubtreeForTestPath(subtreeL1, t.testPath, t.description, isCollapsible);
+      const subtreeL2 = addSubtreeForTestPath(
+        subtreeL1,
+        t.testPath,
+        t.description,
+        t.testCreationStack,
+        isCollapsible
+      );
 
       // TODO: If tree generation gets too slow, avoid actually iterating the cases in a file
       // if there's no need to (based on the subqueriesToExpand).
@@ -260,7 +266,7 @@ function addSubtreeForFilePath(tree, file, description, checkCollapsible) {
   return subtree;
 }
 
-function addSubtreeForTestPath(tree, test, description, isCollapsible) {
+function addSubtreeForTestPath(tree, test, description, testCreationStack, isCollapsible) {
   const subqueryTest = [];
   // To start, tree is suite:a,b:*
   // This loop goes from that -> suite:a,b:c,* -> suite:a,b:c,d,*
@@ -295,6 +301,7 @@ function addSubtreeForTestPath(tree, test, description, isCollapsible) {
       kWildcard,
       query,
       description,
+      testCreationStack,
       collapsible: isCollapsible(query),
     };
   });

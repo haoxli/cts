@@ -74,7 +74,7 @@ class F extends GPUTest {
     const blockHeight = kSizedTextureFormatInfo[format].blockHeight;
     const srcBlocksPerRow = srcTextureSizeAtLevel.width / blockWidth;
     const srcBlockRowsPerImage = srcTextureSizeAtLevel.height / blockHeight;
-    this.device.defaultQueue.writeTexture(
+    this.device.queue.writeTexture(
       { texture: srcTexture, mipLevel: srcCopyLevel },
       initialSrcData,
       {
@@ -156,7 +156,7 @@ class F extends GPUTest {
       dstTextureSizeAtLevel
     );
 
-    this.device.defaultQueue.submit([encoder.finish()]);
+    this.device.queue.submit([encoder.finish()]);
 
     // Fill expectedDataWithPadding with the expected data of dstTexture. The other values in
     // expectedDataWithPadding are kept 0 to check if the texels untouched by the copy are 0

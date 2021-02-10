@@ -32,7 +32,7 @@ class F extends ValidationTest {
       .createTexture({
         size: [1, 1, 1],
         format,
-        usage: GPUTextureUsage.OUTPUT_ATTACHMENT,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
         sampleCount,
       })
       .createView();

@@ -62,6 +62,7 @@ import { assert } from './util/util.js';
 
 
 
+
 export class TestTree {
 
 
@@ -226,6 +227,7 @@ subqueriesToExpand)
       subtreeL1,
       t.testPath,
       t.description,
+      t.testCreationStack,
       isCollapsible);
 
 
@@ -315,6 +317,7 @@ function addSubtreeForTestPath(
 tree,
 test,
 description,
+testCreationStack,
 isCollapsible)
 {
   const subqueryTest = [];
@@ -349,6 +352,7 @@ isCollapsible)
       kWildcard,
       query,
       description,
+      testCreationStack,
       collapsible: isCollapsible(query) };
 
   });

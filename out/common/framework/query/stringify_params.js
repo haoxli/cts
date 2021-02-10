@@ -7,12 +7,16 @@ paramKeyIsPublic } from
 import { assert } from '../util/util.js';
 
 import { stringifyParamValue, stringifyParamValueUniquely } from './json_param_value.js';
-import { kBigSeparator, kParamKVSeparator } from './separators.js';
+import { kParamKVSeparator, kParamSeparator, kWildcard } from './separators.js';
 
-export function stringifyPublicParams(p) {
-  return Object.keys(p).
+export function stringifyPublicParams(p, addWildcard = false) {
+  const parts = Object.keys(p).
   filter(k => paramKeyIsPublic(k)).
   map(k => stringifySingleParam(k, p[k]));
+
+  if (addWildcard) parts.push(kWildcard);
+
+  return parts.join(kParamSeparator);
 }
 
 /**
@@ -23,7 +27,7 @@ export function stringifyPublicParamsUniquely(p) {
   return keys.
   filter(k => paramKeyIsPublic(k)).
   map(k => stringifySingleParamUniquely(k, p[k])).
-  join(kBigSeparator);
+  join(kParamSeparator);
 }
 
 export function stringifySingleParam(k, v) {

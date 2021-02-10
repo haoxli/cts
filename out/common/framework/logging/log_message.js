@@ -28,7 +28,7 @@
       m += '\n' + extractImportantStackTrace(this);
     }
     if (this.timesSeen > 1) {
-      m += `\n(seen ${this.timesSeen} times with identical stack)`;
+      m += `\n(seen ${this.timesSeen} times with identical stack, not necessarily in a row; enable ?debug=1 to stop)`;
     }
     return m;
   }}

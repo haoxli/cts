@@ -32,7 +32,7 @@ class F extends ValidationTest {
     const attachment = this.device.createTexture({
       format: 'rgba8unorm',
       size: attachmentSize,
-      usage: GPUTextureUsage.OUTPUT_ATTACHMENT,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
     const encoder = this.device.createCommandEncoder();
@@ -57,7 +57,7 @@ class F extends ValidationTest {
     const attachment = this.device.createTexture({
       format: 'rgba8unorm',
       size: attachmentSize,
-      usage: GPUTextureUsage.OUTPUT_ATTACHMENT,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
     const encoder = this.device.createCommandEncoder();
@@ -88,7 +88,7 @@ class F extends ValidationTest {
     const attachment = this.device.createTexture({
       format: 'rgba8unorm',
       size: [1, 1, 1],
-      usage: GPUTextureUsage.OUTPUT_ATTACHMENT,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
     const encoder = this.device.createCommandEncoder();

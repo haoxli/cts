@@ -36,7 +36,7 @@ class F extends ValidationTest {
             [[group(0), binding(0)]] var<uniform> uniforms : VertexUniforms;
 
             [[builtin(position)]] var<out> Position : vec4<f32>;
-            [[builtin(vertex_idx)]] var<in> VertexIndex : i32;
+            [[builtin(vertex_index)]] var<in> VertexIndex : i32;
             [[stage(vertex)]] fn main() -> void {
               var pos : array<vec2<f32>, 3> = array<vec2<f32>, 3>(
                 vec2<f32>(-1.0, -1.0),
@@ -80,7 +80,7 @@ class F extends ValidationTest {
     const attachmentTexture = this.device.createTexture({
       format: 'rgba8unorm',
       size: { width: 16, height: 16, depth: 1 },
-      usage: GPUTextureUsage.OUTPUT_ATTACHMENT,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
     return commandEncoder.beginRenderPass({

@@ -74,7 +74,7 @@ class TextureUsageTracking extends ValidationTest {
       mipLevelCount = 1,
       sampleCount = 1,
       format = 'rgba8unorm',
-      usage = GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.SAMPLED } =
+      usage = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.SAMPLED } =
     options;
 
     return this.device.createTexture({
@@ -445,7 +445,7 @@ fn(async t => {
   const texture = t.createTexture({
     arrayLayerCount: TOTAL_LAYERS,
     mipLevelCount: TOTAL_LEVELS,
-    usage: GPUTextureUsage.SAMPLED | GPUTextureUsage.STORAGE | GPUTextureUsage.OUTPUT_ATTACHMENT });
+    usage: GPUTextureUsage.SAMPLED | GPUTextureUsage.STORAGE | GPUTextureUsage.RENDER_ATTACHMENT });
 
 
   const dimension0 = layerCount0 !== 1 ? '2d-array' : '2d';
@@ -701,7 +701,7 @@ fn(async t => {
   // vertex stage is not included. Otherwise, it uses output attachment instead.
   const writeHasVertexStage = Boolean(writeVisibility & GPUShaderStage.VERTEX);
   const texUsage = writeHasVertexStage ?
-  GPUTextureUsage.SAMPLED | GPUTextureUsage.OUTPUT_ATTACHMENT :
+  GPUTextureUsage.SAMPLED | GPUTextureUsage.RENDER_ATTACHMENT :
   GPUTextureUsage.SAMPLED | GPUTextureUsage.STORAGE;
 
   const texture = t.createTexture({ usage: texUsage });
@@ -838,7 +838,7 @@ fn(async t => {
   const view = t.
   createTexture({
     usage:
-    GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.STORAGE | GPUTextureUsage.SAMPLED }).
+    GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.STORAGE | GPUTextureUsage.SAMPLED }).
 
   createView();
 
