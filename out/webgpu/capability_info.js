@@ -146,6 +146,11 @@ export const kCompressedTextureFormatInfo = makeTable(kTexFmtInfoHeader,
   'bc7-rgba-unorm-srgb': [,,,,,,, 16, 4, 4, 'texture-compression-bc'] });
 
 
+
+
+
+
+
 export const kRegularTextureFormats = keysOf(kRegularTextureFormatInfo);
 export const kSizedDepthStencilFormats = keysOf(kSizedDepthStencilFormatInfo);
 export const kUnsizedDepthStencilFormats = keysOf(kUnsizedDepthStencilFormatInfo);

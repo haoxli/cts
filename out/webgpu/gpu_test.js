@@ -3,6 +3,7 @@
 **/import { Fixture } from '../common/framework/fixture.js';import { attemptGarbageCollection } from '../common/framework/util/collect_garbage.js';import { assert } from '../common/framework/util/util.js';
 
 
+import { makeBufferWithContents } from './util/buffer.js';
 import { DevicePool, TestOOMedShouldAttemptGC } from './util/device_pool.js';
 import { align } from './util/math.js';
 import {
@@ -555,16 +556,7 @@ got [${failedByteActualValues.join(', ')}]`;
   }
 
   makeBufferWithContents(dataArray, usage) {
-    const buffer = this.device.createBuffer({
-      mappedAtCreation: true,
-      size: dataArray.byteLength,
-      usage });
-
-    const mappedBuffer = buffer.getMappedRange();
-    const constructor = dataArray.constructor;
-    new constructor(mappedBuffer).set(dataArray);
-    buffer.unmap();
-    return buffer;
+    return makeBufferWithContents(this.device, dataArray, usage);
   }
 
   createTexture2DWithMipmaps(mipmapDataArray) {
