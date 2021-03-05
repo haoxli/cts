@@ -132,10 +132,10 @@ class DescriptorToHolderMap {
     let value;
     try {
       value = await DeviceHolder.create(descriptor);
-    } catch (ex) {var _ex$message;
+    } catch (ex) {
       this.unsupported.add(key);
       throw new SkipTestCase(
-      `GPUDeviceDescriptor not supported: ${JSON.stringify(descriptor)}\n${(_ex$message = ex === null || ex === void 0 ? void 0 : ex.message) !== null && _ex$message !== void 0 ? _ex$message : ''}`);
+      `GPUDeviceDescriptor not supported: ${JSON.stringify(descriptor)}\n${ex?.message ?? ''}`);
 
     }
     this.insertAndCleanUp(key, value);

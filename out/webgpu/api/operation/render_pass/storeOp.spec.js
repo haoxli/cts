@@ -68,7 +68,7 @@ fn(t => {
   const kColorFormat = 'rgba8unorm';
   const colorAttachment = t.device.createTexture({
     format: kColorFormat,
-    size: { width: kWidth, height: kHeight, depth: 1 },
+    size: { width: kWidth, height: kHeight, depthOrArrayLayers: 1 },
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 
 
@@ -78,7 +78,7 @@ fn(t => {
   const kDepthStencilFormat = 'depth32float';
   const depthStencilAttachment = t.device.createTexture({
     format: kDepthStencilFormat,
-    size: { width: kWidth, height: kHeight, depth: 1 },
+    size: { width: kWidth, height: kHeight, depthOrArrayLayers: 1 },
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 
 
@@ -155,7 +155,7 @@ combine(poptions('arrayLayer', kArrayLayers))).
 fn(t => {
   const colorAttachment = t.device.createTexture({
     format: t.params.colorFormat,
-    size: { width: kWidth, height: kHeight, depth: t.params.arrayLayer + 1 },
+    size: { width: kWidth, height: kHeight, depthOrArrayLayers: t.params.arrayLayer + 1 },
     mipLevelCount: kMipLevelCount,
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 
@@ -218,7 +218,7 @@ fn(t => {
     colorAttachments.push(
     t.device.createTexture({
       format: kColorFormat,
-      size: { width: kWidth, height: kHeight, depth: 1 },
+      size: { width: kWidth, height: kHeight, depthOrArrayLayers: 1 },
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT }));
 
 
@@ -281,7 +281,7 @@ combine(poptions('arrayLayer', kArrayLayers))).
 fn(t => {
   const depthStencilAttachment = t.device.createTexture({
     format: t.params.depthStencilFormat,
-    size: { width: kWidth, height: kHeight, depth: t.params.arrayLayer + 1 },
+    size: { width: kWidth, height: kHeight, depthOrArrayLayers: t.params.arrayLayer + 1 },
     mipLevelCount: kMipLevelCount,
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 

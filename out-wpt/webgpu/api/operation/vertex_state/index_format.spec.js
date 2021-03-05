@@ -120,7 +120,7 @@ class IndexFormatTest extends GPUTest {
 
     const colorAttachment = this.device.createTexture({
       format: kTextureFormat,
-      size: { width: kWidth, height: kHeight, depth: 1 },
+      size: { width: kWidth, height: kHeight, depthOrArrayLayers: 1 },
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
     });
 

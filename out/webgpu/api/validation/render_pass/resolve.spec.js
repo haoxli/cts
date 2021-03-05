@@ -107,7 +107,11 @@ fn(async t => {
         // Create the color attachment with resolve target with the configurable parameters.
         const resolveSourceColorAttachment = t.device.createTexture({
           format: colorAttachmentFormat,
-          size: { width: colorAttachmentWidth, height: colorAttachmentHeight, depth: 1 },
+          size: {
+            width: colorAttachmentWidth,
+            height: colorAttachmentHeight,
+            depthOrArrayLayers: 1 },
+
           sampleCount: colorAttachmentSamples,
           usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 
@@ -117,7 +121,8 @@ fn(async t => {
           size: {
             width: resolveTargetWidth,
             height: resolveTargetHeight,
-            depth: resolveTargetViewBaseArrayLayer + resolveTargetViewArrayLayerCount },
+            depthOrArrayLayers:
+            resolveTargetViewBaseArrayLayer + resolveTargetViewArrayLayerCount },
 
           sampleCount: resolveTargetSamples,
           mipLevelCount: resolveTargetViewBaseMipLevel + resolveTargetViewMipCount,
@@ -140,7 +145,11 @@ fn(async t => {
         // and sample count must match the resolve source color attachment to be valid.
         const colorAttachment = t.device.createTexture({
           format: otherAttachmentFormat,
-          size: { width: colorAttachmentWidth, height: colorAttachmentHeight, depth: 1 },
+          size: {
+            width: colorAttachmentWidth,
+            height: colorAttachmentHeight,
+            depthOrArrayLayers: 1 },
+
           sampleCount: colorAttachmentSamples,
           usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 
@@ -150,7 +159,7 @@ fn(async t => {
           size: {
             width: colorAttachmentWidth,
             height: colorAttachmentHeight,
-            depth: 1 },
+            depthOrArrayLayers: 1 },
 
           sampleCount: 1,
           usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });

@@ -28,7 +28,7 @@ import { makeTestGroup } from '../../../../../../common/framework/test_group.js'
 import { ValidationTest } from '../../../validation_test.js';
 
 class F extends ValidationTest {
-  testViewportCall(success, v, attachmentSize = { width: 1, height: 1, depth: 1 }) {
+  testViewportCall(success, v, attachmentSize = { width: 1, height: 1, depthOrArrayLayers: 1 }) {
     const attachment = this.device.createTexture({
       format: 'rgba8unorm',
       size: attachmentSize,
@@ -53,7 +53,7 @@ class F extends ValidationTest {
     }, !success);
   }
 
-  testScissorCall(success, s, attachmentSize = { width: 1, height: 1, depth: 1 }) {
+  testScissorCall(success, s, attachmentSize = { width: 1, height: 1, depthOrArrayLayers: 1 }) {
     const attachment = this.device.createTexture({
       format: 'rgba8unorm',
       size: attachmentSize,
@@ -168,7 +168,7 @@ g.test('setViewport,xy_rect_contained_in_attachment')
     t.testViewportCall(
       success,
       { x, y, w, h, minDepth: 0, maxDepth: 1 },
-      { width: attachmentWidth, height: attachmentHeight, depth: 1 }
+      { width: attachmentWidth, height: attachmentHeight, depthOrArrayLayers: 1 }
     );
   });
 
@@ -258,7 +258,7 @@ g.test('setScissorRect,xy_rect_contained_in_attachment')
     t.testScissorCall(
       success,
       { x, y, w, h },
-      { width: attachmentWidth, height: attachmentHeight, depth: 1 }
+      { width: attachmentWidth, height: attachmentHeight, depthOrArrayLayers: 1 }
     );
   });
 

@@ -206,8 +206,10 @@ params().
 combine(poptions('passFormat', kDepthStencilAttachmentFormats)).
 combine(poptions('bundleFormat', kDepthStencilAttachmentFormats))).
 
-fn(t => {
+fn(async t => {
   const { passFormat, bundleFormat } = t.params;
+  await t.selectDeviceForTextureFormatOrSkipTestCase([passFormat, bundleFormat]);
+
   const bundleEncoder = t.device.createRenderBundleEncoder({
     colorFormats: ['rgba8unorm'],
     depthStencilFormat: bundleFormat });
@@ -317,8 +319,10 @@ combine(poptions('encoderType', ['render pass', 'render bundle'])).
 combine(poptions('encoderFormat', kDepthStencilAttachmentFormats)).
 combine(poptions('pipelineFormat', kDepthStencilAttachmentFormats))).
 
-fn(t => {
+fn(async t => {
   const { encoderType, encoderFormat, pipelineFormat } = t.params;
+  await t.selectDeviceForTextureFormatOrSkipTestCase([encoderFormat, pipelineFormat]);
+
   const pipeline = t.createRenderPipeline(
   [{ format: 'rgba8unorm' }],
   pipelineFormat !== undefined ? { format: pipelineFormat } : undefined);

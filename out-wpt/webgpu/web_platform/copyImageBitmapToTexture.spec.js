@@ -109,7 +109,7 @@ got [${failedByteActualValues.join(', ')}]`;
     encoder.copyTextureToBuffer(
       { texture: dstTexture, mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
       { buffer: testBuffer, bytesPerRow },
-      { width: imageBitmap.width, height: imageBitmap.height, depth: 1 }
+      { width: imageBitmap.width, height: imageBitmap.height, depthOrArrayLayers: 1 }
     );
 
     this.device.queue.submit([encoder.finish()]);
@@ -223,7 +223,7 @@ g.test('from_ImageData')
       size: {
         width: imageBitmap.width,
         height: imageBitmap.height,
-        depth: 1,
+        depthOrArrayLayers: 1,
       },
 
       format: dstColorFormat,
@@ -267,7 +267,7 @@ g.test('from_ImageData')
     t.doTestAndCheckResult(
       { imageBitmap, origin: { x: 0, y: 0 } },
       { texture: dst },
-      { width: imageBitmap.width, height: imageBitmap.height, depth: 1 },
+      { width: imageBitmap.width, height: imageBitmap.height, depthOrArrayLayers: 1 },
       dstBytesPerPixel,
       expectedPixels
     );
@@ -322,7 +322,7 @@ g.test('from_canvas')
       size: {
         width: imageBitmap.width,
         height: imageBitmap.height,
-        depth: 1,
+        depthOrArrayLayers: 1,
       },
 
       format: 'rgba8unorm',
@@ -340,7 +340,7 @@ g.test('from_canvas')
     t.doTestAndCheckResult(
       { imageBitmap, origin: { x: 0, y: 0 } },
       { texture: dst },
-      { width: imageBitmap.width, height: imageBitmap.height, depth: 1 },
+      { width: imageBitmap.width, height: imageBitmap.height, depthOrArrayLayers: 1 },
       bytesPerPixel,
       expectedData
     );

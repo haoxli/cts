@@ -16,7 +16,7 @@ params([
 
 fn(async t => {
   const renderTexture = t.device.createTexture({
-    size: { width: 1, height: 1, depth: 1 },
+    size: { width: 1, height: 1, depthOrArrayLayers: 1 },
     format: 'r8unorm',
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT });
 

@@ -1,9 +1,14 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert } from '../../../common/framework/util/util.js';import { GPUTest } from '../../gpu_test.js';
-
+**/import { assert, unreachable } from '../../../common/framework/util/util.js';import { GPUTest } from '../../gpu_test.js';
 
 export const kEncoderTypes = ['non-pass', 'compute pass', 'render pass', 'render bundle'];
+
+
+
+
+
+
 
 
 
@@ -15,9 +20,9 @@ export class ValidationTest extends GPUTest {
   createTextureWithState(
   state,
   descriptor)
-  {var _descriptor;
-    descriptor = (_descriptor = descriptor) !== null && _descriptor !== void 0 ? _descriptor : {
-      size: { width: 1, height: 1, depth: 1 },
+  {
+    descriptor = descriptor ?? {
+      size: { width: 1, height: 1, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
       usage:
       GPUTextureUsage.COPY_SRC |
@@ -43,8 +48,8 @@ export class ValidationTest extends GPUTest {
   createBufferWithState(
   state,
   descriptor)
-  {var _descriptor2;
-    descriptor = (_descriptor2 = descriptor) !== null && _descriptor2 !== void 0 ? _descriptor2 : {
+  {
+    descriptor = descriptor ?? {
       size: 4,
       usage: GPUBufferUsage.VERTEX };
 
@@ -101,7 +106,7 @@ export class ValidationTest extends GPUTest {
 
   getSampledTexture(sampleCount = 1) {
     return this.device.createTexture({
-      size: { width: 16, height: 16, depth: 1 },
+      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
       usage: GPUTextureUsage.SAMPLED,
       sampleCount });
@@ -110,7 +115,7 @@ export class ValidationTest extends GPUTest {
 
   getStorageTexture() {
     return this.device.createTexture({
-      size: { width: 16, height: 16, depth: 1 },
+      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
       usage: GPUTextureUsage.STORAGE });
 
@@ -119,7 +124,7 @@ export class ValidationTest extends GPUTest {
   getErrorTexture() {
     this.device.pushErrorScope('validation');
     const texture = this.device.createTexture({
-      size: { width: 0, height: 0, depth: 0 },
+      size: { width: 0, height: 0, depthOrArrayLayers: 0 },
       format: 'rgba8unorm',
       usage: GPUTextureUsage.SAMPLED });
 
@@ -203,17 +208,6 @@ export class ValidationTest extends GPUTest {
     return pipeline;
   }
 
-
-
-
-
-
-
-
-
-
-
-
   createEncoder(encoderType) {
     const colorFormat = 'rgba8unorm';
     switch (encoderType) {
@@ -221,7 +215,6 @@ export class ValidationTest extends GPUTest {
           const encoder = this.device.createCommandEncoder();
           return {
             encoder,
-
             finish: () => {
               return encoder.finish();
             } };
@@ -258,7 +251,7 @@ export class ValidationTest extends GPUTest {
           const attachment = this.device.
           createTexture({
             format: colorFormat,
-            size: { width: 16, height: 16, depth: 1 },
+            size: { width: 16, height: 16, depthOrArrayLayers: 1 },
             usage: GPUTextureUsage.RENDER_ATTACHMENT }).
 
           createView();
@@ -279,6 +272,7 @@ export class ValidationTest extends GPUTest {
 
         }}
 
+    unreachable();
   }
 
   /**

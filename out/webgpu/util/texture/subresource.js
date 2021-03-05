@@ -1,6 +1,7 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import { assert } from '../../../common/framework/util/util.js';import { kAllTextureFormatInfo } from '../../capability_info.js';import { align } from '../../util/math.js';
+import { standardizeExtent3D } from '../unions.js';
 
 
 
@@ -62,15 +63,19 @@ export class SubresourceRange {
 
 
 
+
+
+
 export function mipSize(size, level) {
   const rShiftMax1 = s => Math.max(s >> level, 1);
   if (size instanceof Array) {
     return size.map(rShiftMax1);
   } else {
+    const size_ = standardizeExtent3D(size);
     return {
-      width: rShiftMax1(size.width),
-      height: rShiftMax1(size.height),
-      depth: rShiftMax1(size.depth) };
+      width: rShiftMax1(size_.width),
+      height: rShiftMax1(size_.height),
+      depthOrArrayLayers: rShiftMax1(size_.depthOrArrayLayers) };
 
   }
 }
@@ -92,6 +97,10 @@ level)
   virtualHeightAtLevel,
   kAllTextureFormatInfo[format].blockHeight);
 
-  return { width: physicalWidthAtLevel, height: physicalHeightAtLevel, depth: size.depth };
+  return {
+    width: physicalWidthAtLevel,
+    height: physicalHeightAtLevel,
+    depthOrArrayLayers: size.depthOrArrayLayers };
+
 }
 //# sourceMappingURL=subresource.js.map

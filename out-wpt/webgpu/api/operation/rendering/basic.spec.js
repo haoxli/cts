@@ -16,7 +16,7 @@ g.test('clear').fn(async t => {
 
   const colorAttachment = t.device.createTexture({
     format: 'rgba8unorm',
-    size: { width: 1, height: 1, depth: 1 },
+    size: { width: 1, height: 1, depthOrArrayLayers: 1 },
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
@@ -37,7 +37,7 @@ g.test('clear').fn(async t => {
   encoder.copyTextureToBuffer(
     { texture: colorAttachment, mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
     { buffer: dst, bytesPerRow: 256 },
-    { width: 1, height: 1, depth: 1 }
+    { width: 1, height: 1, depthOrArrayLayers: 1 }
   );
 
   t.device.queue.submit([encoder.finish()]);
@@ -53,7 +53,7 @@ g.test('fullscreen_quad').fn(async t => {
 
   const colorAttachment = t.device.createTexture({
     format: 'rgba8unorm',
-    size: { width: 1, height: 1, depth: 1 },
+    size: { width: 1, height: 1, depthOrArrayLayers: 1 },
     usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
@@ -115,7 +115,7 @@ g.test('fullscreen_quad').fn(async t => {
   encoder.copyTextureToBuffer(
     { texture: colorAttachment, mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
     { buffer: dst, bytesPerRow: 256 },
-    { width: 1, height: 1, depth: 1 }
+    { width: 1, height: 1, depthOrArrayLayers: 1 }
   );
 
   t.device.queue.submit([encoder.finish()]);

@@ -4,6 +4,7 @@
 import { attemptGarbageCollection } from '../common/framework/util/collect_garbage.js';
 import { assert } from '../common/framework/util/util.js';
 
+import { kAllTextureFormatInfo } from './capability_info.js';
 import { makeBufferWithContents } from './util/buffer.js';
 import { DevicePool, TestOOMedShouldAttemptGC } from './util/device_pool.js';
 import { align } from './util/math.js';
@@ -63,6 +64,25 @@ export class GPUTest extends Fixture {
 
     this.provider = await devicePool.reserve(descriptor);
     this.acquiredDevice = this.provider.acquire();
+  }
+
+  async selectDeviceForTextureFormatOrSkipTestCase(formats) {
+    if (!Array.isArray(formats)) {
+      formats = [formats];
+    }
+    const extensions = new Set();
+    for (const format of formats) {
+      if (format !== undefined) {
+        const formatExtension = kAllTextureFormatInfo[format].extension;
+        if (formatExtension !== undefined) {
+          extensions.add(formatExtension);
+        }
+      }
+    }
+
+    if (extensions.size) {
+      await this.selectDeviceOrSkipTestCase({ extensions });
+    }
   }
 
   // Note: finalize is called even if init was unsuccessful.
@@ -370,11 +390,7 @@ got [${failedByteActualValues.join(', ')}]`;
 
     const commandEncoder = this.device.createCommandEncoder();
     commandEncoder.copyTextureToBuffer(
-      {
-        texture: src,
-        mipLevel: layout === null || layout === void 0 ? void 0 : layout.mipLevel,
-        origin: { x: 0, y: 0, z: slice },
-      },
+      { texture: src, mipLevel: layout?.mipLevel, origin: { x: 0, y: 0, z: slice } },
       { buffer, bytesPerRow, rowsPerImage },
       mipSize
     );
@@ -401,11 +417,7 @@ got [${failedByteActualValues.join(', ')}]`;
 
     const commandEncoder = this.device.createCommandEncoder();
     commandEncoder.copyTextureToBuffer(
-      {
-        texture: src,
-        mipLevel: layout === null || layout === void 0 ? void 0 : layout.mipLevel,
-        origin: { x, y, z: slice },
-      },
+      { texture: src, mipLevel: layout?.mipLevel, origin: { x, y, z: slice } },
       { buffer, bytesPerRow, rowsPerImage },
       mipSize
     );
@@ -485,7 +497,7 @@ got [${failedByteActualValues.join(', ')}]`;
     const textureSizeMipmap0 = 1 << (mipLevelCount - 1);
     const texture = this.device.createTexture({
       mipLevelCount,
-      size: { width: textureSizeMipmap0, height: textureSizeMipmap0, depth: 1 },
+      size: { width: textureSizeMipmap0, height: textureSizeMipmap0, depthOrArrayLayers: 1 },
       format,
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.SAMPLED,
     });

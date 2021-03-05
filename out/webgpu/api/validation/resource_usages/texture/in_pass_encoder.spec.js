@@ -78,7 +78,7 @@ class TextureUsageTracking extends ValidationTest {
     options;
 
     return this.device.createTexture({
-      size: { width, height, depth: arrayLayerCount },
+      size: { width, height, depthOrArrayLayers: arrayLayerCount },
       mipLevelCount,
       sampleCount,
       dimension: '2d',
@@ -598,6 +598,8 @@ fn(async t => {
     _usageSuccess } =
   t.params;
 
+  await t.selectDeviceOrSkipTestCase(kDepthStencilFormatInfo[format].extension);
+
   const texture = t.createTexture({
     arrayLayerCount: TOTAL_LAYERS,
     mipLevelCount: TOTAL_LEVELS,
@@ -807,7 +809,7 @@ fn(async t => {
   let success = bindingType !== 'writeonly-storage-texture';
   // Replaced bindings should not be validated in compute pass, because validation only occurs
   // inside dispatch() which only looks at the current resource usages.
-  success || (success = compute);
+  success ||= compute;
 
   t.expectValidationError(() => {
     encoder.finish();

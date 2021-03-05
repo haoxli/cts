@@ -88,7 +88,7 @@ combine([
 ...poptions('storageTextureFormat', kAllTextureFormats)])).
 
 
-fn(t => {
+fn(async t => {
   const {
     type,
     hasDynamicOffset,
@@ -98,23 +98,27 @@ fn(t => {
     storageTextureFormat } =
   t.params;
 
+  if (storageTextureFormat !== undefined) {
+    await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[storageTextureFormat].extension);
+  }
+
   let success = true;
   if (!(type in kBufferBindingTypeInfo)) {
-    success && (success = hasDynamicOffset === undefined);
-    success && (success = minBufferBindingSize === undefined);
+    success &&= hasDynamicOffset === undefined;
+    success &&= minBufferBindingSize === undefined;
   }
   if (!(type in kTextureBindingTypeInfo)) {
-    success && (success = viewDimension === undefined);
+    success &&= viewDimension === undefined;
   }
   if (kBindingTypeInfo[type].resource !== 'sampledTex') {
-    success && (success = textureComponentType === undefined);
+    success &&= textureComponentType === undefined;
   }
   if (kBindingTypeInfo[type].resource !== 'storageTex') {
-    success && (success = storageTextureFormat === undefined);
+    success &&= storageTextureFormat === undefined;
   } else {
-    success && (success = viewDimension === undefined || kTextureViewDimensionInfo[viewDimension].storage);
-    success && (success =
-    storageTextureFormat === undefined || kAllTextureFormatInfo[storageTextureFormat].storage);
+    success &&= viewDimension === undefined || kTextureViewDimensionInfo[viewDimension].storage;
+    success &&=
+    storageTextureFormat === undefined || kAllTextureFormatInfo[storageTextureFormat].storage;
   }
 
   t.expectValidationError(() => {

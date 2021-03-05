@@ -21,8 +21,7 @@ function makeTable(members, defaults, table) {
   for (const [k, v] of Object.entries(table)) {
     const item = {};
     for (let i = 0; i < members.length; ++i) {
-      var _v$i;
-      item[members[i]] = (_v$i = v[i]) !== null && _v$i !== void 0 ? _v$i : defaults[i];
+      item[members[i]] = v[i] ?? defaults[i];
     }
     result[k] = item;
   }
@@ -135,6 +134,7 @@ export const kSizedDepthStencilFormatInfo = makeTable(
   [true, false, , , false, , , , 1, 1],
   {
     depth32float: [true, false, true, false, , false, false, 4],
+    depth16unorm: [true, false, true, false, , false, false, 2],
     stencil8: [true, , false, true, , false, false, 1],
   }
 );
@@ -145,6 +145,9 @@ export const kUnsizedDepthStencilFormatInfo = makeTable(
   {
     depth24plus: [, , true, false, , false, false],
     'depth24plus-stencil8': [, , true, true, , false, false],
+    // bytesPerBlock only makes sense on a per-aspect basis. But this table can't express that. So we put depth24unorm-stencil8 and depth32float-stencil8 to be unsized formats for now.
+    'depth24unorm-stencil8': [, , true, true, , false, false, , , , 'depth24unorm-stencil8'],
+    'depth32float-stencil8': [, , true, true, , false, false, , , , 'depth32float-stencil8'],
   }
 );
 
@@ -235,6 +238,50 @@ export const kTextureAspectInfo = {
 };
 
 export const kTextureAspects = keysOf(kTextureAspectInfo);
+
+const kDepthStencilFormatCapabilityInBufferTextureCopy = {
+  // kUnsizedDepthStencilFormats
+  depth24plus: {
+    CopyB2T: [],
+    CopyT2B: [],
+  },
+
+  'depth24plus-stencil8': {
+    CopyB2T: ['stencil-only'],
+    CopyT2B: ['stencil-only'],
+  },
+
+  // kSizedDepthStencilFormats
+  depth16unorm: {
+    CopyB2T: ['all', 'depth-only'],
+    CopyT2B: ['all', 'depth-only'],
+  },
+
+  depth32float: {
+    CopyB2T: [],
+    CopyT2B: ['all', 'depth-only'],
+  },
+
+  'depth24unorm-stencil8': {
+    CopyB2T: ['stencil-only'],
+    CopyT2B: ['depth-only', 'stencil-only'],
+  },
+
+  'depth32float-stencil8': {
+    CopyB2T: ['stencil-only'],
+    CopyT2B: ['depth-only', 'stencil-only'],
+  },
+
+  stencil8: {
+    CopyB2T: ['all', 'stencil-only'],
+    CopyT2B: ['all', 'stencil-only'],
+  },
+};
+
+export function depthStencilBufferTextureCopySupported(type, format, aspect) {
+  const supportedAspects = kDepthStencilFormatCapabilityInBufferTextureCopy[format][type];
+  return supportedAspects.includes(aspect);
+}
 
 export const kTextureUsageInfo = {
   [GPUConst.TextureUsage.COPY_SRC]: {},

@@ -485,8 +485,8 @@ fn(t => {
     mappedAtCreation: true });
 
 
-  const actualOffset = offset !== null && offset !== void 0 ? offset : 0;
-  const actualSize = size !== null && size !== void 0 ? size : bufferSize - actualOffset;
+  const actualOffset = offset ?? 0;
+  const actualSize = size ?? bufferSize - actualOffset;
 
   const success = actualOffset <= bufferSize && actualOffset + actualSize <= bufferSize;
   t.testGetMappedRangeCall(success, buffer, offset, size);
@@ -593,11 +593,11 @@ fn(async t => {
   const buffer = t.createMappableBuffer(mapMode, bufferSize);
   await buffer.mapAsync(mapMode, mapOffset, mapSize);
 
-  const actualMapOffset = mapOffset !== null && mapOffset !== void 0 ? mapOffset : 0;
-  const actualMapSize = mapSize !== null && mapSize !== void 0 ? mapSize : bufferSize - actualMapOffset;
+  const actualMapOffset = mapOffset ?? 0;
+  const actualMapSize = mapSize ?? bufferSize - actualMapOffset;
 
-  const actualOffset = offset !== null && offset !== void 0 ? offset : 0;
-  const actualSize = size !== null && size !== void 0 ? size : bufferSize - actualOffset;
+  const actualOffset = offset ?? 0;
+  const actualSize = size ?? bufferSize - actualOffset;
 
   const success =
   actualOffset >= actualMapOffset &&

@@ -349,7 +349,7 @@ export class TextureZeroInitTest extends GPUTest {
         },
 
         { texture, mipLevel: level, origin: { x: 0, y: 0, z: slice } },
-        { width, height, depth: 1 }
+        { width, height, depthOrArrayLayers: 1 }
       );
     }
     this.queue.submit([commandEncoder.finish()]);

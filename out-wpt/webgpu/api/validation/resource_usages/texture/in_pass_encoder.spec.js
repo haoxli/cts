@@ -69,7 +69,7 @@ class TextureUsageTracking extends ValidationTest {
     } = options;
 
     return this.device.createTexture({
-      size: { width, height, depth: arrayLayerCount },
+      size: { width, height, depthOrArrayLayers: arrayLayerCount },
       mipLevelCount,
       sampleCount,
       dimension: '2d',
@@ -588,6 +588,8 @@ g.test('subresources_and_binding_types_combination_for_aspect')
       _usageSuccess,
     } = t.params;
 
+    await t.selectDeviceOrSkipTestCase(kDepthStencilFormatInfo[format].extension);
+
     const texture = t.createTexture({
       arrayLayerCount: TOTAL_LAYERS,
       mipLevelCount: TOTAL_LEVELS,
@@ -801,7 +803,7 @@ g.test('replaced_binding')
     let success = bindingType !== 'writeonly-storage-texture';
     // Replaced bindings should not be validated in compute pass, because validation only occurs
     // inside dispatch() which only looks at the current resource usages.
-    success || (success = compute);
+    success ||= compute;
 
     t.expectValidationError(() => {
       encoder.finish();
