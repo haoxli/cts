@@ -1,6 +1,7 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { assert, unreachable } from '../../../common/framework/util/util.js';
+import { kMaxQueryCount } from '../../capability_info.js';
 import { GPUTest } from '../../gpu_test.js';
 
 export const kEncoderTypes = ['non-pass', 'compute pass', 'render pass', 'render bundle'];
@@ -57,6 +58,34 @@ export class ValidationTest extends GPUTest {
         const buffer = this.device.createBuffer(descriptor);
         buffer.destroy();
         return buffer;
+      }
+    }
+  }
+
+  createQuerySetWithState(state, descriptor) {
+    descriptor = descriptor ?? {
+      type: 'occlusion',
+      count: 2,
+    };
+
+    switch (state) {
+      case 'valid':
+        return this.device.createQuerySet(descriptor);
+      case 'invalid': {
+        // Make the queryset invalid because of the count out of bounds.
+        this.device.pushErrorScope('validation');
+        const queryset = this.device.createQuerySet({
+          type: 'occlusion',
+          count: kMaxQueryCount + 1,
+        });
+
+        this.device.popErrorScope();
+        return queryset;
+      }
+      case 'destroyed': {
+        const queryset = this.device.createQuerySet(descriptor);
+        queryset.destroy();
+        return queryset;
       }
     }
   }

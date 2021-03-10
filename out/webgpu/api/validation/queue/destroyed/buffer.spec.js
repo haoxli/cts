@@ -15,4 +15,13 @@ Consider whether these tests should be distributed throughout the suite, instead
 import { ValidationTest } from '../../validation_test.js';
 
 export const g = makeTestGroup(ValidationTest);
+
+g.test('resolveQuerySet').
+desc(
+`
+Tests that use a destroyed buffer in resolveQuerySet.
+- x= {destroyed, not destroyed (control case)}
+  `).
+
+unimplemented();
 //# sourceMappingURL=buffer.spec.js.map

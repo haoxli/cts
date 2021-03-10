@@ -143,7 +143,7 @@ export const listing = [
       "render",
       "state_tracking"
     ],
-    "description": "Ensure state is set correctly. Tries to stress state caching (setting different states multiple\ntimes in different orders) for setIndexBuffer and setVertexBuffer.\nEquivalent tests for setBindGroup and setPipeline are in programmable/state_tracking.spec.ts.\nEquivalent tests for viewport/scissor/blend/reference are in render/dynamic_state.spec.ts\n\nTODO: plan and implement\n- try setting states multiple times in different orders, check state is correct in a draw call.\n    - setIndexBuffer: specifically test changing the format, offset, size, without changing the buffer\n    - setVertexBuffer: specifically test changing the offset, size, without changing the buffer\n- try changing the pipeline {before,after} the vertex/index buffers.\n  (In D3D12, the vertex buffer stride is part of SetVertexBuffer instead of the pipeline.)"
+    "description": "Ensure state is set correctly. Tries to stress state caching (setting different states multiple\ntimes in different orders) for setIndexBuffer and setVertexBuffer.\nEquivalent tests for setBindGroup and setPipeline are in programmable/state_tracking.spec.ts.\nEquivalent tests for viewport/scissor/blend/reference are in render/dynamic_state.spec.ts\n\nTODO: plan and implement\n- try setting states multiple times in different orders, check state is correct in a draw call.\n    - setIndexBuffer: specifically test changing the format, offset, size, without changing the buffer\n    - setVertexBuffer: specifically test changing the offset, size, without changing the buffer\n- try changing the pipeline {before,after} the vertex/index buffers.\n  (In D3D12, the vertex buffer stride is part of SetVertexBuffer instead of the pipeline.)\n- Test that drawing after having set vertex buffer slots not used by the pipeline.\n- Test that setting / not setting the index buffer does not impact a non-indexed draw."
   },
   {
     "file": [
@@ -366,16 +366,7 @@ export const listing = [
       "rendering",
       "draw"
     ],
-    "description": "Tests for the general aspects of draw/drawIndexed/drawIndirect/drawIndexedIndirect.\n\nTODO: plan and implement\n- draws (note bind group state is not tested here):\n    - various zero-sized draws\n    - draws with vertexCount not aligned to primitive topology (line-list or triangle-list) (should not error)\n    - index buffer is {unset, set}\n    - vertex buffers are {unset, set} (some that the pipeline uses, some it doesn't)\n      (note: to test this, the shader in the pipeline doesn't have to actually use inputs)\n    - x= {draw, drawIndexed, drawIndirect, drawIndexedIndirect}\n- ?"
-  },
-  {
-    "file": [
-      "api",
-      "operation",
-      "rendering",
-      "indexed_draw"
-    ],
-    "description": "Tests for the indexing-specific aspects of drawIndexed/drawIndexedIndirect.\n\nTODO: plan and implement\n- Test indexed draws with the combinations:\n  - Renderable cases:\n    - indexCount {=, >} the required points of primitive topology and\n      {<, =} the size of index buffer\n    - instanceCount is {1, largeish}\n    - {firstIndex, baseVertex, firstInstance} = 0\n    - firstIndex  {<, =} the size of index buffer\n  - Not renderable cases:\n    - indexCount = 0\n    - indexCount < the required points of primitive topology\n    - instanceCount = {undefined, 0}\n    - firstIndex out of buffer range\n    - firstIndex largeish\n  - x = {drawIndexed, drawIndexedIndirect}\n  - x = index formats\n- ?"
+    "description": "Tests for the general aspects of draw/drawIndexed/drawIndirect/drawIndexedIndirect.\n\nPrimitive topology tested in api/operation/render_pipeline/primitive_topology.spec.ts.\nIndex format tested in api/operation/command_buffer/render/state_tracking.spec.ts.\n\nTODO:\n* arguments - Test that draw arguments are passed correctly.\n  Test works by drawing triangles to the screen.\n  Horizontally across the screen are triangles with increasing \"primitive id\".\n  Vertically down the screen are triangles with increasing instance id.\n  Increasing the |first| param should skip some of the beginning triangles on the horizontal axis.\n  Increasing the |first_instance| param should skip of the beginning triangles on the vertical axis.\n  The vertex buffer contains two side-by-side triangles, and base_vertex is used to offset to select the second.\n  The test checks that the center of all of the expected triangles is drawn, and the others are empty.\n  The fragment shader also writes out to a storage buffer. If the draw is zero-sized, check that no value is written.\n\n  Params:\n  - count= {0, non-zero} either the vertexCount or indexCount\n  - instance_count= {0, non-zero}\n  - first={0, non-zero} - either the firstVertex or firstIndex\n  - first_instance={0, non-zero}\n  - mode= {draw, drawIndexed, drawIndirect, drawIndexedIndirect}\n  - base_vertex= {0, non-zero} - only for indexed draws\n\n* default_arguments - Test defaults to draw / drawIndexed.\n  - arg= {instance_count, first, first_instance, base_vertex}\n  - mode= {draw, drawIndexed}\n\n* vertex_attributes - Test fetching of vertex attributes\n  Each vertex attribute is a single value and written to one component of an output attachment.\n  4 components x 4 attachments is enough for 16 attributes. The test draws a grid of points\n  with a fixed number of primitives and instances.\n  Horizontally across the screen are primitives with increasing \"primitive id\".\n  Vertically down the screen are primitives with increasing instance id.\n\n  Params:\n  - vertex_attributes= {0, 1, max}\n  - vertex_buffer_count={0, 1, max} - where # attributes is > 0\n  - step_mode= {vertex, instanced, mixed} - where mixed only applies for vertex_attributes > 1\n\n* unaligned_vertex_count - Test that drawing with a number of vertices that's not a multiple of the vertices a given primitive list topology is not an error. The last primitive is not drawn.\n  - primitive_topology= {line-list, triangle-list}\n  - mode= {draw, drawIndexed, drawIndirect, drawIndexedIndirect}"
   },
   {
     "file": [
@@ -384,7 +375,7 @@ export const listing = [
       "rendering",
       "indirect_draw"
     ],
-    "description": "Tests for the indirect-specific aspects of drawIndirect/drawIndexedIndirect.\n\nTODO: plan and implement\n- indirect draws:\n    - indirectBuffer is {valid, invalid, destroyed, doesn't have usage)\n    - indirectOffset is {\n        - 0, 1, 4\n        - b.size - sizeof(args struct)\n        - b.size - sizeof(args struct) + min alignment (1 or 2 or 4)\n        - }\n    - x= {drawIndirect, drawIndexedIndirect}\n- ?"
+    "description": "Tests for the indirect-specific aspects of drawIndirect/drawIndexedIndirect.\n\nTODO:\n* parameter_packing - Test that the indirect draw parameters are tightly packed.\n  - offset= {0, 4, k * sizeof(args struct), k * sizeof(args struct) + 4}\n  - mode= {drawIndirect, drawIndexedIndirect}"
   },
   {
     "file": [
@@ -616,7 +607,7 @@ export const listing = [
       "validation",
       "createTexture"
     ],
-    "description": "createTexture validation tests.\n\nTODO: review existing tests and merge with this plan:\n> All x= every texture format\n>\n> - sampleCount = {0, 1, 4, 8, 16, 256} with format/dimension that supports multisample\n>     - x= every texture format\n> - sampleCount = {1, 4}\n>     - with format that supports multisample, with all possible dimensions\n>     - with dimension that support multisample, with all possible formats\n>     - with format-dimension that support multisample, with {mipLevelCount, array layer count} = {1, 2}\n> - usage flags\n>     - {0, ... each single usage flag}\n>     - x= every texture format\n> - every possible pair of usage flags\n>     - with one common texture format\n> - any other conditions from the spec\n> - ...?\n\nTODO: move destroy tests out of this file"
+    "description": "createTexture validation tests.\n\nTODO: review existing tests and merge with this plan:\n> All x= every texture format\n>\n> - usage flags\n>     - {0, ... each single usage flag}\n>     - x= every texture format\n> - every possible pair of usage flags\n>     - with one common texture format\n> - any other conditions from the spec\n> - ...?\n\nTODO: move destroy tests out of this file"
   },
   {
     "file": [
@@ -723,7 +714,7 @@ export const listing = [
       "render",
       "other"
     ],
-    "description": "Does **not** test usage scopes (resource_usages/), programmable pass stuff (programmable,*),\nor state tracking (state_tracking).\n\nTODO: plan and implement. Notes:\n> All x= {render pass, render bundle}\n>\n> - setPipeline\n>     - {valid, invalid} GPURenderPipeline\n> - setIndexBuffer\n>     - buffer is {valid, invalid, doesn't have usage)\n>     - (offset, size) is\n>         - (0, 0)\n>         - (0, 1)\n>         - (0, 4)\n>         - (0, 5)\n>         - (0, b.size)\n>         - (min alignment, b.size - 4)\n>         - (4, b.size - 4)\n>         - (b.size - 4, 4)\n>         - (b.size, min size)\n>         - (0, min size), and if that's valid:\n>             - (b.size - min size, min size)\n> - setVertexBuffer\n>     - slot is {0, max, max+1}\n>     - buffer is {valid, invalid,  doesn't have usage)\n>     - (offset, size) is like above"
+    "description": "Does **not** test usage scopes (resource_usages/), programmable pass stuff (programmable,*),\nor state tracking (state_tracking).\n\nTODO: plan and implement. Notes:\n> All x= {render pass, render bundle}\n>\n> - setPipeline\n>     - {valid, invalid} GPURenderPipeline\n> - setIndexBuffer\n>     - buffer is {valid, invalid, doesn't have usage)\n>     - (offset, size) is\n>         - (0, 0)\n>         - (0, 1)\n>         - (0, 4)\n>         - (0, 5)\n>         - (0, b.size)\n>         - (min alignment, b.size - 4)\n>         - (4, b.size - 4)\n>         - (b.size - 4, 4)\n>         - (b.size, min size)\n>         - (0, min size), and if that's valid:\n>             - (b.size - min size, min size)\n> - setVertexBuffer\n>     - slot is {0, max, max+1}\n>     - buffer is {valid, invalid,  doesn't have usage)\n>     - (offset, size) is like above\n> - drawIndirect / drawIndexedIndirect\n>     - buffer is {valid, invalid, doesn't have usage)\n>     - (offset, b.size) is\n>         - (0, 0)\n>         - (0, min size - min alignment)\n>         - (0, min size - 1)\n>         - (0, min size)\n>         - (min alignment, min size + min alignment)\n>         - (min alignment, min alignment + min size - 1)\n>         - (min alignment +/- 1, min size + alignment)"
   },
   {
     "file": [
@@ -793,7 +784,7 @@ export const listing = [
       "queries",
       "general"
     ],
-    "description": "TODO:\n\n- For each way to start a query (all possible types in all possible encoders):\n    - queryIndex {in, out of} range for GPUQuerySet\n    - GPUQuerySet {valid, invalid}\n        - or {undefined}, for occlusionQuerySet\n    - ?"
+    "description": "TODO:\n\n- For each way to start a query (all possible types in all possible encoders):\n    - queryIndex {in, out of} range for GPUQuerySet\n    - GPUQuerySet {valid, invalid}\n        - or {undefined}, for occlusionQuerySet\n    - x = {occlusion, pipeline statistics, timestamp} query"
   },
   {
     "file": [
@@ -823,7 +814,7 @@ export const listing = [
       "queries",
       "resolveQuerySet"
     ],
-    "description": "TODO:\n- invalid GPUQuerySet\n- firstQuery and/or queryCount out of range\n- invalid destination buffer\n- destinationOffset out of range\n- ?"
+    "description": "Validation tests for resolveQuerySet."
   },
   {
     "file": [
@@ -1100,7 +1091,7 @@ export const listing = [
       "validation",
       "vertex_state"
     ],
-    "description": "vertexState validation tests.\n\nTODO: implement the combinations tests below.\n\nTODO Test location= declarations in the shader.\n\nTest each declaration in the shader must have an attribute with that shaderLocation:\n - For each shaderLocation TBD:\n  - For buffersIndex = 0 1, limit-1\n   - For attribute index = 0, 1, 4\n    - Create a vertexState with/without the attribute with that shader location at buffer[bufferIndex].attribs[attribIndex]\n     - Check error IFF vertexState doesn't have the shaderLocation\n\nTest each declaration must have a format compatible with the attribute:\n - For each vertex format\n  - For each type of shader declaration\n   - Check error IFF shader declaration not compatible with the attribute's format.\n\nOne-off test that many attributes can overlap.\n\nAll tests below are for a vertex buffer index 0, 1, limit-1.\n\nTest the shaderLocation must be unique:\n - For attribute 0, 1, limit - 1.\n  - For target attribute value 0, 1, limit -1, limit.\n\nTest check that the end attribute must be contained in the stride:\n - For stride = 0 (special case), 4, 128, limit\n   - For each vertex format\n    - For offset stride, stride - componentsize(format), stride - sizeof(format), stride - sizeof(format) + componentsize(format), 0, 2^32 - componentsize(format), 2^32, 2**60\n      - Check error IFF offset + sizeof(format) > stride (or 2048 for 0)\n\nTest that an attribute must be aligned to the component size:\n - For each vertex format\n  - For stride = 2*sizeof(format), 128, limit\n    - For offset = componentsize(format), componentsize(format) / 2, stride - sizeof(format) - componentsize(format), stride - sizeof(format)\n     - Check error IFF offset not aligned to componentsize(format);"
+    "description": "vertexState validation tests.\n\nTODO: implement the combinations tests below.\n\nTest each declaration must have a format compatible with the attribute:\n - For each vertex format\n  - For each type of shader declaration\n   - Check error IFF shader declaration not compatible with the attribute's format.\n\nOne-off test that many attributes can overlap.\n\nAll tests below are for a vertex buffer index 0, 1, limit-1.\n\nTest check that the end attribute must be contained in the stride:\n - For stride = 0 (special case), 4, 128, limit\n   - For each vertex format\n    - For offset stride, stride - componentsize(format), stride - sizeof(format), stride - sizeof(format) + componentsize(format), 0, 2^32 - componentsize(format), 2^32, 2**60\n      - Check error IFF offset + sizeof(format) > stride (or 2048 for 0)\n\nTest that an attribute must be aligned to the component size:\n - For each vertex format\n  - For stride = 2*sizeof(format), 128, limit\n    - For offset = componentsize(format), componentsize(format) / 2, stride - sizeof(format) - componentsize(format), stride - sizeof(format)\n     - Check error IFF offset not aligned to componentsize(format);"
   },
   {
     "file": [
