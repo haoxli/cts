@@ -85,11 +85,6 @@ export function dataBytesForCopyOrOverestimate({
   format,
   copySize: copySize_,
   method })
-
-
-
-
-
 {
   const copyExtent = standardizeExtent3D(copySize_);
 

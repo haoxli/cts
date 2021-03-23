@@ -51,8 +51,8 @@ kHeight,
 
 class IndexFormatTest extends GPUTest {
   MakeRenderPipeline(
-  primitiveTopology,
-  indexFormat)
+  topology,
+  stripIndexFormat)
   {
     const vertexModule = this.device.createShaderModule({
       // TODO?: These positions will create triangles that cut right through pixel centers. If this
@@ -91,12 +91,15 @@ class IndexFormatTest extends GPUTest {
 
     return this.device.createRenderPipeline({
       layout: this.device.createPipelineLayout({ bindGroupLayouts: [] }),
-      vertexStage: { module: vertexModule, entryPoint: 'main' },
-      fragmentStage: { module: fragmentModule, entryPoint: 'main' },
-      primitiveTopology,
-      colorStates: [{ format: kTextureFormat }],
-      vertexState: {
-        indexFormat } });
+      vertex: { module: vertexModule, entryPoint: 'main' },
+      fragment: {
+        module: fragmentModule,
+        entryPoint: 'main',
+        targets: [{ format: kTextureFormat }] },
+
+      primitive: {
+        topology,
+        stripIndexFormat } });
 
 
   }

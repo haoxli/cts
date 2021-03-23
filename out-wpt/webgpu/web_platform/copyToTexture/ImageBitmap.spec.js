@@ -1,41 +1,43 @@
-export const description = `
+/**
+ * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
+ **/ export const description = `
 copyImageBitmapToTexture from ImageBitmaps created from various sources.
 
-TODO: additional sources
+TODO: Test ImageBitmap generated from all possible ImageBitmapSource, relevant ImageBitmapOptions
+    (https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#images-2)
+    and various source filetypes and metadata (weird dimensions, EXIF orientations, video rotations
+    and visible/crop rectangles, etc. (In theory these things are handled inside createImageBitmap,
+    but in theory could affect the internal representation of the ImageBitmap.)
+
+TODO: Test zero-sized copies from all sources (just make sure params cover it) (e.g. 0x0, 0x4, 4x0).
 `;
+import { poptions, params } from '../../../common/framework/params_builder.js';
+import { makeTestGroup } from '../../../common/framework/test_group.js';
+import { unreachable } from '../../../common/framework/util/util.js';
+import { kUncompressedTextureFormatInfo } from '../../capability_info.js';
+import { GPUTest } from '../../gpu_test.js';
+import { kTexelRepresentationInfo } from '../../util/texture/texel_data.js';
 
-import { poptions, params } from '../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../common/framework/test_group.js';
-import { unreachable } from '../../common/framework/util/util.js';
-import { kUncompressedTextureFormatInfo, UncompressedTextureFormat } from '../capability_info.js';
-import { GPUTest } from '../gpu_test.js';
-import { kTexelRepresentationInfo } from '../util/texture/texel_data.js';
-
-function calculateRowPitch(width: number, bytesPerPixel: number): number {
+function calculateRowPitch(width, bytesPerPixel) {
   const bytesPerRow = width * bytesPerPixel;
   // Rounds up to a multiple of 256 according to WebGPU requirements.
   return (((bytesPerRow - 1) >> 8) + 1) << 8;
 }
+var Color;
 
-enum Color {
-  Red,
-  Green,
-  Blue,
-  White,
-  OpaqueBlack,
-  TransparentBlack,
-}
 // Cache for generated pixels.
-const generatedPixelCache: Map<GPUTextureFormat, Map<Color, Uint8Array>> = new Map();
+(function (Color) {
+  Color[(Color['Red'] = 0)] = 'Red';
+  Color[(Color['Green'] = 1)] = 'Green';
+  Color[(Color['Blue'] = 2)] = 'Blue';
+  Color[(Color['White'] = 3)] = 'White';
+  Color[(Color['OpaqueBlack'] = 4)] = 'OpaqueBlack';
+  Color[(Color['TransparentBlack'] = 5)] = 'TransparentBlack';
+})(Color || (Color = {}));
+const generatedPixelCache = new Map();
 
 class F extends GPUTest {
-  checkCopyImageBitmapResult(
-    src: GPUBuffer,
-    expected: ArrayBufferView,
-    width: number,
-    height: number,
-    bytesPerPixel: number
-  ): void {
+  checkCopyImageBitmapResult(src, expected, width, height, bytesPerPixel) {
     const exp = new Uint8Array(expected.buffer, expected.byteOffset, expected.byteLength);
     const rowPitch = calculateRowPitch(width, bytesPerPixel);
     const dst = this.createCopyForMapRead(src, 0, rowPitch * height);
@@ -51,6 +53,7 @@ class F extends GPUTest {
         rowPitch,
         bytesPerPixel
       );
+
       if (check !== undefined) {
         niceStack.message = check;
         this.rec.expectationFailed(niceStack);
@@ -59,17 +62,10 @@ class F extends GPUTest {
     });
   }
 
-  checkBufferWithRowPitch(
-    actual: Uint8Array,
-    exp: Uint8Array,
-    width: number,
-    height: number,
-    rowPitch: number,
-    bytesPerPixel: number
-  ): string | undefined {
-    const failedByteIndices: string[] = [];
-    const failedByteExpectedValues: string[] = [];
-    const failedByteActualValues: string[] = [];
+  checkBufferWithRowPitch(actual, exp, width, height, rowPitch, bytesPerPixel) {
+    const failedByteIndices = [];
+    const failedByteExpectedValues = [];
+    const failedByteActualValues = [];
     iLoop: for (let i = 0; i < height; ++i) {
       const bytesPerRow = width * bytesPerPixel;
       for (let j = 0; j < bytesPerRow; ++j) {
@@ -97,12 +93,12 @@ got [${failedByteActualValues.join(', ')}]`;
   }
 
   doTestAndCheckResult(
-    imageBitmapCopyView: GPUImageBitmapCopyView,
-    dstTextureCopyView: GPUTextureCopyView,
-    copySize: GPUExtent3D,
-    bytesPerPixel: number,
-    expectedData: Uint8ClampedArray
-  ): void {
+    imageBitmapCopyView,
+    dstTextureCopyView,
+    copySize,
+    bytesPerPixel,
+    expectedData
+  ) {
     this.device.queue.copyImageBitmapToTexture(imageBitmapCopyView, dstTextureCopyView, copySize);
 
     const imageBitmap = imageBitmapCopyView.imageBitmap;
@@ -121,6 +117,7 @@ got [${failedByteActualValues.join(', ')}]`;
       { buffer: testBuffer, bytesPerRow },
       { width: imageBitmap.width, height: imageBitmap.height, depthOrArrayLayers: 1 }
     );
+
     this.device.queue.submit([encoder.finish()]);
 
     this.checkCopyImageBitmapResult(
@@ -132,7 +129,7 @@ got [${failedByteActualValues.join(', ')}]`;
     );
   }
 
-  generatePixel(color: Color, format: UncompressedTextureFormat): Uint8Array {
+  generatePixel(color, format) {
     let entry = generatedPixelCache.get(format);
     if (entry === undefined) {
       entry = new Map();
@@ -165,10 +162,11 @@ got [${failedByteActualValues.join(', ')}]`;
         default:
           unreachable();
       }
+
       entry.set(color, pixels);
     }
 
-    return entry.get(color)!;
+    return entry.get(color);
   }
 }
 
@@ -190,7 +188,7 @@ g.test('from_ImageData')
           'rgba32float',
           'rg8unorm',
           'rg16float',
-        ] as const)
+        ])
       )
   )
   .subcases(() =>
@@ -221,8 +219,8 @@ g.test('from_ImageData')
 
     // Generate correct expected values
     const imageData = new ImageData(imagePixels, width, height);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const imageBitmap = await (createImageBitmap as any)(imageData, {
+
+    const imageBitmap = await createImageBitmap(imageData, {
       premultiplyAlpha: alpha,
       imageOrientation: orientation,
     });
@@ -233,12 +231,13 @@ g.test('from_ImageData')
         height: imageBitmap.height,
         depthOrArrayLayers: 1,
       },
+
       format: dstColorFormat,
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
     });
 
     // Construct expected value for different dst color format
-    const dstBytesPerPixel = kUncompressedTextureFormatInfo[dstColorFormat].bytesPerBlock!;
+    const dstBytesPerPixel = kUncompressedTextureFormatInfo[dstColorFormat].bytesPerBlock;
     const dstPixels = new Uint8ClampedArray(dstBytesPerPixel * width * height);
     let expectedPixels = new Uint8ClampedArray(dstBytesPerPixel * width * height);
     for (let i = 0, currentPixel = startPixel; i < width * height; ++i) {
@@ -331,6 +330,7 @@ g.test('from_canvas')
         height: imageBitmap.height,
         depthOrArrayLayers: 1,
       },
+
       format: 'rgba8unorm',
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
     });

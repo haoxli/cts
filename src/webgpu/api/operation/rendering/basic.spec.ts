@@ -55,7 +55,7 @@ g.test('fullscreen_quad').fn(async t => {
   const colorAttachmentView = colorAttachment.createView();
 
   const pipeline = t.device.createRenderPipeline({
-    vertexStage: {
+    vertex: {
       module: t.device.createShaderModule({
         code: `
           [[builtin(position)]] var<out> Position : vec4<f32>;
@@ -73,7 +73,7 @@ g.test('fullscreen_quad').fn(async t => {
       }),
       entryPoint: 'main',
     },
-    fragmentStage: {
+    fragment: {
       module: t.device.createShaderModule({
         code: `
           [[location(0)]] var<out> fragColor : vec4<f32>;
@@ -84,9 +84,9 @@ g.test('fullscreen_quad').fn(async t => {
           `,
       }),
       entryPoint: 'main',
+      targets: [{ format: 'rgba8unorm' }],
     },
-    primitiveTopology: 'triangle-list',
-    colorStates: [{ format: 'rgba8unorm' }],
+    primitive: { topology: 'triangle-list' },
   });
 
   const encoder = t.device.createCommandEncoder();
@@ -114,4 +114,11 @@ g.test('fullscreen_quad').fn(async t => {
 
 g.test('large_draw')
   .desc(`Test reasonably-sized large {draw, drawIndexed} (see also stress tests).`)
+  .unimplemented();
+
+g.test('reverse_depth')
+  .desc(
+    `Tests simple rendering with reversed depth buffer, ensures depth test works properly.
+  (see https://developer.nvidia.com/content/depth-precision-visualized).`
+  )
   .unimplemented();

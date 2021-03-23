@@ -26,7 +26,7 @@ class F extends ValidationTest {
 
   createRenderPipeline() {
     const pipeline = this.device.createRenderPipeline({
-      vertexStage: {
+      vertex: {
         module: this.device.createShaderModule({
           code: `
             [[block]] struct VertexUniforms {
@@ -48,7 +48,7 @@ class F extends ValidationTest {
 
         entryPoint: 'main' },
 
-      fragmentStage: {
+      fragment: {
         module: this.device.createShaderModule({
           code: `
             [[block]] struct FragmentUniforms {
@@ -62,10 +62,10 @@ class F extends ValidationTest {
               return;
             }` }),
 
-        entryPoint: 'main' },
+        entryPoint: 'main',
+        targets: [{ format: 'rgba8unorm' }] },
 
-      primitiveTopology: 'triangle-list',
-      colorStates: [{ format: 'rgba8unorm' }] });
+      primitive: { topology: 'triangle-list' } });
 
     return pipeline;
   }

@@ -222,7 +222,7 @@ class PrimitiveTopologyTest extends GPUTest {
   }
 
   run(
-  primitiveTopology,
+  topology,
   testLocations,
   usePrimitiveRestart)
   {
@@ -239,9 +239,9 @@ class PrimitiveTopologyTest extends GPUTest {
 
 
 
-    let indexFormat = undefined;
-    if (primitiveTopology === 'triangle-strip' || primitiveTopology === 'line-strip') {
-      indexFormat = 'uint32';
+    let stripIndexFormat = undefined;
+    if (topology === 'triangle-strip' || topology === 'line-strip') {
+      stripIndexFormat = 'uint32';
     }
 
     // Draw a primitive using 6 vertices based on the type.
@@ -251,7 +251,7 @@ class PrimitiveTopologyTest extends GPUTest {
     // Output color is solid green.
     renderPass.setPipeline(
     this.device.createRenderPipeline({
-      vertexStage: {
+      vertex: {
         module: this.device.createShaderModule({
           code: `
               [[location(0)]] var<in> pos : vec4<f32>;
@@ -262,9 +262,21 @@ class PrimitiveTopologyTest extends GPUTest {
                 return;
               }` }),
 
-        entryPoint: 'main' },
+        entryPoint: 'main',
+        buffers: [
+        {
+          arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
+          attributes: [
+          {
+            format: 'float32x4',
+            offset: 0,
+            shaderLocation: 0 }] }] },
 
-      fragmentStage: {
+
+
+
+
+      fragment: {
         module: this.device.createShaderModule({
           code: `
               [[location(0)]] var<out> fragColor : vec4<f32>;
@@ -273,24 +285,12 @@ class PrimitiveTopologyTest extends GPUTest {
                 return;
               }` }),
 
-        entryPoint: 'main' },
+        entryPoint: 'main',
+        targets: [{ format: kColorFormat }] },
 
-      primitiveTopology,
-      colorStates: [{ format: kColorFormat }],
-      vertexState: {
-        indexFormat,
-        vertexBuffers: [
-        {
-          arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
-          attributes: [
-          {
-            format: 'float32x4',
-            offset: 0,
-            shaderLocation: 0 }] }] } }));
-
-
-
-
+      primitive: {
+        topology,
+        stripIndexFormat } }));
 
 
 

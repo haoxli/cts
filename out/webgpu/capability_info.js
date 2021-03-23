@@ -1,6 +1,7 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/
+**/import { assert } from '../common/framework/util/util.js';
+
 import { GPUConst } from './constants.js';
 
 
@@ -70,6 +71,7 @@ export const kBufferUsages = numericKeysOf(kBufferUsageInfo);
 
 // Textures
 
+// Note that we repeat the header multiple times in order to make it easier to read.
 export const kRegularTextureFormatInfo = makeTable(
 ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'extension'],
 [, true, true, false, false,, true, true,, 1, 1], {
@@ -119,18 +121,18 @@ export const kRegularTextureFormatInfo = makeTable(
 
 const kTexFmtInfoHeader = ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'extension'];
 export const kSizedDepthStencilFormatInfo = makeTable(kTexFmtInfoHeader,
-[true, true, false,,, false,,,, 1, 1], {
-  'depth32float': [true,, false, true, false,, false, false, 4],
-  'depth16unorm': [true,, false, true, false,, false, false, 2],
-  'stencil8': [true,,, false, true,, false, false, 1] });
+[true, true, false,,, false, false, false,, 1, 1], {
+  'depth32float': [true,,, true, false,,,, 4],
+  'depth16unorm': [true,,, true, false,,,, 2],
+  'stencil8': [true,,, false, true,,,, 1] });
 
 export const kUnsizedDepthStencilFormatInfo = makeTable(kTexFmtInfoHeader,
-[true, true, false,,, false,,, undefined, 1, 1], {
-  'depth24plus': [,,, true, false,, false, false],
-  'depth24plus-stencil8': [,,, true, true,, false, false],
+[true, true, false,,, false, false, false, undefined, 1, 1], {
+  'depth24plus': [,,, true, false,,,],
+  'depth24plus-stencil8': [,,, true, true,,,],
   // bytesPerBlock only makes sense on a per-aspect basis. But this table can't express that. So we put depth24unorm-stencil8 and depth32float-stencil8 to be unsized formats for now.
-  'depth24unorm-stencil8': [,,, true, true,, false, false,,,, 'depth24unorm-stencil8'],
-  'depth32float-stencil8': [,,, true, true,, false, false,,,, 'depth32float-stencil8'] });
+  'depth24unorm-stencil8': [,,, true, true,,,,,,, 'depth24unorm-stencil8'],
+  'depth32float-stencil8': [,,, true, true,,,,,,, 'depth32float-stencil8'] });
 
 export const kCompressedTextureFormatInfo = makeTable(kTexFmtInfoHeader,
 [false, false, true, false, false, false, true, true,, 4, 4], {
@@ -231,33 +233,40 @@ const kDepthStencilFormatCapabilityInBufferTextureCopy = {
   // kUnsizedDepthStencilFormats
   depth24plus: {
     CopyB2T: [],
-    CopyT2B: [] },
+    CopyT2B: [],
+    texelAspectSize: { 'depth-only': -1, 'stencil-only': -1 } },
 
   'depth24plus-stencil8': {
     CopyB2T: ['stencil-only'],
-    CopyT2B: ['stencil-only'] },
+    CopyT2B: ['stencil-only'],
+    texelAspectSize: { 'depth-only': -1, 'stencil-only': 1 } },
 
 
   // kSizedDepthStencilFormats
   depth16unorm: {
     CopyB2T: ['all', 'depth-only'],
-    CopyT2B: ['all', 'depth-only'] },
+    CopyT2B: ['all', 'depth-only'],
+    texelAspectSize: { 'depth-only': 2, 'stencil-only': -1 } },
 
   depth32float: {
     CopyB2T: [],
-    CopyT2B: ['all', 'depth-only'] },
+    CopyT2B: ['all', 'depth-only'],
+    texelAspectSize: { 'depth-only': 4, 'stencil-only': -1 } },
 
   'depth24unorm-stencil8': {
     CopyB2T: ['stencil-only'],
-    CopyT2B: ['depth-only', 'stencil-only'] },
+    CopyT2B: ['depth-only', 'stencil-only'],
+    texelAspectSize: { 'depth-only': 4, 'stencil-only': 1 } },
 
   'depth32float-stencil8': {
     CopyB2T: ['stencil-only'],
-    CopyT2B: ['depth-only', 'stencil-only'] },
+    CopyT2B: ['depth-only', 'stencil-only'],
+    texelAspectSize: { 'depth-only': 4, 'stencil-only': 1 } },
 
   stencil8: {
     CopyB2T: ['all', 'stencil-only'],
-    CopyT2B: ['all', 'stencil-only'] } };
+    CopyT2B: ['all', 'stencil-only'],
+    texelAspectSize: { 'depth-only': -1, 'stencil-only': 1 } } };
 
 
 
@@ -269,6 +278,16 @@ aspect)
   const supportedAspects =
   kDepthStencilFormatCapabilityInBufferTextureCopy[format][type];
   return supportedAspects.includes(aspect);
+}
+
+export function depthStencilFormatAspectSize(
+format,
+aspect)
+{
+  const texelAspectSize =
+  kDepthStencilFormatCapabilityInBufferTextureCopy[format].texelAspectSize[aspect];
+  assert(texelAspectSize > 0);
+  return texelAspectSize;
 }
 
 export const kTextureUsageInfo =
@@ -310,6 +329,48 @@ export const kTextureViewDimensionInfo =
   '3d': { storage: true } };
 
 export const kTextureViewDimensions = keysOf(kTextureViewDimensionInfo);
+
+// Vertex formats
+
+export const kVertexFormatInfo = makeTable(
+['bytesPerComponent', 'type', 'componentCount'],
+[,,], {
+  // 8 bit components
+  'uint8x2': [1, 'uint', 2],
+  'uint8x4': [1, 'uint', 4],
+  'sint8x2': [1, 'sint', 2],
+  'sint8x4': [1, 'sint', 4],
+  'unorm8x2': [1, 'unorm', 2],
+  'unorm8x4': [1, 'unorm', 4],
+  'snorm8x2': [1, 'snorm', 2],
+  'snorm8x4': [1, 'snorm', 4],
+  // 16 bit components
+  'uint16x2': [2, 'uint', 2],
+  'uint16x4': [2, 'uint', 4],
+  'sint16x2': [2, 'sint', 2],
+  'sint16x4': [2, 'sint', 4],
+  'unorm16x2': [2, 'unorm', 2],
+  'unorm16x4': [2, 'unorm', 4],
+  'snorm16x2': [2, 'snorm', 2],
+  'snorm16x4': [2, 'snorm', 4],
+  'float16x2': [2, 'float', 2],
+  'float16x4': [2, 'float', 4],
+  // 32 bit components
+  'float32': [4, 'float', 1],
+  'float32x2': [4, 'float', 2],
+  'float32x3': [4, 'float', 3],
+  'float32x4': [4, 'float', 4],
+  'uint32': [4, 'uint', 1],
+  'uint32x2': [4, 'uint', 2],
+  'uint32x3': [4, 'uint', 3],
+  'uint32x4': [4, 'uint', 4],
+  'sint32': [4, 'sint', 1],
+  'sint32x2': [4, 'sint', 2],
+  'sint32x3': [4, 'sint', 3],
+  'sint32x4': [4, 'sint', 4] });
+
+
+export const kVertexFormats = keysOf(kVertexFormatInfo);
 
 // Typedefs for bindings
 

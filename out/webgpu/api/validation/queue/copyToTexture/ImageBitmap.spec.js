@@ -25,14 +25,14 @@ Test Plan:
   - Check that an error is generated when destination.texture.origin + copySize is too large.
 
 TODO: copying into slices of 2d array textures. 1d and 3d as well if they're not invalid.
-`;import { poptions, params, pbool } from '../../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../../common/framework/test_group.js';
+`;import { poptions, params, pbool } from '../../../../../common/framework/params_builder.js';
+import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import {
 kAllTextureFormatInfo,
 kAllTextureFormats,
 kTextureUsages } from
-'../../../capability_info.js';
-import { ValidationTest } from '../validation_test.js';
+'../../../../capability_info.js';
+import { ValidationTest } from '../../validation_test.js';
 
 const kDefaultBytesPerPixel = 4; // using 'bgra8unorm' or 'rgba8unorm'
 const kDefaultWidth = 32;
@@ -434,22 +434,4 @@ fn(async t => {
   success);
 
 });
-
-g.test('ImageBitmap_sources').
-desc(
-`Test ImageBitmap generated from all possible ImageBitmapSource, relevant ImageBitmapOptions
-    (https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#images-2)
-    and various source filetypes and metadata (weird dimensions, EXIF orientations, video rotations
-    and visible/crop rectangles, etc. (In theory these things are handled inside createImageBitmap,
-    but in theory could affect the internal representation of the ImageBitmap.)`).
-
-unimplemented();
-
-g.test('zero_sized').
-desc(
-`Test valid zero-sized copies.
-
-- copySize { [0,x,x], [x,0,x], [x,x,0], [0,0,0] }`).
-
-unimplemented();
-//# sourceMappingURL=copyImageBitmapToTexture.spec.js.map
+//# sourceMappingURL=ImageBitmap.spec.js.map

@@ -23,7 +23,7 @@ fn(async t => {
 
   // create render pipeline
   const renderPipeline = t.device.createRenderPipeline({
-    vertexStage: {
+    vertex: {
       module: t.device.createShaderModule({
         code: `
             [[builtin(position)]] var<out> Position : vec4<f32>;
@@ -41,7 +41,7 @@ fn(async t => {
 
       entryPoint: 'main' },
 
-    fragmentStage: {
+    fragment: {
       module: t.device.createShaderModule({
         code: `
             [[location(0)]] var<out> fragColor : vec4<f32>;
@@ -51,10 +51,10 @@ fn(async t => {
             }
             ` }),
 
-      entryPoint: 'main' },
+      entryPoint: 'main',
+      targets: [{ format: 'r8unorm' }] },
 
-    primitiveTopology: 'triangle-list',
-    colorStates: [{ format: 'r8unorm' }] });
+    primitive: { topology: 'triangle-list' } });
 
 
   // encode pass and submit

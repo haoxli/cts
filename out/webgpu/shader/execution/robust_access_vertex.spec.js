@@ -326,11 +326,11 @@ fn(async t => {
   }
 
   // Vertex buffer descriptors
-  const vertexBuffers = [];
+  const buffers = [];
   {
     let currAttribute = 0;
     for (let i = 0; i < bufferContents.length; i++) {
-      vertexBuffers.push({
+      buffers.push({
         arrayStride: attributesPerBuffer * typeInfo.size,
         stepMode: i === 0 ? 'instance' : 'vertex',
         attributes: Array(attributesPerBuffer).
@@ -351,7 +351,7 @@ fn(async t => {
   }
 
   const pipeline = t.device.createRenderPipeline({
-    vertexStage: {
+    vertex: {
       module: t.device.createShaderModule({
         code: `
             [[builtin(position)]] var<out> Position : vec4<f32>;
@@ -383,9 +383,10 @@ fn(async t => {
               }
             }` }),
 
-      entryPoint: 'main' },
+      entryPoint: 'main',
+      buffers },
 
-    fragmentStage: {
+    fragment: {
       module: t.device.createShaderModule({
         code: `
             [[location(0)]] var<out> fragColor : vec4<f32>;
@@ -393,13 +394,10 @@ fn(async t => {
               fragColor = vec4<f32>(1.0, 0.0, 0.0, 1.0);
             }` }),
 
-      entryPoint: 'main' },
+      entryPoint: 'main',
+      targets: [{ format: 'rgba8unorm' }] },
 
-    primitiveTopology: 'point-list',
-    colorStates: [{ format: 'rgba8unorm' }],
-    vertexState: {
-      vertexBuffers } });
-
+    primitive: { topology: 'point-list' } });
 
 
   // Pipeline setup, texture setup

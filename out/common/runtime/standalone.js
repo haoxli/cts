@@ -199,27 +199,19 @@ parentLevel,
 onChange)
 {
   const isLeaf = ('run' in n);
-  const div = $('<div>').addClass('nodeheader');
+  const div = $('<details>').addClass('nodeheader');
+  const header = $('<summary>').appendTo(div);
 
   const setChecked = () => {
-    if (checkbox) {
-      checkbox.prop('checked', true); // (does not fire onChange)
-      onChange(true);
-    }
+    div.prop('open', true); // (does not fire onChange)
+    onChange(true);
   };
 
-  let checkbox;
   const href = `?${worker ? 'worker&' : ''}${debug ? 'debug&' : ''}q=${n.query.toString()}`;
   if (onChange) {
-    checkbox = $('<input>').
-    attr('type', 'checkbox').
-    addClass('collapsebtn').
-    on('change', function () {
-      onChange(this.checked);
-    }).
-    attr('alt', 'Expand').
-    attr('title', 'Expand').
-    appendTo(div);
+    div.on('toggle', function () {
+      onChange(this.open);
+    });
 
     // Expand the shallower parts of the tree at load.
     // Also expand completely within subtrees that are at the same query level
@@ -236,25 +228,25 @@ onChange)
   on('click', async () => {
     await runSubtree();
   }).
-  appendTo(div);
+  appendTo(header);
   $('<a>').
   addClass('nodelink').
   attr('href', href).
   attr('alt', 'Open').
   attr('title', 'Open').
-  appendTo(div);
+  appendTo(header);
   if ('testCreationStack' in n && n.testCreationStack) {
     $('<button>').
     addClass('testcaselogbtn').
     attr('alt', 'Log test creation stack to console').
     attr('title', 'Log test creation stack to console').
-    appendTo(div).
+    appendTo(header).
     on('click', () => {
 
       console.log(n.testCreationStack);
     });
   }
-  const nodetitle = $('<div>').addClass('nodetitle').appendTo(div);
+  const nodetitle = $('<div>').addClass('nodetitle').appendTo(header);
   $('<input>').
   attr('type', 'text').
   prop('readonly', true).
@@ -266,7 +258,7 @@ onChange)
     $('<pre>') //
     .addClass('nodedescription').
     text(n.description).
-    appendTo(nodetitle);
+    appendTo(header);
   }
   return [div[0], setChecked];
 }

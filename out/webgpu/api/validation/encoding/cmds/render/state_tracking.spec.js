@@ -16,7 +16,7 @@ class F extends ValidationTest {
 
   createRenderPipeline(bufferCount) {
     return this.device.createRenderPipeline({
-      vertexStage: {
+      vertex: {
         module: this.device.createShaderModule({
           code: `
             ${range(
@@ -29,9 +29,19 @@ class F extends ValidationTest {
               return;
             }` }),
 
-        entryPoint: 'main' },
+        entryPoint: 'main',
+        buffers: [
+        {
+          arrayStride: 3 * 4,
+          attributes: range(bufferCount, i => ({
+            format: 'float32x3',
+            offset: 0,
+            shaderLocation: i })) }] },
 
-      fragmentStage: {
+
+
+
+      fragment: {
         module: this.device.createShaderModule({
           code: `
             [[location(0)]] var<out> fragColor : vec4<f32>;
@@ -40,22 +50,10 @@ class F extends ValidationTest {
               return;
             }` }),
 
-        entryPoint: 'main' },
+        entryPoint: 'main',
+        targets: [{ format: 'rgba8unorm' }] },
 
-      primitiveTopology: 'triangle-list',
-      colorStates: [{ format: 'rgba8unorm' }],
-      vertexState: {
-        vertexBuffers: [
-        {
-          arrayStride: 3 * 4,
-          attributes: range(bufferCount, i => ({
-            format: 'float32x3',
-            offset: 0,
-            shaderLocation: i })) }] } });
-
-
-
-
+      primitive: { topology: 'triangle-list' } });
 
   }
 

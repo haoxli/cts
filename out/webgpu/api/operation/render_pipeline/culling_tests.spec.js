@@ -98,7 +98,7 @@ fn(t => {
   // 2. The bottom-right one is clockwise (CW)
   pass.setPipeline(
   t.device.createRenderPipeline({
-    vertexStage: {
+    vertex: {
       module: t.device.createShaderModule({
         code: `
               [[builtin(position)]] var<out> Position : vec4<f32>;
@@ -118,7 +118,7 @@ fn(t => {
 
       entryPoint: 'main' },
 
-    fragmentStage: {
+    fragment: {
       module: t.device.createShaderModule({
         code: `
               [[location(0)]] var<out> fragColor : vec4<f32>;
@@ -133,15 +133,15 @@ fn(t => {
                 return;
               }` }),
 
-      entryPoint: 'main' },
+      entryPoint: 'main',
+      targets: [{ format }] },
 
-    primitiveTopology: t.params.primitiveTopology,
-    rasterizationState: {
+    primitive: {
+      topology: t.params.primitiveTopology,
       frontFace: t.params.frontFace,
       cullMode: t.params.cullMode },
 
-    colorStates: [{ format }],
-    depthStencilState: depthTexture ?
+    depthStencil: depthTexture ?
     { format: t.params.depthStencilFormat } :
     undefined }));
 

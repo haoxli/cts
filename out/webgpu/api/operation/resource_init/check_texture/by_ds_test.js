@@ -29,11 +29,11 @@ sampleCount,
 expected)
 {
   return t.device.createRenderPipeline({
-    vertexStage: {
+    vertex: {
       entryPoint: 'main',
       module: makeFullscreenVertexModule(t.device) },
 
-    fragmentStage: {
+    fragment: {
       entryPoint: 'main',
       module: t.device.createShaderModule({
         code: `
@@ -46,16 +46,16 @@ expected)
           outSuccess = 1.0;
           return;
         }
-        ` }) },
+        ` }),
 
+      targets: [{ format: 'r8unorm' }] },
 
-    colorStates: [{ format: 'r8unorm' }],
-    depthStencilState: {
+    depthStencil: {
       format,
       depthCompare: 'equal' },
 
-    primitiveTopology: 'triangle-list',
-    sampleCount });
+    primitive: { topology: 'triangle-list' },
+    multisample: { count: sampleCount } });
 
 }
 
@@ -65,11 +65,11 @@ format,
 sampleCount)
 {
   return t.device.createRenderPipeline({
-    vertexStage: {
+    vertex: {
       entryPoint: 'main',
       module: makeFullscreenVertexModule(t.device) },
 
-    fragmentStage: {
+    fragment: {
       entryPoint: 'main',
       module: t.device.createShaderModule({
         code: `
@@ -80,21 +80,17 @@ sampleCount)
           outSuccess = 1.0;
           return;
         }
-        ` }) },
+        ` }),
 
+      targets: [{ format: 'r8unorm' }] },
 
-    colorStates: [
-    {
-      format: 'r8unorm' }],
-
-
-    depthStencilState: {
+    depthStencil: {
       format,
       stencilFront: { compare: 'equal' },
       stencilBack: { compare: 'equal' } },
 
-    primitiveTopology: 'triangle-list',
-    sampleCount });
+    primitive: { topology: 'triangle-list' },
+    multisample: { count: sampleCount } });
 
 }
 

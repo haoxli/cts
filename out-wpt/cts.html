@@ -26,6 +26,9 @@
 
 <script src=/resources/testharness.js></script>
 <script src=/resources/testharnessreport.js></script>
+<script>
+    const loadWebGPUExpectations = undefined;
+</script>
 <script type=module src=/webgpu/common/runtime/wpt.js></script>
 <meta name=variant content='?q=webgpu:api,operation,buffers,map:*'>
 <meta name=variant content='?q=webgpu:api,operation,buffers,map_detach:*'>
@@ -47,7 +50,6 @@
 <meta name=variant content='?q=webgpu:api,operation,memory_sync,buffer,ww:*'>
 <meta name=variant content='?q=webgpu:api,operation,memory_sync,texture,rw_and_wr:*'>
 <meta name=variant content='?q=webgpu:api,operation,memory_sync,texture,ww:*'>
-<meta name=variant content='?q=webgpu:api,operation,onuncapturederror:*'>
 <meta name=variant content='?q=webgpu:api,operation,queue,writeBuffer:*'>
 <meta name=variant content='?q=webgpu:api,operation,render_pass,resolve:*'>
 <meta name=variant content='?q=webgpu:api,operation,render_pass,storeOp:*'>
@@ -68,6 +70,7 @@
 <meta name=variant content='?q=webgpu:api,operation,sampling,lod_clamp:*'>
 <meta name=variant content='?q=webgpu:api,operation,texture_view,read:*'>
 <meta name=variant content='?q=webgpu:api,operation,texture_view,write:*'>
+<meta name=variant content='?q=webgpu:api,operation,uncapturederror:*'>
 <meta name=variant content='?q=webgpu:api,operation,vertex_state,basic:*'>
 <meta name=variant content='?q=webgpu:api,operation,vertex_state,correctness:*'>
 <meta name=variant content='?q=webgpu:api,operation,vertex_state,index_format:*'>
@@ -76,7 +79,9 @@
 <meta name=variant content='?q=webgpu:api,validation,buffer,destroy:*'>
 <meta name=variant content='?q=webgpu:api,validation,buffer,mapping:*'>
 <meta name=variant content='?q=webgpu:api,validation,buffer,threading:*'>
-<meta name=variant content='?q=webgpu:api,validation,capability_checks,features,queries:*'>
+<meta name=variant content='?q=webgpu:api,validation,capability_checks,features,depth_clamping:*'>
+<meta name=variant content='?q=webgpu:api,validation,capability_checks,features,query_types:*'>
+<meta name=variant content='?q=webgpu:api,validation,capability_checks,features,texture_formats:*'>
 <meta name=variant content='?q=webgpu:api,validation,createBindGroup:*'>
 <meta name=variant content='?q=webgpu:api,validation,createBindGroupLayout:*'>
 <meta name=variant content='?q=webgpu:api,validation,createPipelineLayout:*'>
@@ -115,7 +120,7 @@
 <meta name=variant content='?q=webgpu:api,validation,query_set,create:*'>
 <meta name=variant content='?q=webgpu:api,validation,query_set,destroy:*'>
 <meta name=variant content='?q=webgpu:api,validation,queue,buffer_mapped:*'>
-<meta name=variant content='?q=webgpu:api,validation,queue,copyImageBitmapToTexture:*'>
+<meta name=variant content='?q=webgpu:api,validation,queue,copyToTexture,ImageBitmap:*'>
 <meta name=variant content='?q=webgpu:api,validation,queue,destroyed,buffer:*'>
 <meta name=variant content='?q=webgpu:api,validation,queue,destroyed,query_set:*'>
 <meta name=variant content='?q=webgpu:api,validation,queue,destroyed,texture:*'>
@@ -139,4 +144,8 @@
 <meta name=variant content='?q=webgpu:web_platform,canvas,context_creation:*'>
 <meta name=variant content='?q=webgpu:web_platform,canvas,getCurrentTexture:*'>
 <meta name=variant content='?q=webgpu:web_platform,canvas,getSwapChainPreferredFormat:*'>
-<meta name=variant content='?q=webgpu:web_platform,copyImageBitmapToTexture:*'>
+<meta name=variant content='?q=webgpu:web_platform,copyToTexture,ImageBitmap:*'>
+<meta name=variant content='?q=webgpu:web_platform,copyToTexture,canvas:*'>
+<meta name=variant content='?q=webgpu:web_platform,copyToTexture,video:*'>
+<meta name=variant content='?q=webgpu:web_platform,external_texture,canvas:*'>
+<meta name=variant content='?q=webgpu:web_platform,external_texture,video:*'>

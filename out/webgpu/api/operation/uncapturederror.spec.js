@@ -32,4 +32,4 @@ desc(
 (since deserialized ones don't have EventTarget/onuncapturederror).`).
 
 unimplemented();
-//# sourceMappingURL=onuncapturederror.spec.js.map
+//# sourceMappingURL=uncapturederror.spec.js.map
