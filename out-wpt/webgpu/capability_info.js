@@ -72,50 +72,50 @@ export const kRegularTextureFormatInfo = makeTable(
     'blockHeight',
     'extension',
   ],
-  [, true, true, false, false, , true, true, , 1, 1],
+  [, , true, false, false, , true, true, , 1, 1],
   {
     // 8-bit formats
-    r8unorm: [true, , , , , false, , , 1],
-    r8snorm: [false, , , , , false, , , 1],
-    r8uint: [true, , , , , false, , , 1],
-    r8sint: [true, , , , , false, , , 1],
+    r8unorm: [true, true, , , , false, , , 1],
+    r8snorm: [false, false, , , , false, , , 1],
+    r8uint: [true, true, , , , false, , , 1],
+    r8sint: [true, true, , , , false, , , 1],
     // 16-bit formats
-    r16uint: [true, , , , , false, , , 2],
-    r16sint: [true, , , , , false, , , 2],
-    r16float: [true, , , , , false, , , 2],
-    rg8unorm: [true, , , , , false, , , 2],
-    rg8snorm: [false, , , , , false, , , 2],
-    rg8uint: [true, , , , , false, , , 2],
-    rg8sint: [true, , , , , false, , , 2],
+    r16uint: [true, true, , , , false, , , 2],
+    r16sint: [true, true, , , , false, , , 2],
+    r16float: [true, true, , , , false, , , 2],
+    rg8unorm: [true, true, , , , false, , , 2],
+    rg8snorm: [false, false, , , , false, , , 2],
+    rg8uint: [true, true, , , , false, , , 2],
+    rg8sint: [true, true, , , , false, , , 2],
     // 32-bit formats
-    r32uint: [true, , , , , true, , , 4],
-    r32sint: [true, , , , , true, , , 4],
-    r32float: [true, , , , , true, , , 4],
-    rg16uint: [true, , , , , false, , , 4],
-    rg16sint: [true, , , , , false, , , 4],
-    rg16float: [true, , , , , false, , , 4],
-    rgba8unorm: [true, , , , , true, , , 4],
-    'rgba8unorm-srgb': [true, , , , , false, , , 4],
-    rgba8snorm: [false, , , , , true, , , 4],
-    rgba8uint: [true, , , , , true, , , 4],
-    rgba8sint: [true, , , , , true, , , 4],
-    bgra8unorm: [true, , , , , false, , , 4],
-    'bgra8unorm-srgb': [true, , , , , false, , , 4],
+    r32uint: [true, true, , , , true, , , 4],
+    r32sint: [true, true, , , , true, , , 4],
+    r32float: [true, true, , , , true, , , 4],
+    rg16uint: [true, true, , , , false, , , 4],
+    rg16sint: [true, true, , , , false, , , 4],
+    rg16float: [true, true, , , , false, , , 4],
+    rgba8unorm: [true, true, , , , true, , , 4],
+    'rgba8unorm-srgb': [true, true, , , , false, , , 4],
+    rgba8snorm: [false, false, , , , true, , , 4],
+    rgba8uint: [true, true, , , , true, , , 4],
+    rgba8sint: [true, true, , , , true, , , 4],
+    bgra8unorm: [true, true, , , , false, , , 4],
+    'bgra8unorm-srgb': [true, true, , , , false, , , 4],
     // Packed 32-bit formats
-    rgb10a2unorm: [true, , , , , false, , , 4],
-    rg11b10ufloat: [false, , , , , false, , , 4],
-    rgb9e5ufloat: [false, , , , , false, , , 4],
+    rgb10a2unorm: [true, true, , , , false, , , 4],
+    rg11b10ufloat: [false, false, , , , false, , , 4],
+    rgb9e5ufloat: [false, false, , , , false, , , 4],
     // 64-bit formats
-    rg32uint: [true, , , , , true, , , 8],
-    rg32sint: [true, , , , , true, , , 8],
-    rg32float: [true, , , , , true, , , 8],
-    rgba16uint: [true, , , , , true, , , 8],
-    rgba16sint: [true, , , , , true, , , 8],
-    rgba16float: [true, , , , , true, , , 8],
+    rg32uint: [true, true, , , , true, , , 8],
+    rg32sint: [true, true, , , , true, , , 8],
+    rg32float: [true, true, , , , true, , , 8],
+    rgba16uint: [true, true, , , , true, , , 8],
+    rgba16sint: [true, true, , , , true, , , 8],
+    rgba16float: [true, true, , , , true, , , 8],
     // 128-bit formats
-    rgba32uint: [true, , , , , true, , , 16],
-    rgba32sint: [true, , , , , true, , , 16],
-    rgba32float: [true, , , , , true, , , 16],
+    rgba32uint: [true, true, , , , true, , , 16],
+    rgba32sint: [true, true, , , , true, , , 16],
+    rgba32float: [true, true, , , , true, , , 16],
   }
 );
 
@@ -137,9 +137,9 @@ export const kSizedDepthStencilFormatInfo = makeTable(
   kTexFmtInfoHeader,
   [true, true, false, , , false, false, false, , 1, 1],
   {
-    depth32float: [true, , , true, false, , , , 4],
-    depth16unorm: [true, , , true, false, , , , 2],
-    stencil8: [true, , , false, true, , , , 1],
+    depth32float: [, , , true, false, , , , 4],
+    depth16unorm: [, , , true, false, , , , 2],
+    stencil8: [, , , false, true, , , , 1],
   }
 );
 
@@ -301,6 +301,14 @@ export function depthStencilFormatAspectSize(format, aspect) {
   return texelAspectSize;
 }
 
+export function textureDimensionAndFormatCompatible(dimension, format) {
+  const info = kAllTextureFormatInfo[format];
+  return !(
+    (dimension === '1d' || dimension === '3d') &&
+    (info.blockWidth > 1 || info.depth || info.stencil)
+  );
+}
+
 export const kTextureUsageInfo = {
   [GPUConst.TextureUsage.COPY_SRC]: {},
   [GPUConst.TextureUsage.COPY_DST]: {},
@@ -376,6 +384,9 @@ export const kVertexFormats = keysOf(kVertexFormatInfo);
 // Typedefs for bindings
 
 // Bindings
+
+// Dynamic buffer offsets require offset to be divisible by 256
+export const kMinDynamicBufferOffsetAlignment = 256;
 
 export const kMaxBindingsPerBindGroup = 16;
 

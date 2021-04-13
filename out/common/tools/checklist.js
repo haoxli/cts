@@ -20,7 +20,7 @@ if (process.argv.length !== 3) usage(1);
 
 
 async function loadQueryListFromTextFile(filename) {
-  const lines = (await fs.promises.readFile(filename, 'utf8')).split('\n');
+  const lines = (await fs.promises.readFile(filename, 'utf8')).split(/\r?\n/);
   const allQueries = lines.filter(l => l).map(l => parseQuery(l.trim()));
 
   const queriesBySuite = new Map();

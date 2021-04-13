@@ -36,11 +36,14 @@ setup({
   const filterQuery = parseQuery(qs[0]);
   const testcases = await loader.loadCases(filterQuery);
 
-  const expectations = parseExpectationsForTestQuery(
-  await (loadWebGPUExpectations ?? []),
+  const expectations =
+  typeof loadWebGPUExpectations !== 'undefined' ?
+  parseExpectationsForTestQuery(
+  await loadWebGPUExpectations,
   filterQuery,
-  new URL(window.location.href));
+  new URL(window.location.href)) :
 
+  [];
 
   const log = new Logger(false);
 
@@ -49,7 +52,7 @@ setup({
     const wpt_fn = async () => {
       const [rec, res] = log.record(name);
       if (worker) {
-        await worker.run(rec, name);
+        await worker.run(rec, name, expectations);
       } else {
         await testcase.run(rec, expectations);
       }

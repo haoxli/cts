@@ -11,7 +11,8 @@ kCompressedTextureFormatInfo,
 kTextureDimensions,
 kTextureUsages,
 kUncompressedTextureFormats,
-kUncompressedTextureFormatInfo } from
+kUncompressedTextureFormatInfo,
+textureDimensionAndFormatCompatible } from
 '../../capability_info.js';
 import { DefaultLimits, GPUConst } from '../../constants.js';
 import { maxMipLevelCount } from '../../util/texture/base.js';
@@ -79,9 +80,34 @@ fn(async t => {
 
 
   const success = zeroArgument === 'none';
+
   t.expectValidationError(() => {
     t.device.createTexture(descriptor);
   }, !success);
+});
+
+g.test('dimension_type_and_format_compatibility').
+desc(
+`Test every dimension type on every format. Note that compressed formats and depth/stencil formats are not valid for 1D/3D dimension types.`).
+
+cases(poptions('dimension', [undefined, ...kTextureDimensions])).
+subcases(() => params().combine(poptions('format', kAllTextureFormats))).
+fn(async t => {
+  const { dimension, format } = t.params;
+
+  const info = kAllTextureFormatInfo[format];
+  await t.selectDeviceOrSkipTestCase(info.extension);
+
+  const descriptor = {
+    size: [info.blockWidth, info.blockHeight, 1],
+    dimension,
+    format,
+    usage: GPUTextureUsage.SAMPLED };
+
+
+  t.expectValidationError(() => {
+    t.device.createTexture(descriptor);
+  }, !textureDimensionAndFormatCompatible(dimension, format));
 });
 
 g.test('mipLevelCount,format').
@@ -109,6 +135,7 @@ fn(async t => {
 
 
   const success = mipLevelCount <= 6;
+
   t.expectValidationError(() => {
     t.device.createTexture(descriptor);
   }, !success);
@@ -187,26 +214,31 @@ fn(async t => {
 });
 
 g.test('sampleCount,various_sampleCount_with_all_formats').
-desc(`Test texture creation with various (valid or invalid) sample count and all formats`).
+desc(
+`Test texture creation with various (valid or invalid) sample count and all formats. Note that 1D and 3D textures can't support multisample.`).
+
+cases(poptions('dimension', [undefined, '2d'])).
 subcases(() =>
 params().
 combine(poptions('sampleCount', [0, 1, 2, 4, 8, 16, 32, 256])).
 combine(poptions('format', kAllTextureFormats))).
 
 fn(async t => {
-  const { sampleCount, format } = t.params;
+  const { dimension, sampleCount, format } = t.params;
 
   await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[format].extension);
 
   const descriptor = {
     size: [32, 32, 1],
     sampleCount,
+    dimension,
     format,
     usage: GPUTextureUsage.SAMPLED };
 
 
   const success =
   sampleCount === 1 || sampleCount === 4 && kAllTextureFormatInfo[format].multisample;
+
   t.expectValidationError(() => {
     t.device.createTexture(descriptor);
   }, !success);
@@ -216,7 +248,7 @@ g.test('sampleCount,valid_sampleCount_with_other_parameter_varies').
 desc(
 `Test texture creation with valid sample count when dimensions, arrayLayerCount, mipLevelCount, format, and usage varies.
      Texture can be single sample (sampleCount is 1) or multi-sample (sampleCount is 4).
-     Multisample texture requires that 1) its dimension is 2d or undefined, 2) its format is a uncompressed format, 3) its mipLevelCount and arrayLayerCount are 1, 4) its usage doesn't include STORAGE.`).
+     Multisample texture requires that 1) its dimension is 2d or undefined, 2) its format supports multisample, 3) its mipLevelCount and arrayLayerCount are 1, 4) its usage doesn't include STORAGE.`).
 
 cases(poptions('dimension', [undefined, ...kTextureDimensions])).
 subcases(({ dimension }) =>
@@ -229,7 +261,9 @@ arrayLayerCount === 2 && dimension !== '2d' && dimension !== undefined).
 
 combine(poptions('mipLevelCount', [1, 2])).
 combine(poptions('format', kAllTextureFormats)).
-combine(poptions('usage', kTextureUsages)).
+combine(poptions('usage', kTextureUsages))
+// Filter out incompatible dimension type and format combinations.
+.filter(({ format }) => textureDimensionAndFormatCompatible(dimension, format)).
 unless(({ usage, format }) => {
   const info = kAllTextureFormatInfo[format];
   return (
@@ -278,10 +312,12 @@ desc(
 	  It also tests smallest size (lower bound) for every dimension type and every uncompressed format, while other texture_size tests are testing the upper bound.`).
 
 cases(poptions('dimension', [undefined, ...kTextureDimensions])).
-subcases(() =>
+subcases(({ dimension }) =>
 params().
 combine(poptions('format', kUncompressedTextureFormats)).
-combine(poptions('size', [[1], [1, 1], [1, 1, 1]]))).
+combine(poptions('size', [[1], [1, 1], [1, 1, 1]]))
+// Filter out incompatible dimension type and format combinations.
+.filter(({ format }) => textureDimensionAndFormatCompatible(dimension, format))).
 
 fn(async t => {
   const { dimension, format, size } = t.params;
@@ -301,9 +337,10 @@ fn(async t => {
 g.test('texture_size,default_value_and_smallest_size,compressed_format').
 desc(
 `Test default values for height and depthOrArrayLayers for every dimension type and every compressed format.
-	  It also tests smallest size (lower bound) for every dimension type and every compressed format, while other texture_size tests are testing the upper bound.`).
+	  It also tests smallest size (lower bound) for every dimension type and every compressed format, while other texture_size tests are testing the upper bound.`)
 
-cases(poptions('dimension', [undefined, ...kTextureDimensions])).
+// Compressed formats are invalid for 1D and 3D.
+.cases(poptions('dimension', [undefined, '2d'])).
 subcases(() =>
 params().
 combine(poptions('format', kCompressedTextureFormats)).
@@ -341,8 +378,9 @@ fn(async t => {
 g.test('texture_size,1d_texture').
 desc(`Test texture size requirement for 1D texture`).
 subcases(() =>
-params().
-combine(poptions('format', kAllTextureFormats)).
+params()
+// Compressed textures are invalid for 1D.
+.combine(poptions('format', kUncompressedTextureFormats)).
 combine(
 poptions('width', [
 DefaultLimits.maxTextureDimension1D - 1,
@@ -356,7 +394,7 @@ combine(poptions('depthOrArrayLayers', [1, 2]))).
 fn(async t => {
   const { format, width, height, depthOrArrayLayers } = t.params;
 
-  await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[format].extension);
+  await t.selectDeviceOrSkipTestCase(kUncompressedTextureFormatInfo[format].extension);
 
   const descriptor = {
     size: [width, height, depthOrArrayLayers],
@@ -580,6 +618,7 @@ expand(p => {
 fn(async t => {
   const { format, size } = t.params;
 
+  // Compressed formats are not supported in 3D in WebGPU v1 because they are complicated but not very useful for now.
   t.skip('Compressed 3D texture is not supported');
 
   const info = kCompressedTextureFormatInfo[format];
@@ -614,12 +653,14 @@ desc(
 `Test texture usage (single usage or combined usages) for every texture format and every dimension type`).
 
 cases(poptions('dimension', [undefined, ...kTextureDimensions])).
-subcases(() =>
+subcases(({ dimension }) =>
 params().
 combine(poptions('format', kAllTextureFormats))
 // If usage0 and usage1 are the same, then the usage being test is a single usage. Otherwise, it is a combined usage.
 .combine(poptions('usage0', kTextureUsages)).
-combine(poptions('usage1', kTextureUsages))).
+combine(poptions('usage1', kTextureUsages))
+// Filter out incompatible dimension type and format combinations.
+.filter(({ format }) => textureDimensionAndFormatCompatible(dimension, format))).
 
 fn(async t => {
   const { dimension, format, usage0, usage1 } = t.params;

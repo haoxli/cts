@@ -2,7 +2,11 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import { assert, unreachable } from '../../../common/framework/util/util.js';import { kMaxQueryCount } from '../../capability_info.js';import { GPUTest } from '../../gpu_test.js';
 
-export const kEncoderTypes = ['non-pass', 'compute pass', 'render pass', 'render bundle'];
+export const kRenderEncodeTypes = ['render pass', 'render bundle'];
+
+export const kProgrammableEncoderTypes = ['compute pass', ...kRenderEncodeTypes];
+
+export const kEncoderTypes = ['non-pass', ...kProgrammableEncoderTypes];
 
 
 
