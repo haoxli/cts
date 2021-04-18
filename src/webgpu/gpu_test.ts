@@ -6,9 +6,15 @@ import {
   EncodableTextureFormat,
   SizedTextureFormat,
   kAllTextureFormatInfo,
+  kQueryTypeInfo,
 } from './capability_info.js';
 import { makeBufferWithContents } from './util/buffer.js';
-import { DevicePool, DeviceProvider, TestOOMedShouldAttemptGC } from './util/device_pool.js';
+import {
+  DevicePool,
+  DeviceProvider,
+  TestOOMedShouldAttemptGC,
+  UncanonicalizedDeviceDescriptor,
+} from './util/device_pool.js';
 import { align } from './util/math.js';
 import {
   fillTextureDataWithTexelValue,
@@ -75,10 +81,20 @@ export class GPUTest extends Fixture {
    * If the request descriptor can't be supported, throws an exception to skip the entire test case.
    */
   async selectDeviceOrSkipTestCase(
-    descriptor: GPUDeviceDescriptor | GPUExtensionName | undefined
+    descriptor:
+      | UncanonicalizedDeviceDescriptor
+      | GPUFeatureName
+      | undefined
+      | Array<GPUFeatureName | undefined>
   ): Promise<void> {
     if (descriptor === undefined) return;
-    if (typeof descriptor === 'string') descriptor = { extensions: [descriptor] };
+    if (typeof descriptor === 'string') {
+      descriptor = { nonGuaranteedFeatures: [descriptor] };
+    } else if (descriptor instanceof Array) {
+      descriptor = {
+        nonGuaranteedFeatures: descriptor.filter(f => f !== undefined) as GPUFeatureName[],
+      };
+    }
 
     assert(this.provider !== undefined);
     // Make sure the device isn't replaced after it's been retrieved once.
@@ -101,19 +117,24 @@ export class GPUTest extends Fixture {
     if (!Array.isArray(formats)) {
       formats = [formats];
     }
-    const extensions = new Set<GPUExtensionName>();
+    const features = new Set<GPUFeatureName | undefined>();
     for (const format of formats) {
       if (format !== undefined) {
-        const formatExtension = kAllTextureFormatInfo[format].extension;
-        if (formatExtension !== undefined) {
-          extensions.add(formatExtension);
-        }
+        features.add(kAllTextureFormatInfo[format].feature);
       }
     }
 
-    if (extensions.size) {
-      await this.selectDeviceOrSkipTestCase({ extensions });
+    await this.selectDeviceOrSkipTestCase(Array.from(features));
+  }
+
+  async selectDeviceForQueryTypeOrSkipTestCase(
+    types: GPUQueryType | GPUQueryType[]
+  ): Promise<void> {
+    if (!Array.isArray(types)) {
+      types = [types];
     }
+    const features = types.map(t => kQueryTypeInfo[t].feature);
+    await this.selectDeviceOrSkipTestCase(features);
   }
 
   // Note: finalize is called even if init was unsuccessful.

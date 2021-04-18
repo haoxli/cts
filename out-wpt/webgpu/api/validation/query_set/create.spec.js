@@ -3,21 +3,10 @@
  **/ export const description = `
 Tests for validation in createQuerySet.
 `;
-import { params, poptions } from '../../../../common/framework/params_builder.js';
+import { poptions } from '../../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { kQueryTypes, kMaxQueryCount } from '../../../capability_info.js';
 import { ValidationTest } from '../validation_test.js';
-
-async function selectDeviceForQueryType(t, type) {
-  const extensions = [];
-  if (type === 'pipeline-statistics') {
-    extensions.push('pipeline-statistics-query');
-  } else if (type === 'timestamp') {
-    extensions.push('timestamp-query');
-  }
-
-  await t.selectDeviceOrSkipTestCase({ extensions });
-}
 
 export const g = makeTestGroup(ValidationTest);
 
@@ -29,15 +18,12 @@ Tests that create query set with the count for all query types:
 - x= {occlusion, pipeline-statistics, timestamp} query
   `
   )
-  .params(
-    params()
-      .combine(poptions('type', kQueryTypes))
-      .combine(poptions('count', [0, kMaxQueryCount, kMaxQueryCount + 1]))
-  )
+  .cases(poptions('type', kQueryTypes))
+  .subcases(() => poptions('count', [0, kMaxQueryCount, kMaxQueryCount + 1]))
   .fn(async t => {
     const { type, count } = t.params;
 
-    await selectDeviceForQueryType(t, type);
+    await t.selectDeviceForQueryTypeOrSkipTestCase(type);
 
     const pipelineStatistics = type === 'pipeline-statistics' ? ['clipper-invocations'] : [];
 
@@ -55,15 +41,12 @@ Tests that create query set with the GPUPipelineStatisticName for all query type
 - x= {occlusion, pipeline-statistics, timestamp} query
   `
   )
-  .params(
-    params()
-      .combine(poptions('type', kQueryTypes))
-      .combine(poptions('pipelineStatistics', [undefined, [], ['clipper-invocations']]))
-  )
+  .cases(poptions('type', kQueryTypes))
+  .subcases(() => poptions('pipelineStatistics', [undefined, [], ['clipper-invocations']]))
   .fn(async t => {
     const { type, pipelineStatistics } = t.params;
 
-    await selectDeviceForQueryType(t, type);
+    await t.selectDeviceForQueryTypeOrSkipTestCase(type);
 
     const count = 1;
     const shouldError =
@@ -84,7 +67,7 @@ g.test('pipelineStatistics,duplicates_and_all')
 Tests that create query set with the duplicate values and all values of GPUPipelineStatisticName for pipeline-statistics query.
   `
   )
-  .params(
+  .subcases(() =>
     poptions('pipelineStatistics', [
       ['clipper-invocations', 'clipper-invocations'],
       [
@@ -99,7 +82,7 @@ Tests that create query set with the duplicate values and all values of GPUPipel
   .fn(async t => {
     const type = 'pipeline-statistics';
 
-    await selectDeviceForQueryType(t, type);
+    await t.selectDeviceForQueryTypeOrSkipTestCase(type);
 
     const count = 1;
     const pipelineStatistics = t.params.pipelineStatistics;

@@ -164,7 +164,7 @@ class ImageCopyTest extends GPUTest {
   }
 
   /**
-     * This is used for testing passing undefined members of `GPUTextureDataLayout` instead of actual
+     * This is used for testing passing undefined members of `GPUImageDataLayout` instead of actual
      * values where possible. Passing arguments as values and not as objects so that they are passed
      * by copy and not by reference.
      */
@@ -189,7 +189,7 @@ class ImageCopyTest extends GPUTest {
   }
 
   /**
-     * This is used for testing passing undefined members of `GPUTextureCopyView` instead of actual
+     * This is used for testing passing undefined members of `GPUImageCopyTexture` instead of actual
      * values where possible and also for testing passing the origin as `[number, number, number]`.
      * Passing arguments as values and not as objects so that they are passed by copy and not by
      * reference.
@@ -697,7 +697,7 @@ fn(async t => {
     checkMethod } =
   t.params;
   const info = kSizedTextureFormatInfo[format];
-  await t.selectDeviceOrSkipTestCase(info.extension);
+  await t.selectDeviceOrSkipTestCase(info.feature);
 
   // For CopyB2T and CopyT2B we need to have bytesPerRow 256-aligned,
   // to make this happen we align the bytesInACompleteRow value and multiply
@@ -779,7 +779,7 @@ fn(async t => {
     checkMethod } =
   t.params;
   const info = kSizedTextureFormatInfo[format];
-  await t.selectDeviceOrSkipTestCase(info.extension);
+  await t.selectDeviceOrSkipTestCase(info.feature);
 
   const offset = offsetInBlocks * info.bytesPerBlock;
   const copySize = {
@@ -844,7 +844,7 @@ fn(async t => {
     checkMethod } =
   t.params;
   const info = kSizedTextureFormatInfo[format];
-  await t.selectDeviceOrSkipTestCase(info.extension);
+  await t.selectDeviceOrSkipTestCase(info.feature);
 
   const originBlocks = [1, 1, 1];
   const copySizeBlocks = [2, 2, 2];
@@ -1032,7 +1032,7 @@ fn(async t => {
     checkMethod } =
   t.params;
   const info = kSizedTextureFormatInfo[format];
-  await t.selectDeviceOrSkipTestCase(info.extension);
+  await t.selectDeviceOrSkipTestCase(info.feature);
 
   const origin = {
     x: originInBlocks.x * info.blockWidth,

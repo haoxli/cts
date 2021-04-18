@@ -120,7 +120,7 @@ class ImageCopyTest extends GPUTest {
   }
 
   /**
-   * This is used for testing passing undefined members of `GPUTextureDataLayout` instead of actual
+   * This is used for testing passing undefined members of `GPUImageDataLayout` instead of actual
    * values where possible. Passing arguments as values and not as objects so that they are passed
    * by copy and not by reference.
    */
@@ -140,7 +140,7 @@ class ImageCopyTest extends GPUTest {
   }
 
   /**
-   * This is used for testing passing undefined members of `GPUTextureCopyView` instead of actual
+   * This is used for testing passing undefined members of `GPUImageCopyTexture` instead of actual
    * values where possible and also for testing passing the origin as `[number, number, number]`.
    * Passing arguments as values and not as objects so that they are passed by copy and not by
    * reference.
@@ -628,7 +628,7 @@ bytes in copy works for every format.
       checkMethod,
     } = t.params;
     const info = kSizedTextureFormatInfo[format];
-    await t.selectDeviceOrSkipTestCase(info.extension);
+    await t.selectDeviceOrSkipTestCase(info.feature);
 
     // For CopyB2T and CopyT2B we need to have bytesPerRow 256-aligned,
     // to make this happen we align the bytesInACompleteRow value and multiply
@@ -710,7 +710,7 @@ works for every format with 2d and 2d-array textures.
       checkMethod,
     } = t.params;
     const info = kSizedTextureFormatInfo[format];
-    await t.selectDeviceOrSkipTestCase(info.extension);
+    await t.selectDeviceOrSkipTestCase(info.feature);
 
     const offset = offsetInBlocks * info.bytesPerBlock;
     const copySize = {
@@ -777,7 +777,7 @@ for all formats. We pass origin and copyExtent as [number, number, number].`
       checkMethod,
     } = t.params;
     const info = kSizedTextureFormatInfo[format];
-    await t.selectDeviceOrSkipTestCase(info.extension);
+    await t.selectDeviceOrSkipTestCase(info.feature);
 
     const originBlocks = [1, 1, 1];
     const copySizeBlocks = [2, 2, 2];
@@ -965,7 +965,7 @@ g.test('mip_levels')
       checkMethod,
     } = t.params;
     const info = kSizedTextureFormatInfo[format];
-    await t.selectDeviceOrSkipTestCase(info.extension);
+    await t.selectDeviceOrSkipTestCase(info.feature);
 
     const origin = {
       x: originInBlocks.x * info.blockWidth,

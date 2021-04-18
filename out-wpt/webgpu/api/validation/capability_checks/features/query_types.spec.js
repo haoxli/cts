@@ -31,15 +31,15 @@ As of this writing, the spec needs to be fixed as well.
   .fn(async t => {
     const { type, pipelineStatisticsQueryEnable, timestampQueryEnable } = t.params;
 
-    const extensions = [];
+    const nonGuaranteedFeatures = [];
     if (pipelineStatisticsQueryEnable) {
-      extensions.push('pipeline-statistics-query');
+      nonGuaranteedFeatures.push('pipeline-statistics-query');
     }
     if (timestampQueryEnable) {
-      extensions.push('timestamp-query');
+      nonGuaranteedFeatures.push('timestamp-query');
     }
 
-    await t.selectDeviceOrSkipTestCase({ extensions });
+    await t.selectDeviceOrSkipTestCase({ nonGuaranteedFeatures });
 
     const count = 1;
     const pipelineStatistics = type === 'pipeline-statistics' ? ['clipper-invocations'] : [];

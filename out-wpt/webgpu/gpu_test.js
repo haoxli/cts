@@ -4,7 +4,7 @@
 import { attemptGarbageCollection } from '../common/framework/util/collect_garbage.js';
 import { assert } from '../common/framework/util/util.js';
 
-import { kAllTextureFormatInfo } from './capability_info.js';
+import { kAllTextureFormatInfo, kQueryTypeInfo } from './capability_info.js';
 import { makeBufferWithContents } from './util/buffer.js';
 import { DevicePool, TestOOMedShouldAttemptGC } from './util/device_pool.js';
 import { align } from './util/math.js';
@@ -49,7 +49,13 @@ export class GPUTest extends Fixture {
    */
   async selectDeviceOrSkipTestCase(descriptor) {
     if (descriptor === undefined) return;
-    if (typeof descriptor === 'string') descriptor = { extensions: [descriptor] };
+    if (typeof descriptor === 'string') {
+      descriptor = { nonGuaranteedFeatures: [descriptor] };
+    } else if (descriptor instanceof Array) {
+      descriptor = {
+        nonGuaranteedFeatures: descriptor.filter(f => f !== undefined),
+      };
+    }
 
     assert(this.provider !== undefined);
     // Make sure the device isn't replaced after it's been retrieved once.
@@ -70,19 +76,22 @@ export class GPUTest extends Fixture {
     if (!Array.isArray(formats)) {
       formats = [formats];
     }
-    const extensions = new Set();
+    const features = new Set();
     for (const format of formats) {
       if (format !== undefined) {
-        const formatExtension = kAllTextureFormatInfo[format].extension;
-        if (formatExtension !== undefined) {
-          extensions.add(formatExtension);
-        }
+        features.add(kAllTextureFormatInfo[format].feature);
       }
     }
 
-    if (extensions.size) {
-      await this.selectDeviceOrSkipTestCase({ extensions });
+    await this.selectDeviceOrSkipTestCase(Array.from(features));
+  }
+
+  async selectDeviceForQueryTypeOrSkipTestCase(types) {
+    if (!Array.isArray(types)) {
+      types = [types];
     }
+    const features = types.map(t => kQueryTypeInfo[t].feature);
+    await this.selectDeviceOrSkipTestCase(features);
   }
 
   // Note: finalize is called even if init was unsuccessful.

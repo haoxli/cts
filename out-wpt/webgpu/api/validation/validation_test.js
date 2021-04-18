@@ -194,7 +194,7 @@ export class ValidationTest extends GPUTest {
     return this.device.createRenderPipeline({
       vertex: {
         module: this.device.createShaderModule({
-          code: '[[stage(vertex)]] fn main() -> void {}',
+          code: '[[stage(vertex)]] fn main() {}',
         }),
 
         entryPoint: 'main',
@@ -202,7 +202,7 @@ export class ValidationTest extends GPUTest {
 
       fragment: {
         module: this.device.createShaderModule({
-          code: '[[stage(fragment)]] fn main() -> void {}',
+          code: '[[stage(fragment)]] fn main() {}',
         }),
 
         entryPoint: 'main',
@@ -217,7 +217,7 @@ export class ValidationTest extends GPUTest {
     return this.device.createComputePipeline({
       computeStage: {
         module: this.device.createShaderModule({
-          code: '[[stage(compute)]] fn main() -> void {}',
+          code: '[[stage(compute)]] fn main() {}',
         }),
 
         entryPoint: 'main',

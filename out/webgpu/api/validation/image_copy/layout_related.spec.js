@@ -135,7 +135,7 @@ fn(async t => {
     method } =
   t.params;
   const info = kSizedTextureFormatInfo[format];
-  await t.selectDeviceOrSkipTestCase(info.extension);
+  await t.selectDeviceOrSkipTestCase(info.feature);
 
   // In the CopyB2T and CopyT2B cases we need to have bytesPerRow 256-aligned,
   // to make this happen we align the bytesInACompleteRow value and multiply
@@ -183,7 +183,7 @@ subcases(texelBlockAlignmentTestExpanderForRowsPerImage).
 fn(async t => {
   const { rowsPerImage, format, method } = t.params;
   const info = kSizedTextureFormatInfo[format];
-  await t.selectDeviceOrSkipTestCase(info.extension);
+  await t.selectDeviceOrSkipTestCase(info.feature);
 
   const size = { width: 0, height: 0, depthOrArrayLayers: 0 };
 
@@ -207,7 +207,7 @@ subcases(texelBlockAlignmentTestExpanderForOffset).
 fn(async t => {
   const { format, offset, method } = t.params;
   const info = kSizedTextureFormatInfo[format];
-  await t.selectDeviceOrSkipTestCase(info.extension);
+  await t.selectDeviceOrSkipTestCase(info.feature);
 
   const size = { width: 0, height: 0, depthOrArrayLayers: 0 };
 
@@ -252,7 +252,7 @@ fn(async t => {
     method } =
   t.params;
   const info = kSizedTextureFormatInfo[format];
-  await t.selectDeviceOrSkipTestCase(info.extension);
+  await t.selectDeviceOrSkipTestCase(info.feature);
 
   // In the CopyB2T and CopyT2B cases we need to have bytesPerRow 256-aligned.
   const bytesPerRowAlignment = method === 'WriteTexture' ? 1 : 256;

@@ -10,8 +10,8 @@ function makeFullscreenVertexModule(device) {
     [[builtin(vertex_index)]] var<in> VertexIndex : i32;
 
     [[stage(vertex)]]
-    fn main() -> void {
-      const pos : array<vec2<f32>, 3> = array<vec2<f32>, 3>(
+    fn main() {
+      let pos : array<vec2<f32>, 3> = array<vec2<f32>, 3>(
         vec2<f32>(-1.0, -3.0),
         vec2<f32>( 3.0,  1.0),
         vec2<f32>(-1.0,  1.0));
@@ -37,7 +37,7 @@ function getDepthTestEqualPipeline(t, format, sampleCount, expected) {
         [[location(0)]] var<out> outSuccess : f32;
 
         [[stage(fragment)]]
-        fn main() -> void {
+        fn main() {
           FragDepth = f32(${expected});
           outSuccess = 1.0;
           return;
@@ -72,7 +72,7 @@ function getStencilTestEqualPipeline(t, format, sampleCount) {
         [[location(0)]] var<out> outSuccess : f32;
 
         [[stage(fragment)]]
-        fn main() -> void {
+        fn main() {
           outSuccess = 1.0;
           return;
         }

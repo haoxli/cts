@@ -20,7 +20,8 @@ TODO: Add some more tests/cases (may replace some existing tests), e.g.:
   - initialValue=x, signal(y), wait(x)
   - initialValue=x, signal(y), wait(y)
   - etc.
-`;import { makeTestGroup } from '../../../common/framework/test_group.js';
+`;
+import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { assert } from '../../../common/framework/util/util.js';
 
 import { ValidationTest } from './validation_test.js';

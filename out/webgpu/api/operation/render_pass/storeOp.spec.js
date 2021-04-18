@@ -227,9 +227,9 @@ fn(t => {
   // Color load operation will clear to {1.0, 1.0, 1.0, 1.0}
   // Color store operation is determined by test params. Use storeOperation1 for even numbered
   // attachments and storeOperation2 for odd numbered attachments.
-  const renderPassColorAttachmentDescriptors = [];
+  const renderPassColorAttachments = [];
   for (let i = 0; i < t.params.colorAttachments; i++) {
-    renderPassColorAttachmentDescriptors.push({
+    renderPassColorAttachments.push({
       attachment: colorAttachments[i].createView(),
       loadValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
       storeOp: i % 2 === 0 ? t.params.storeOperation1 : t.params.storeOperation2 });
@@ -238,7 +238,7 @@ fn(t => {
 
   const encoder = t.device.createCommandEncoder();
   const pass = encoder.beginRenderPass({
-    colorAttachments: renderPassColorAttachmentDescriptors });
+    colorAttachments: renderPassColorAttachments });
 
   pass.endPass();
   t.device.queue.submit([encoder.finish()]);
@@ -246,10 +246,10 @@ fn(t => {
   // Check that the correct store operation occurred.
   let expectedValue = {};
   for (let i = 0; i < t.params.colorAttachments; i++) {
-    if (renderPassColorAttachmentDescriptors[i].storeOp === 'clear') {
+    if (renderPassColorAttachments[i].storeOp === 'clear') {
       // If colorStoreOp was clear, the texture should now contain {0.0, 0.0, 0.0, 0.0}.
       expectedValue = { R: 0.0, G: 0.0, B: 0.0, A: 0.0 };
-    } else if (renderPassColorAttachmentDescriptors[i].storeOp === 'store') {
+    } else if (renderPassColorAttachments[i].storeOp === 'store') {
       // If colorStoreOP was store, the texture should still contain {1.0, 1.0, 1.0, 1.0}.
       expectedValue = { R: 1.0, G: 1.0, B: 1.0, A: 1.0 };
     }

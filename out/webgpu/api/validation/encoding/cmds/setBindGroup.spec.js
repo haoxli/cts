@@ -106,7 +106,7 @@ combine(poptions('resourceType', ['buffer', 'texture']))).
 
 fn(async t => {
   const { encoderType, state, resourceType } = t.params;
-  const { maxBindGroups } = t.device.adapter.limits || { maxBindGroups: 4 };
+  const maxBindGroups = t.device.limits?.maxBindGroups ?? 4;
 
   async function runTest(index) {
     const { encoder, finish } = t.createEncoder(encoderType);

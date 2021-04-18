@@ -2,8 +2,8 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `copyTexturetoTexture operation tests
 
-  TODO(jiawei.shao@intel.com): support all WebGPU texture formats.
-  `;import { poptions, params } from '../../../../common/framework/params_builder.js';
+TODO(jiawei.shao@intel.com): support all WebGPU texture formats.
+`;import { poptions, params } from '../../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert } from '../../../../common/framework/util/util.js';
 import {
@@ -415,9 +415,7 @@ combine(poptions('dstCopyLevel', [0, 2]))).
 
 fn(async t => {
   const { textureSize, format, copyBoxOffsets, srcCopyLevel, dstCopyLevel } = t.params;
-
-  const extension = kCompressedTextureFormatInfo[format].extension;
-  await t.selectDeviceOrSkipTestCase({ extensions: [extension] });
+  await t.selectDeviceOrSkipTestCase(kCompressedTextureFormatInfo[format].feature);
 
   t.DoCopyTextureToTextureTest(
   textureSize.srcTextureSize,
@@ -500,9 +498,7 @@ combine(poptions('dstCopyLevel', [0, 2]))).
 
 fn(async t => {
   const { textureSize, format, copyBoxOffsets, srcCopyLevel, dstCopyLevel } = t.params;
-
-  const extension = kCompressedTextureFormatInfo[format].extension;
-  await t.selectDeviceOrSkipTestCase({ extensions: [extension] });
+  await t.selectDeviceOrSkipTestCase(kCompressedTextureFormatInfo[format].feature);
 
   t.DoCopyTextureToTextureTest(
   textureSize.srcTextureSize,

@@ -38,7 +38,6 @@ Test Plan: (TODO(jiawei.shao@intel.com): add tests on 1D/3D textures)
     texture subresources.
 `;import { poptions, params } from '../../../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
-import { assert } from '../../../../../common/framework/util/util.js';
 import {
 kAllTextureFormatInfo,
 kAllTextureFormats,
@@ -270,20 +269,9 @@ combine(poptions('dstFormat', kAllTextureFormats))).
 
 fn(async t => {
   const { srcFormat, dstFormat } = t.params;
-  const extensions = [];
-
-  const srcFormatExtension = kAllTextureFormatInfo[srcFormat].extension;
-  if (srcFormatExtension !== undefined) {
-    extensions.push(srcFormatExtension);
-  }
-  const dstFormatExtension = kAllTextureFormatInfo[dstFormat].extension;
-  if (dstFormatExtension !== undefined) {
-    extensions.push(dstFormatExtension);
-  }
-
-  if (extensions.length) {
-    await t.selectDeviceOrSkipTestCase({ extensions });
-  }
+  const srcFormatInfo = kAllTextureFormatInfo[srcFormat];
+  const dstFormatInfo = kAllTextureFormatInfo[dstFormat];
+  await t.selectDeviceOrSkipTestCase([srcFormatInfo.feature, dstFormatInfo.feature]);
 
   const kTextureSize = { width: 16, height: 16, depthOrArrayLayers: 1 };
 
@@ -347,8 +335,7 @@ fn(async t => {
     srcCopyLevel,
     dstCopyLevel } =
   t.params;
-
-  await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[format].extension);
+  await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[format].feature);
 
   const kMipLevelCount = 3;
 
@@ -521,7 +508,7 @@ fn(async t => {
 g.test('copy_aspects').
 desc(
 `
-Test the validations on the member 'aspect' of GPUTextureCopyView in CopyTextureToTexture().
+Test the validations on the member 'aspect' of GPUImageCopyTexture in CopyTextureToTexture().
 - for all the color and depth-stencil formats: the texture copy aspects must be both 'all'.
 - for all the depth-only formats: the texture copy aspects must be either 'all' or 'depth-only'.
 - for all the stencil-only formats: the texture copy aspects must be either 'all' or 'stencil-only'.
@@ -535,10 +522,9 @@ combine(poptions('destinationAspect', ['all', 'depth-only', 'stencil-only']))).
 
 fn(async t => {
   const { format, sourceAspect, destinationAspect } = t.params;
+  await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[format].feature);
 
   const kTextureSize = { width: 16, height: 8, depthOrArrayLayers: 1 };
-
-  await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[format].extension);
 
   const srcTexture = t.device.createTexture({
     size: kTextureSize,
@@ -602,10 +588,7 @@ combine(poptions('dstCopyLevel', [0, 1, 2]))).
 
 fn(async t => {
   const { format, copyBoxOffsets, srcCopyLevel, dstCopyLevel } = t.params;
-
-  const extension = kAllTextureFormatInfo[format].extension;
-  assert(extension !== undefined);
-  await t.selectDeviceOrSkipTestCase({ extensions: [extension] });
+  await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[format].feature);
 
   const kTextureSize = { width: 60, height: 48, depthOrArrayLayers: 3 };
   const kMipLevelCount = 4;

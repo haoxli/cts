@@ -66,7 +66,10 @@ export class SubresourceRange {
 
 
 
-export function mipSize(size, level) {
+export function mipSize(
+size,
+level)
+{
   const rShiftMax1 = s => Math.max(s >> level, 1);
   if (size instanceof Array) {
     return size.map(rShiftMax1);

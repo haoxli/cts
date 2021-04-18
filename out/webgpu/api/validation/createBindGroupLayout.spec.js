@@ -3,6 +3,7 @@
 **/export const description = `
 createBindGroupLayout validation tests.
 
+TODO: update for new binding structure, remove eslint-disable.
 TODO: review existing tests, write descriptions, and make sure tests are complete.
 `;import { pbool, poptions, params } from '../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
@@ -99,7 +100,7 @@ fn(async t => {
   t.params;
 
   if (storageTextureFormat !== undefined) {
-    await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[storageTextureFormat].extension);
+    await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[storageTextureFormat].feature);
   }
 
   let success = true;
@@ -200,6 +201,7 @@ fn(async t => {
 
   // Dynamic buffers exceed maximum in a bind group layout.
   const badDescriptor = clone(goodDescriptor);
+
   badDescriptor.entries[maxDynamicBufferCount].hasDynamicOffset = true;
 
   t.expectValidationError(() => {
@@ -215,8 +217,10 @@ fn(async t => {
 //     (i.e. 'storage-buffer' <-> 'readonly-storage-buffer').
 //   - Otherwise, an arbitrary other type.
 function* pickExtraBindingTypes(
+
 bindingType,
 extraTypeSame)
+
 {
   const info = kBindingTypeInfo[bindingType];
   if (extraTypeSame) {

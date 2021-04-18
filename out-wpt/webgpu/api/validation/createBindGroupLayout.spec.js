@@ -3,6 +3,7 @@
  **/ export const description = `
 createBindGroupLayout validation tests.
 
+TODO: update for new binding structure, remove eslint-disable.
 TODO: review existing tests, write descriptions, and make sure tests are complete.
 `;
 import { pbool, poptions, params } from '../../../common/framework/params_builder.js';
@@ -101,7 +102,7 @@ g.test('bindingTypeSpecific_optional_members')
     } = t.params;
 
     if (storageTextureFormat !== undefined) {
-      await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[storageTextureFormat].extension);
+      await t.selectDeviceOrSkipTestCase(kAllTextureFormatInfo[storageTextureFormat].feature);
     }
 
     let success = true;
@@ -202,6 +203,7 @@ TODO(#230): Update to enforce per-stage and per-pipeline-layout limits on BGLs a
 
     // Dynamic buffers exceed maximum in a bind group layout.
     const badDescriptor = clone(goodDescriptor);
+
     badDescriptor.entries[maxDynamicBufferCount].hasDynamicOffset = true;
 
     t.expectValidationError(() => {

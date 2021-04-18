@@ -55,7 +55,7 @@ export const checkContentsBySampling = (t, params, texture, state, subresourceRa
             [[builtin(global_invocation_id)]] var<in> GlobalInvocationID : vec3<u32>;
 
             [[stage(compute)]]
-            fn main() -> void {
+            fn main() {
               var flatIndex : u32 = ${width}u * GlobalInvocationID.y + GlobalInvocationID.x;
               flatIndex = flatIndex * ${componentCount}u;
               var texel : vec4<${shaderType}> = textureLoad(

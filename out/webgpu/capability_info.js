@@ -6,8 +6,6 @@ import { GPUConst } from './constants.js';
 
 
 
-
-
 function keysOf(obj) {
   return Object.keys(obj);
 }
@@ -47,7 +45,17 @@ table)
 // Queries
 
 export const kMaxQueryCount = 8192;
-export const kQueryTypes = ['occlusion', 'pipeline-statistics', 'timestamp'];
+export const kQueryTypeInfo =
+
+
+
+{
+  // Occlusion query does not require any features.
+  'occlusion': { feature: undefined },
+  'pipeline-statistics': { feature: 'pipeline-statistics-query' },
+  'timestamp': { feature: 'timestamp-query' } };
+
+export const kQueryTypes = keysOf(kQueryTypeInfo);
 
 // Buffers
 
@@ -73,7 +81,7 @@ export const kBufferUsages = numericKeysOf(kBufferUsageInfo);
 
 // Note that we repeat the header multiple times in order to make it easier to read.
 export const kRegularTextureFormatInfo = makeTable(
-['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'extension'],
+['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'feature'],
 [,, true, false, false,, true, true,, 1, 1], {
   // 8-bit formats
   'r8unorm': [true, true,,,, false,,, 1],
@@ -119,7 +127,7 @@ export const kRegularTextureFormatInfo = makeTable(
   'rgba32float': [true, true,,,, true,,, 16] });
 
 
-const kTexFmtInfoHeader = ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'extension'];
+const kTexFmtInfoHeader = ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight', 'feature'];
 export const kSizedDepthStencilFormatInfo = makeTable(kTexFmtInfoHeader,
 [true, true, false,,, false, false, false,, 1, 1], {
   'depth32float': [,,, true, false,,,, 4],
@@ -312,7 +320,9 @@ export const kTextureUsageInfo =
 
 export const kTextureUsages = numericKeysOf(kTextureUsageInfo);
 
+// TODO: Remove once tests are updated for new binding structure.
 export const kTextureComponentTypeInfo =
+
 
 
 
@@ -533,7 +543,9 @@ export const kTextureBindingTypes = keysOf(kTextureBindingTypeInfo);
 
 // All binding types (merged from above)
 
+// TODO: Update when tests are updated for new binding structure.
 export const kBindingTypeInfo =
+
 
 {
   ...kBufferBindingTypeInfo,

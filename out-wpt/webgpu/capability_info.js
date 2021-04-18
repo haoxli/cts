@@ -33,7 +33,14 @@ function makeTable(members, defaults, table) {
 // Queries
 
 export const kMaxQueryCount = 8192;
-export const kQueryTypes = ['occlusion', 'pipeline-statistics', 'timestamp'];
+export const kQueryTypeInfo = {
+  // Occlusion query does not require any features.
+  occlusion: { feature: undefined },
+  'pipeline-statistics': { feature: 'pipeline-statistics-query' },
+  timestamp: { feature: 'timestamp-query' },
+};
+
+export const kQueryTypes = keysOf(kQueryTypeInfo);
 
 // Buffers
 
@@ -70,7 +77,7 @@ export const kRegularTextureFormatInfo = makeTable(
     'bytesPerBlock',
     'blockWidth',
     'blockHeight',
-    'extension',
+    'feature',
   ],
   [, , true, false, false, , true, true, , 1, 1],
   {
@@ -131,7 +138,7 @@ const kTexFmtInfoHeader = [
   'bytesPerBlock',
   'blockWidth',
   'blockHeight',
-  'extension',
+  'feature',
 ];
 export const kSizedDepthStencilFormatInfo = makeTable(
   kTexFmtInfoHeader,
@@ -319,6 +326,7 @@ export const kTextureUsageInfo = {
 
 export const kTextureUsages = numericKeysOf(kTextureUsageInfo);
 
+// TODO: Remove once tests are updated for new binding structure.
 export const kTextureComponentTypeInfo = {
   float: {},
   sint: {},
@@ -524,6 +532,7 @@ export const kTextureBindingTypes = keysOf(kTextureBindingTypeInfo);
 
 // All binding types (merged from above)
 
+// TODO: Update when tests are updated for new binding structure.
 export const kBindingTypeInfo = {
   ...kBufferBindingTypeInfo,
   ...kSamplerBindingTypeInfo,

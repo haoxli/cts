@@ -5,8 +5,6 @@ import { assert } from '../common/framework/util/util.js';
 import { GPUConst } from './constants.js';
 
 type valueof<K> = K[keyof K];
-type GPUTextureUsage = valueof<typeof GPUTextureUsage>;
-type GPUBufferUsage = valueof<typeof GPUBufferUsage>;
 
 function keysOf<T extends string>(obj: { [k in T]: unknown }): readonly T[] {
   return (Object.keys(obj) as unknown[]) as T[];
@@ -47,14 +45,24 @@ function makeTable<
 // Queries
 
 export const kMaxQueryCount = 8192;
-export const kQueryTypes = ['occlusion', 'pipeline-statistics', 'timestamp'] as const;
+export const kQueryTypeInfo: {
+  readonly [k in GPUQueryType]: {
+    readonly feature: GPUFeatureName | undefined;
+  };
+} = /* prettier-ignore */ {
+  // Occlusion query does not require any features.
+  'occlusion':           { feature:  undefined },
+  'pipeline-statistics': { feature: 'pipeline-statistics-query' },
+  'timestamp':           { feature: 'timestamp-query' },
+};
+export const kQueryTypes = keysOf(kQueryTypeInfo);
 
 // Buffers
 
 export const kBufferSizeAlignment = 4;
 
 export const kBufferUsageInfo: {
-  readonly [k in GPUBufferUsage]: {};
+  readonly [k in valueof<typeof GPUConst.BufferUsage>]: {};
 } = /* prettier-ignore */ {
   [GPUConst.BufferUsage.MAP_READ]:      {},
   [GPUConst.BufferUsage.MAP_WRITE]:     {},
@@ -67,13 +75,13 @@ export const kBufferUsageInfo: {
   [GPUConst.BufferUsage.INDIRECT]:      {},
   [GPUConst.BufferUsage.QUERY_RESOLVE]: {},
 };
-export const kBufferUsages = numericKeysOf<GPUBufferUsage>(kBufferUsageInfo);
+export const kBufferUsages = numericKeysOf<GPUBufferUsageFlags>(kBufferUsageInfo);
 
 // Textures
 
 // Note that we repeat the header multiple times in order to make it easier to read.
 export const kRegularTextureFormatInfo = /* prettier-ignore */ makeTable(
-                           ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight',              'extension'] as const,
+                           ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight',                'feature'] as const,
                            [            ,              ,    true,   false,     false,          ,      true,      true,                ,            1,             1,                         ] as const, {
   // 8-bit formats
   'r8unorm':               [        true,          true,        ,        ,          ,     false,          ,          ,               1],
@@ -119,7 +127,7 @@ export const kRegularTextureFormatInfo = /* prettier-ignore */ makeTable(
   'rgba32float':           [        true,          true,        ,        ,          ,      true,          ,          ,              16],
 } as const);
 /* prettier-ignore */
-const kTexFmtInfoHeader =  ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight',              'extension'] as const;
+const kTexFmtInfoHeader =  ['renderable', 'multisample', 'color', 'depth', 'stencil', 'storage', 'copySrc', 'copyDst', 'bytesPerBlock', 'blockWidth', 'blockHeight',                'feature'] as const;
 export const kSizedDepthStencilFormatInfo = /* prettier-ignore */ makeTable(kTexFmtInfoHeader,
                            [        true,          true,   false,        ,          ,     false,     false,     false,                ,            1,             1,                         ] as const, {
   'depth32float':          [            ,              ,        ,    true,     false,          ,          ,          ,               4],
@@ -302,7 +310,7 @@ export function textureDimensionAndFormatCompatible(
 }
 
 export const kTextureUsageInfo: {
-  readonly [k in GPUTextureUsage]: {};
+  readonly [k in valueof<typeof GPUConst.TextureUsage>]: {};
 } = {
   [GPUConst.TextureUsage.COPY_SRC]: {},
   [GPUConst.TextureUsage.COPY_DST]: {},
@@ -310,10 +318,12 @@ export const kTextureUsageInfo: {
   [GPUConst.TextureUsage.STORAGE]: {},
   [GPUConst.TextureUsage.RENDER_ATTACHMENT]: {},
 };
-export const kTextureUsages = numericKeysOf<GPUTextureUsage>(kTextureUsageInfo);
+export const kTextureUsages = numericKeysOf<GPUTextureUsageFlags>(kTextureUsageInfo);
 
+// TODO: Remove once tests are updated for new binding structure.
 export const kTextureComponentTypeInfo: {
-  readonly [k in GPUTextureComponentType]: {
+  readonly /* eslint-disable-next-line deprecation/deprecation */
+  [k in GPUTextureComponentType]: {
     // Add fields as needed
   };
 } = /* prettier-ignore */ {
@@ -498,7 +508,7 @@ const kValidStagesStorageWrite = {
 
 export const kBufferBindingTypeInfo: {
   readonly [k in BufferBindingType]: {
-    readonly usage: GPUBufferUsage;
+    readonly usage: GPUBufferUsageFlags;
     // Add fields as needed
   } & BindingTypeInfo;
 } = /* prettier-ignore */ {
@@ -520,7 +530,7 @@ export const kSamplerBindingTypes = keysOf(kSamplerBindingTypeInfo);
 
 export const kTextureBindingTypeInfo: {
   readonly [k in TextureBindingType]: {
-    readonly usage: GPUTextureUsage;
+    readonly usage: GPUTextureUsageFlags;
     // Add fields as needed
   } & BindingTypeInfo;
 } = /* prettier-ignore */ {
@@ -533,8 +543,10 @@ export const kTextureBindingTypes = keysOf(kTextureBindingTypeInfo);
 
 // All binding types (merged from above)
 
+// TODO: Update when tests are updated for new binding structure.
 export const kBindingTypeInfo: {
-  readonly [k in GPUBindingType]: BindingTypeInfo;
+  readonly /* eslint-disable-next-line deprecation/deprecation */
+  [k in GPUBindingType]: BindingTypeInfo;
 } = {
   ...kBufferBindingTypeInfo,
   ...kSamplerBindingTypeInfo,

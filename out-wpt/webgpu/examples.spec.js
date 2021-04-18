@@ -133,10 +133,8 @@ g.test('basic,params_builder')
   .fn(() => {});
 
 g.test('gpu,async').fn(async t => {
-  const fence = t.queue.createFence();
-  t.queue.signal(fence, 2);
-  await fence.onCompletion(1);
-  t.expect(fence.getCompletedValue() === 2);
+  const x = await t.queue.onSubmittedWorkDone();
+  t.expect(x === undefined);
 });
 
 g.test('gpu,buffers').fn(async t => {
@@ -167,7 +165,7 @@ Tests that a BC format passes validation iff the feature is enabled.`
     const { textureCompressionBC } = t.params;
 
     if (textureCompressionBC) {
-      await t.selectDeviceOrSkipTestCase({ extensions: ['texture-compression-bc'] });
+      await t.selectDeviceOrSkipTestCase('texture-compression-bc');
     }
 
     const shouldError = !textureCompressionBC;
@@ -195,9 +193,7 @@ TODO: Test that an ETC format passes validation iff the feature is enabled.`
     const { textureCompressionETC } = t.params;
 
     if (textureCompressionETC) {
-      await t.selectDeviceOrSkipTestCase({
-        extensions: ['texture-compression-etc'],
-      });
+      await t.selectDeviceOrSkipTestCase('texture-compression-etc');
     }
 
     // TODO: Should actually test createTexture with an ETC format here.

@@ -161,20 +161,23 @@ class DescriptorToHolderMap {
  * (it just means some GPUDevice objects won't get deduplicated).
  */
 function canonicalizeDescriptor(desc) {
-  const extensionsCanonicalized = desc.extensions ? Array.from(desc.extensions).sort() : [];
-  const limits = { ...desc.limits };
+  const featuresCanonicalized = desc.nonGuaranteedFeatures
+    ? Array.from(new Set(desc.nonGuaranteedFeatures)).sort()
+    : [];
 
   const limitsCanonicalized = { ...DefaultLimits };
-  for (const k of Object.keys(limits)) {
-    if (limits[k] !== undefined) {
-      limitsCanonicalized[k] = limits[k];
+  if (desc.nonGuaranteedLimits) {
+    for (const k of Object.keys(desc.nonGuaranteedLimits)) {
+      if (desc.nonGuaranteedLimits[k] !== undefined) {
+        limitsCanonicalized[k] = desc.nonGuaranteedLimits[k];
+      }
     }
   }
 
   // Type ensures every field is carried through.
   const descriptorCanonicalized = {
-    extensions: extensionsCanonicalized,
-    limits: limitsCanonicalized,
+    nonGuaranteedFeatures: featuresCanonicalized,
+    nonGuaranteedLimits: limitsCanonicalized,
   };
 
   return [descriptorCanonicalized, JSON.stringify(descriptorCanonicalized)];

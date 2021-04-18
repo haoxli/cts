@@ -107,8 +107,8 @@ g.test('culling')
               [[builtin(position)]] var<out> Position : vec4<f32>;
               [[builtin(vertex_index)]] var<in> VertexIndex : i32;
 
-              [[stage(vertex)]] fn main() -> void {
-                const pos : array<vec2<f32>, 6> = array<vec2<f32>, 6>(
+              [[stage(vertex)]] fn main() {
+                let pos : array<vec2<f32>, 6> = array<vec2<f32>, 6>(
                     vec2<f32>(-1.0,  1.0),
                     vec2<f32>(-1.0,  0.0),
                     vec2<f32>( 0.0,  1.0),
@@ -129,7 +129,7 @@ g.test('culling')
               [[location(0)]] var<out> fragColor : vec4<f32>;
               [[builtin(front_facing)]] var<in> FrontFacing : bool;
 
-              [[stage(fragment)]] fn main() -> void {
+              [[stage(fragment)]] fn main() {
                 if (FrontFacing) {
                   fragColor = vec4<f32>(0.0, 1.0, 0.0, 1.0);
                 } else {
