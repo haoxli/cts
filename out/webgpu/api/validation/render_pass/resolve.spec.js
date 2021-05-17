@@ -130,8 +130,9 @@ fn(async t => {
 
 
         renderPassColorAttachmentDescriptors.push({
-          attachment: resolveSourceColorAttachment.createView(),
+          view: resolveSourceColorAttachment.createView(),
           loadValue: 'load',
+          storeOp: 'clear',
           resolveTarget: resolveTarget.createView({
             dimension: resolveTargetViewArrayLayerCount === 1 ? '2d' : '2d-array',
             mipLevelCount: resolveTargetViewMipCount,
@@ -166,8 +167,9 @@ fn(async t => {
 
 
         renderPassColorAttachmentDescriptors.push({
-          attachment: colorAttachment.createView(),
+          view: colorAttachment.createView(),
           loadValue: 'load',
+          storeOp: 'clear',
           resolveTarget: resolveTarget.createView() });
 
       }

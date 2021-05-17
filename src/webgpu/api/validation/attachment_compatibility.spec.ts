@@ -42,8 +42,9 @@ class F extends ValidationTest {
     sampleCount?: number
   ): GPURenderPassColorAttachment {
     return {
-      attachment: this.createAttachmentTextureView(format, sampleCount),
+      view: this.createAttachmentTextureView(format, sampleCount),
       loadValue: [0, 0, 0, 0],
+      storeOp: 'store',
     };
   }
 
@@ -52,7 +53,7 @@ class F extends ValidationTest {
     sampleCount?: number
   ): GPURenderPassDepthStencilAttachment {
     return {
-      attachment: this.createAttachmentTextureView(format, sampleCount),
+      view: this.createAttachmentTextureView(format, sampleCount),
       depthLoadValue: 0,
       depthStoreOp: 'clear',
       stencilLoadValue: 1,
@@ -115,10 +116,8 @@ class F extends ValidationTest {
       vertex: {
         module: this.device.createShaderModule({
           code: `
-            [[builtin(position)]] var<out> position : vec4<f32>;
-
-            [[stage(vertex)]] fn main() {
-              position = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+            [[stage(vertex)]] fn main() -> [[builtin(position)]] vec4<f32> {
+              return vec4<f32>(0.0, 0.0, 0.0, 0.0);
             }`,
         }),
         entryPoint: 'main',

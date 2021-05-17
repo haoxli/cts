@@ -283,7 +283,7 @@ export class TextureZeroInitTest extends GPUTest {
           .beginRenderPass({
             colorAttachments: [
               {
-                attachment: texture.createView(viewDescriptor),
+                view: texture.createView(viewDescriptor),
                 storeOp: 'store',
                 loadValue: initializedStateAsColor(state, this.p.format),
               },
@@ -295,7 +295,7 @@ export class TextureZeroInitTest extends GPUTest {
           .beginRenderPass({
             colorAttachments: [],
             depthStencilAttachment: {
-              attachment: texture.createView(viewDescriptor),
+              view: texture.createView(viewDescriptor),
               depthStoreOp: 'store',
               depthLoadValue: initializedStateAsDepth[state],
               stencilStoreOp: 'store',
@@ -379,7 +379,7 @@ export class TextureZeroInitTest extends GPUTest {
           .beginRenderPass({
             colorAttachments: [
               {
-                attachment: texture.createView(desc),
+                view: texture.createView(desc),
                 storeOp: 'clear',
                 loadValue: 'load',
               },
@@ -391,7 +391,7 @@ export class TextureZeroInitTest extends GPUTest {
           .beginRenderPass({
             colorAttachments: [],
             depthStencilAttachment: {
-              attachment: texture.createView(desc),
+              view: texture.createView(desc),
               depthStoreOp: 'clear',
               depthLoadValue: 'load',
               stencilStoreOp: 'clear',

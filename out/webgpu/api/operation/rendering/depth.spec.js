@@ -86,13 +86,16 @@ fn(async t => {
     vertex: {
       module: t.device.createShaderModule({
         code: `
-            [[builtin(position)]] var<out> Position : vec4<f32>;
-            [[builtin(vertex_index)]] var<in> VertexIndex : u32;
+            struct Output {
+              [[builtin(position)]] Position : vec4<f32>;
+              [[location(0)]] color : vec4<f32>;
+            };
 
-            [[location(0)]] var<out> color : vec4<f32>;
-
-            [[stage(vertex)]] fn main() {
-              Position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
+            [[stage(vertex)]] fn main(
+              [[builtin(vertex_index)]] VertexIndex : u32) -> Output {
+              var output : Output;
+              output.Position = vec4<f32>(0.5, 0.5, 0.5, 1.0);
+              return output;
             }
             ` }),
 
@@ -101,9 +104,8 @@ fn(async t => {
     fragment: {
       module: t.device.createShaderModule({
         code: `
-            [[location(0)]] var<out> fragColor : vec4<f32>;
-            [[stage(fragment)]] fn main() {
-              fragColor = vec4<f32>(1.0, 1.0, 1.0, 1.0);
+            [[stage(fragment)]] fn main() -> [[location(0)]] vec4<f32> {
+              return vec4<f32>(1.0, 1.0, 1.0, 1.0);
             }
             ` }),
 
@@ -123,13 +125,13 @@ fn(async t => {
   const pass = encoder.beginRenderPass({
     colorAttachments: [
     {
-      attachment: colorAttachmentView,
+      view: colorAttachmentView,
       storeOp: 'store',
       loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 } }],
 
 
     depthStencilAttachment: {
-      attachment: depthTextureView,
+      view: depthTextureView,
 
       depthLoadValue,
       depthStoreOp: 'store',
@@ -178,13 +180,14 @@ fn(async t => {
     vertex: {
       module: t.device.createShaderModule({
         code: `
-            [[builtin(position)]] var<out> Position : vec4<f32>;
-            [[builtin(vertex_index)]] var<in> VertexIndex : u32;
-            [[builtin(instance_index)]] var<in> InstanceIndex : u32;
+            struct Output {
+              [[builtin(position)]] Position : vec4<f32>;
+              [[location(0)]] color : vec4<f32>;
+            };
 
-            [[location(0)]] var<out> color : vec4<f32>;
-
-            [[stage(vertex)]] fn main() {
+            [[stage(vertex)]] fn main(
+              [[builtin(vertex_index)]] VertexIndex : u32,
+              [[builtin(instance_index)]] InstanceIndex : u32) -> Output {
               // TODO: remove workaround for Tint unary array access broke
               let zv : array<vec2<f32>, 4> = array<vec2<f32>, 4>(
                   vec2<f32>(0.2, 0.2),
@@ -192,14 +195,17 @@ fn(async t => {
                   vec2<f32>(-0.1, -0.1),
                   vec2<f32>(1.1, 1.1));
               let z : f32 = zv[InstanceIndex].x;
-              Position = vec4<f32>(0.5, 0.5, z, 1.0);
+
+              var output : Output;
+              output.Position = vec4<f32>(0.5, 0.5, z, 1.0);
               let colors : array<vec4<f32>, 4> = array<vec4<f32>, 4>(
                   vec4<f32>(1.0, 0.0, 0.0, 1.0),
                   vec4<f32>(0.0, 1.0, 0.0, 1.0),
                   vec4<f32>(0.0, 0.0, 1.0, 1.0),
                   vec4<f32>(1.0, 1.0, 1.0, 1.0)
               );
-              color = colors[InstanceIndex];
+              output.color = colors[InstanceIndex];
+              return output;
             }
             ` }),
 
@@ -208,10 +214,10 @@ fn(async t => {
     fragment: {
       module: t.device.createShaderModule({
         code: `
-            [[location(0)]] var<in> color : vec4<f32>;
-            [[location(0)]] var<out> fragColor : vec4<f32>;
-            [[stage(fragment)]] fn main() {
-              fragColor = color;
+            [[stage(fragment)]] fn main(
+              [[location(0)]] color : vec4<f32>
+              ) -> [[location(0)]] vec4<f32> {
+              return color;
             }
             ` }),
 
@@ -231,13 +237,13 @@ fn(async t => {
   const pass = encoder.beginRenderPass({
     colorAttachments: [
     {
-      attachment: colorAttachmentView,
+      view: colorAttachmentView,
       storeOp: 'store',
       loadValue: { r: 0.5, g: 0.5, b: 0.5, a: 1.0 } }],
 
 
     depthStencilAttachment: {
-      attachment: depthTextureView,
+      view: depthTextureView,
 
       depthLoadValue: t.params.reversed ? 0.0 : 1.0,
       depthStoreOp: 'store',

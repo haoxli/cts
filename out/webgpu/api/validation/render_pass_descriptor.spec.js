@@ -44,11 +44,12 @@ class F extends ValidationTest {
   texture,
   textureViewDescriptor)
   {
-    const attachment = texture.createView(textureViewDescriptor);
+    const view = texture.createView(textureViewDescriptor);
 
     return {
-      attachment,
-      loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 } };
+      view,
+      loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+      storeOp: 'store' };
 
   }
 
@@ -56,10 +57,10 @@ class F extends ValidationTest {
   texture,
   textureViewDescriptor)
   {
-    const attachment = texture.createView(textureViewDescriptor);
+    const view = texture.createView(textureViewDescriptor);
 
     return {
-      attachment,
+      view,
       depthLoadValue: 1.0,
       depthStoreOp: 'store',
       stencilLoadValue: 0,
@@ -337,9 +338,10 @@ async t => {
   const descriptor = {
     colorAttachments: [
     {
-      attachment: colorTexture.createView(),
+      view: colorTexture.createView(),
       resolveTarget: resolveTargetTexture.createView(),
-      loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 } }] };
+      loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+      storeOp: 'store' }] };
 
 
 

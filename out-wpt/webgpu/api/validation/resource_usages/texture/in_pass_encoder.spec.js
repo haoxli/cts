@@ -50,12 +50,17 @@ import { assert } from '../../../../../common/framework/util/util.js';
 import {
   kDepthStencilFormats,
   kDepthStencilFormatInfo,
-  kTextureBindingTypes,
-  kTextureBindingTypeInfo,
   kShaderStages,
 } from '../../../../capability_info.js';
 import { GPUConst } from '../../../../constants.js';
 import { ValidationTest } from '../../validation_test.js';
+
+const kTextureBindingTypes = [
+  'sampled-texture',
+  'multisampled-texture',
+  'readonly-storage-texture',
+  'writeonly-storage-texture',
+];
 
 const SIZE = 32;
 class TextureUsageTracking extends ValidationTest {
@@ -80,36 +85,41 @@ class TextureUsageTracking extends ValidationTest {
     });
   }
 
-  createBindGroup(
-    index,
-    view,
+  createBindGroup(binding, resource, bindingType, viewDimension, format) {
+    let entry;
+    switch (bindingType) {
+      case 'sampled-texture':
+        entry = { texture: { viewDimension } };
+        break;
+      case 'multisampled-texture':
+        entry = { texture: { viewDimension, multisampled: true } };
+        break;
+      case 'readonly-storage-texture':
+        assert(format !== undefined);
+        entry = { storageTexture: { access: 'read-only', format, viewDimension } };
+        break;
+      case 'writeonly-storage-texture':
+        assert(format !== undefined);
+        entry = { storageTexture: { access: 'write-only', format, viewDimension } };
+        break;
+    }
 
-    bindingType,
-    dimension,
-    bindingTexFormat
-  ) {
     return this.device.createBindGroup({
-      entries: [{ binding: index, resource: view }],
+      entries: [{ binding, resource }],
       layout: this.device.createBindGroupLayout({
         entries: [
-          {
-            binding: index,
-            visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT,
-            type: bindingType,
-            viewDimension: dimension,
-            storageTextureFormat: bindingTexFormat,
-          },
+          { binding, visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT, ...entry },
         ],
       }),
     });
   }
 
-  createAndExecuteBundle(index, bindGroup, pass) {
+  createAndExecuteBundle(binding, bindGroup, pass) {
     const bundleEncoder = this.device.createRenderBundleEncoder({
       colorFormats: ['rgba8unorm'],
     });
 
-    bundleEncoder.setBindGroup(index, bindGroup);
+    bundleEncoder.setBindGroup(binding, bindGroup);
     const bundle = bundleEncoder.finish();
     pass.executeBundles([bundle]);
   }
@@ -118,7 +128,7 @@ class TextureUsageTracking extends ValidationTest {
     return encoder.beginRenderPass({
       colorAttachments: [
         {
-          attachment: view,
+          view,
           loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
           storeOp: 'store',
         },
@@ -329,66 +339,17 @@ g.test('subresources_and_binding_types_combination_for_color')
         },
       ])
       .combine([
-        {
-          type0: 'sampled-texture',
-          type1: 'sampled-texture',
-          _usageSuccess: true,
-        },
-
-        {
-          type0: 'sampled-texture',
-          type1: 'readonly-storage-texture',
-          _usageSuccess: true,
-        },
-
-        {
-          type0: 'sampled-texture',
-          type1: 'writeonly-storage-texture',
-          _usageSuccess: false,
-        },
-
-        {
-          type0: 'sampled-texture',
-          type1: 'render-target',
-          _usageSuccess: false,
-        },
-
-        {
-          type0: 'readonly-storage-texture',
-          type1: 'readonly-storage-texture',
-          _usageSuccess: true,
-        },
-
-        {
-          type0: 'readonly-storage-texture',
-          type1: 'writeonly-storage-texture',
-          _usageSuccess: false,
-        },
-
-        {
-          type0: 'readonly-storage-texture',
-          type1: 'render-target',
-          _usageSuccess: false,
-        },
-
+        { _usageOK: true, type0: 'sampled-texture', type1: 'sampled-texture' },
+        { _usageOK: true, type0: 'sampled-texture', type1: 'readonly-storage-texture' },
+        { _usageOK: false, type0: 'sampled-texture', type1: 'writeonly-storage-texture' },
+        { _usageOK: false, type0: 'sampled-texture', type1: 'render-target' },
+        { _usageOK: true, type0: 'readonly-storage-texture', type1: 'readonly-storage-texture' },
+        { _usageOK: false, type0: 'readonly-storage-texture', type1: 'writeonly-storage-texture' },
+        { _usageOK: false, type0: 'readonly-storage-texture', type1: 'render-target' },
         // Race condition upon multiple writable storage texture is valid.
-        {
-          type0: 'writeonly-storage-texture',
-          type1: 'writeonly-storage-texture',
-          _usageSuccess: true,
-        },
-
-        {
-          type0: 'writeonly-storage-texture',
-          type1: 'render-target',
-          _usageSuccess: false,
-        },
-
-        {
-          type0: 'render-target',
-          type1: 'render-target',
-          _usageSuccess: false,
-        },
+        { _usageOK: true, type0: 'writeonly-storage-texture', type1: 'writeonly-storage-texture' },
+        { _usageOK: false, type0: 'writeonly-storage-texture', type1: 'render-target' },
+        { _usageOK: false, type0: 'render-target', type1: 'render-target' },
       ])
 
       // Every color attachment can use only one single subresource.
@@ -432,7 +393,7 @@ g.test('subresources_and_binding_types_combination_for_color')
       layerCount1,
       type0,
       type1,
-      _usageSuccess,
+      _usageOK,
       _resourceSuccess,
     } = t.params;
 
@@ -467,13 +428,13 @@ g.test('subresources_and_binding_types_combination_for_color')
       const pass = encoder.beginRenderPass({
         colorAttachments: [
           {
-            attachment: view0,
+            view: view0,
             loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
             storeOp: 'store',
           },
 
           {
-            attachment: view1,
+            view: view1,
             loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
             storeOp: 'store',
           },
@@ -512,7 +473,7 @@ g.test('subresources_and_binding_types_combination_for_color')
       pass.endPass();
     }
 
-    const success = _resourceSuccess || _usageSuccess;
+    const success = _resourceSuccess || _usageOK;
     t.expectValidationError(() => {
       encoder.finish();
     }, !success);
@@ -629,7 +590,7 @@ g.test('subresources_and_binding_types_combination_for_aspect')
       : encoder.beginRenderPass({
           colorAttachments: [
             {
-              attachment: t.createTexture({ width: size, height: size }).createView(),
+              view: t.createTexture({ width: size, height: size }).createView(),
               loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
               storeOp: 'store',
             },
@@ -639,7 +600,7 @@ g.test('subresources_and_binding_types_combination_for_aspect')
             type1 !== 'render-target'
               ? undefined
               : {
-                  attachment: view1,
+                  view: view1,
                   depthStoreOp: 'clear',
                   depthLoadValue: 'load',
                   stencilStoreOp: 'clear',
@@ -707,15 +668,14 @@ g.test('shader_stages_and_visibility')
 
     const texture = t.createTexture({ usage: texUsage });
     const view = texture.createView();
-    const bglEntries = [{ binding: 0, visibility: readVisibility, type: 'sampled-texture' }];
+    const bglEntries = [{ binding: 0, visibility: readVisibility, texture: {} }];
 
     const bgEntries = [{ binding: 0, resource: view }];
     if (!writeHasVertexStage) {
       bglEntries.push({
         binding: 1,
         visibility: writeVisibility,
-        type: 'writeonly-storage-texture',
-        storageTextureFormat: 'rgba8unorm',
+        storageTexture: { access: 'write-only', format: 'rgba8unorm' },
       });
 
       bgEntries.push({ binding: 1, resource: view });
@@ -749,16 +709,21 @@ g.test('shader_stages_and_visibility')
 // call site upon the same index in the same render pass. However, replaced bindings in compute
 // should not be validated.
 g.test('replaced_binding')
-  .params(
+  .cases(
     params()
       .combine(pbool('compute'))
       .combine(pbool('callDrawOrDispatch'))
-      .combine(poptions('bindingType', kTextureBindingTypes))
+      .combine(
+        poptions('entry', [
+          { texture: {} },
+          { texture: { multisampled: true } },
+          { storageTexture: { access: 'read-only', format: 'rgba8unorm' } },
+          { storageTexture: { access: 'write-only', format: 'rgba8unorm' } },
+        ])
+      )
   )
   .fn(async t => {
-    const { compute, callDrawOrDispatch, bindingType } = t.params;
-    const info = kTextureBindingTypeInfo[bindingType];
-    const bindingTexFormat = info.resource === 'storageTex' ? 'rgba8unorm' : undefined;
+    const { compute, callDrawOrDispatch, entry } = t.params;
 
     const sampledView = t.createTexture().createView();
     const sampledStorageView = t
@@ -767,12 +732,11 @@ g.test('replaced_binding')
 
     // Create bindGroup0. It has two bindings. These two bindings use different views/subresources.
     const bglEntries0 = [
-      { binding: 0, visibility: GPUShaderStage.FRAGMENT, type: 'sampled-texture' },
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: {} },
       {
         binding: 1,
         visibility: GPUShaderStage.FRAGMENT,
-        type: bindingType,
-        storageTextureFormat: bindingTexFormat,
+        ...entry,
       },
     ];
 
@@ -808,7 +772,7 @@ g.test('replaced_binding')
 
     // TODO: If the Compatible Usage List (https://gpuweb.github.io/gpuweb/#compatible-usage-list)
     // gets programmatically defined in capability_info, use it here, instead of this logic, for clarity.
-    let success = bindingType !== 'writeonly-storage-texture';
+    let success = entry.storageTexture?.access !== 'write-only';
     // Replaced bindings should not be validated in compute pass, because validation only occurs
     // inside dispatch() which only looks at the current resource usages.
     success ||= compute;
@@ -950,7 +914,7 @@ g.test('unused_bindings_in_pipeline')
 
     const pipeline = compute
       ? t.device.createComputePipeline({
-          computeStage: {
+          compute: {
             module: t.device.createShaderModule({
               code: wgslCompute,
             }),
@@ -985,7 +949,7 @@ g.test('unused_bindings_in_pipeline')
       : encoder.beginRenderPass({
           colorAttachments: [
             {
-              attachment: t.createTexture().createView(),
+              view: t.createTexture().createView(),
               loadValue: { r: 0.0, g: 1.0, b: 0.0, a: 1.0 },
               storeOp: 'store',
             },

@@ -322,9 +322,9 @@ desc(
   - covers the mipmap level > 0
   `).
 
-params(
+cases(poptions('format', kRegularTextureFormats)).
+subcases(() =>
 params().
-combine(poptions('format', kRegularTextureFormats)).
 combine(
 poptions('textureSize', [
 {
@@ -370,9 +370,9 @@ desc(
   the content of the whole dstTexture.
   `).
 
-params(
+cases(poptions('format', kCompressedTextureFormats)).
+subcases(() =>
 params().
-combine(poptions('format', kCompressedTextureFormats)).
 combine(
 poptions('textureSize', [
 // The heights and widths are all power of 2
@@ -435,9 +435,9 @@ desc(
   CopyTextureToTexture() copy, and verifying the content of the whole dstTexture.
   `).
 
-params(
+cases(poptions('format', kRegularTextureFormats)).
+subcases(() =>
 params().
-combine(poptions('format', kRegularTextureFormats)).
 combine(
 poptions('textureSize', [
 {
@@ -475,9 +475,9 @@ desc(
   CopyTextureToTexture() copy, and verifying the content of the whole dstTexture.
   `).
 
-params(
+cases(poptions('format', kCompressedTextureFormats)).
+subcases(() =>
 params().
-combine(poptions('format', kCompressedTextureFormats)).
 combine(
 poptions('textureSize', [
 // The heights and widths are all power of 2
@@ -519,7 +519,7 @@ desc(
   of that dimension.
   `).
 
-params(
+subcases(() =>
 params().
 combine(
 poptions('copyBoxOffset', [

@@ -337,9 +337,9 @@ g.test('color_textures,non_compressed,non_array')
   - covers the mipmap level > 0
   `
   )
-  .params(
+  .cases(poptions('format', kRegularTextureFormats))
+  .subcases(() =>
     params()
-      .combine(poptions('format', kRegularTextureFormats))
       .combine(
         poptions('textureSize', [
           {
@@ -388,9 +388,9 @@ g.test('color_textures,compressed,non_array')
   the content of the whole dstTexture.
   `
   )
-  .params(
+  .cases(poptions('format', kCompressedTextureFormats))
+  .subcases(() =>
     params()
-      .combine(poptions('format', kCompressedTextureFormats))
       .combine(
         poptions('textureSize', [
           // The heights and widths are all power of 2
@@ -458,9 +458,9 @@ g.test('color_textures,non_compressed,array')
   CopyTextureToTexture() copy, and verifying the content of the whole dstTexture.
   `
   )
-  .params(
+  .cases(poptions('format', kRegularTextureFormats))
+  .subcases(() =>
     params()
-      .combine(poptions('format', kRegularTextureFormats))
       .combine(
         poptions('textureSize', [
           {
@@ -499,9 +499,9 @@ g.test('color_textures,compressed,array')
   CopyTextureToTexture() copy, and verifying the content of the whole dstTexture.
   `
   )
-  .params(
+  .cases(poptions('format', kCompressedTextureFormats))
+  .subcases(() =>
     params()
-      .combine(poptions('format', kCompressedTextureFormats))
       .combine(
         poptions('textureSize', [
           // The heights and widths are all power of 2
@@ -544,7 +544,7 @@ g.test('zero_sized')
   of that dimension.
   `
   )
-  .params(
+  .subcases(() =>
     params()
       .combine(
         poptions('copyBoxOffset', [

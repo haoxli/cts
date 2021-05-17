@@ -24,7 +24,7 @@ export const listing = [
       "operation",
       "async_ordering"
     ],
-    "readme": "Test ordering of async resolutions between the following promises (where there are constraints on the ordering).\nSpec issue: https://github.com/gpuweb/gpuweb/issues/962\n\nTODO: plan and implement\n- createReadyPipeline() (not sure if this actually has any ordering constraints)\n- cmdbuf.executionTime\n- device.popErrorScope()\n- device.lost\n- queue.onSubmittedWorkDone()\n- buffer.mapAsync()\n- shadermodule.compilationInfo()"
+    "readme": "Test ordering of async resolutions between promises returned by the following calls (and possibly\nbetween multiple of the same call), where there are constraints on the ordering.\nSpec issue: https://github.com/gpuweb/gpuweb/issues/962\n\nTODO: plan and implement\n- createReadyPipeline() (not sure if this actually has any ordering constraints)\n- cmdbuf.executionTime\n- device.popErrorScope()\n- device.lost\n- queue.onSubmittedWorkDone()\n- buffer.mapAsync()\n- shadermodule.compilationInfo()"
   },
   {
     "file": [
@@ -170,13 +170,6 @@ export const listing = [
     "file": [
       "api",
       "operation",
-      "fences"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "operation",
       "labels"
     ]
   },
@@ -222,6 +215,13 @@ export const listing = [
       "memory_sync",
       "texture",
       "ww"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "onSubmittedWorkDone"
     ]
   },
   {
@@ -382,6 +382,14 @@ export const listing = [
       "operation",
       "sampling",
       "lod_clamp"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "shader_module",
+      "compilation_info"
     ]
   },
   {
@@ -769,13 +777,6 @@ export const listing = [
       "api",
       "validation",
       "error_scope"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "fences"
     ]
   },
   {

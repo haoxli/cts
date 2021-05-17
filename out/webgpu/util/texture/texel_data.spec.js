@@ -72,7 +72,7 @@ t)
   }`;
 
   const pipeline = t.device.createComputePipeline({
-    computeStage: {
+    compute: {
       module: t.device.createShaderModule({
         code: shader }),
 

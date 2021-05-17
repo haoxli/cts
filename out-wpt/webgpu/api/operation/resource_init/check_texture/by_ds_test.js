@@ -6,17 +6,14 @@ import { mipSize } from '../../../../util/texture/subresource.js';
 function makeFullscreenVertexModule(device) {
   return device.createShaderModule({
     code: `
-    [[builtin(position)]] var<out> Position : vec4<f32>;
-    [[builtin(vertex_index)]] var<in> VertexIndex : i32;
-
     [[stage(vertex)]]
-    fn main() {
+    fn main([[builtin(vertex_index)]] VertexIndex : i32)
+         -> [[builtin(position)]] vec4<f32> {
       let pos : array<vec2<f32>, 3> = array<vec2<f32>, 3>(
         vec2<f32>(-1.0, -3.0),
         vec2<f32>( 3.0,  1.0),
         vec2<f32>(-1.0,  1.0));
-      Position = vec4<f32>(pos[VertexIndex], 0.0, 1.0);
-      return;
+      return vec4<f32>(pos[VertexIndex], 0.0, 1.0);
     }
     `,
   });
@@ -33,14 +30,17 @@ function getDepthTestEqualPipeline(t, format, sampleCount, expected) {
       entryPoint: 'main',
       module: t.device.createShaderModule({
         code: `
-        [[builtin(frag_depth)]] var<out> FragDepth : f32;
-        [[location(0)]] var<out> outSuccess : f32;
+        struct Outputs {
+          [[builtin(frag_depth)]] FragDepth : f32;
+          [[location(0)]] outSuccess : f32;
+        };
 
         [[stage(fragment)]]
-        fn main() {
-          FragDepth = f32(${expected});
-          outSuccess = 1.0;
-          return;
+        fn main() -> Outputs {
+          var output : Outputs;
+          output.FragDepth = f32(${expected});
+          output.outSuccess = 1.0;
+          return output;
         }
         `,
       }),
@@ -69,12 +69,9 @@ function getStencilTestEqualPipeline(t, format, sampleCount) {
       entryPoint: 'main',
       module: t.device.createShaderModule({
         code: `
-        [[location(0)]] var<out> outSuccess : f32;
-
         [[stage(fragment)]]
-        fn main() {
-          outSuccess = 1.0;
-          return;
+        fn main() -> [[location(0)]] f32 {
+          return 1.0;
         }
         `,
       }),
@@ -124,7 +121,7 @@ const checkContents = (type, t, params, texture, state, subresourceRange) => {
     const pass = commandEncoder.beginRenderPass({
       colorAttachments: [
         {
-          attachment: renderTexture.createView(),
+          view: renderTexture.createView(),
           resolveTarget,
           loadValue: [0, 0, 0, 0],
           storeOp: 'store',
@@ -132,7 +129,7 @@ const checkContents = (type, t, params, texture, state, subresourceRange) => {
       ],
 
       depthStencilAttachment: {
-        attachment: texture.createView(viewDescriptor),
+        view: texture.createView(viewDescriptor),
         depthStoreOp: 'store',
         depthLoadValue: 'load',
         stencilStoreOp: 'store',

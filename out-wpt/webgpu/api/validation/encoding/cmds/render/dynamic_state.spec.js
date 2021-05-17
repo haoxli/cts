@@ -3,8 +3,6 @@
  **/ export const description = `
 API validation tests for dynamic state commands (setViewport/ScissorRect/BlendColor...).
 
-TODO: update setBlendColor -> setBlendConstant
-
 TODO: ensure existing tests cover these notes. Note many of these may be operation tests instead.
 > - setViewport
 >     - {x, y} = {0, invalid values if any}
@@ -18,7 +16,7 @@ TODO: ensure existing tests cover these notes. Note many of these may be operati
 > - setScissorRect
 >     - {width, height} = 0
 >     - {x+width, y+height} = attachment size + 1
-> - setBlendColor
+> - setBlendConstant
 >     - color {slightly, very} out of range
 >     - used with a simple pipeline that {does, doesn't} use it
 > - setStencilReference
@@ -41,8 +39,9 @@ class F extends ValidationTest {
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
-          attachment: attachment.createView(),
+          view: attachment.createView(),
           loadValue: 'load',
+          storeOp: 'store',
         },
       ],
     });
@@ -66,8 +65,9 @@ class F extends ValidationTest {
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
-          attachment: attachment.createView(),
+          view: attachment.createView(),
           loadValue: 'load',
+          storeOp: 'store',
         },
       ],
     });
@@ -97,8 +97,9 @@ class F extends ValidationTest {
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
-          attachment: attachment.createView(),
+          view: attachment.createView(),
           loadValue: 'load',
+          storeOp: 'store',
         },
       ],
     });
@@ -264,8 +265,8 @@ g.test('setScissorRect,xy_rect_contained_in_attachment')
     );
   });
 
-g.test('setBlendColor')
-  .desc('Test that almost any color value is valid for setBlendColor')
+g.test('setBlendConstant')
+  .desc('Test that almost any color value is valid for setBlendConstant')
   .params([
     { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
     { r: -1.0, g: -1.0, b: -1.0, a: -1.0 },
@@ -274,8 +275,7 @@ g.test('setBlendColor')
   .fn(t => {
     const { r, g, b, a } = t.params;
     const encoders = t.createDummyRenderPassEncoder();
-
-    encoders.pass.setBlendColor({ r, g, b, a });
+    encoders.pass.setBlendConstant({ r, g, b, a });
     encoders.pass.endPass();
     encoders.encoder.finish();
   });

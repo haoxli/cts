@@ -1,6 +1,7 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ import { assert } from '../common/framework/util/util.js';
+ **/ import { assertTypeTrue } from '../common/framework/util/types.js';
+import { assert, unreachable } from '../common/framework/util/util.js';
 
 import { GPUConst } from './constants.js';
 
@@ -326,16 +327,6 @@ export const kTextureUsageInfo = {
 
 export const kTextureUsages = numericKeysOf(kTextureUsageInfo);
 
-// TODO: Remove once tests are updated for new binding structure.
-export const kTextureComponentTypeInfo = {
-  float: {},
-  sint: {},
-  uint: {},
-  'depth-comparison': {},
-};
-
-export const kTextureComponentTypes = keysOf(kTextureComponentTypeInfo);
-
 // Texture View
 
 export const kTextureViewDimensionInfo = {
@@ -391,6 +382,22 @@ export const kVertexFormats = keysOf(kVertexFormatInfo);
 
 // Typedefs for bindings
 
+export const kBindableResources = [
+  'uniformBuf',
+  'storageBuf',
+  'filtSamp',
+  'nonFiltSamp',
+  'compareSamp',
+  'sampledTex',
+  'sampledTexMS',
+  'storageTex',
+  'errorBuf',
+  'errorSamp',
+  'errorTex',
+];
+
+assertTypeTrue();
+
 // Bindings
 
 // Dynamic buffer offsets require offset to be divisible by 256
@@ -414,21 +421,6 @@ export const kPerPipelineBindingLimits = {
   storageTex: { class: 'storageTex', maxDynamic: 0 },
 };
 
-const kBindableResource = {
-  uniformBuf: {},
-  storageBuf: {},
-  plainSamp: {},
-  compareSamp: {},
-  sampledTex: {},
-  sampledTexMS: {},
-  storageTex: {},
-  errorBuf: {},
-  errorSamp: {},
-  errorTex: {},
-};
-
-export const kBindableResources = keysOf(kBindableResource);
-
 const kBindingKind = {
   uniformBuf: {
     resource: 'uniformBuf',
@@ -440,8 +432,13 @@ const kBindingKind = {
     perStageLimitClass: kPerStageBindingLimits.storageBuf,
     perPipelineLimitClass: kPerPipelineBindingLimits.storageBuf,
   },
-  plainSamp: {
-    resource: 'plainSamp',
+  filtSamp: {
+    resource: 'filtSamp',
+    perStageLimitClass: kPerStageBindingLimits.sampler,
+    perPipelineLimitClass: kPerPipelineBindingLimits.sampler,
+  },
+  nonFiltSamp: {
+    resource: 'nonFiltSamp',
     perStageLimitClass: kPerStageBindingLimits.sampler,
     perPipelineLimitClass: kPerPipelineBindingLimits.sampler,
   },
@@ -478,68 +475,145 @@ const kValidStagesStorageWrite = {
   validStages: GPUConst.ShaderStage.FRAGMENT | GPUConst.ShaderStage.COMPUTE,
 };
 
-export const kBufferBindingTypeInfo = {
-  'uniform-buffer': {
-    usage: GPUConst.BufferUsage.UNIFORM,
-    ...kBindingKind.uniformBuf,
-    ...kValidStagesAll,
-  },
-  'storage-buffer': {
-    usage: GPUConst.BufferUsage.STORAGE,
-    ...kBindingKind.storageBuf,
-    ...kValidStagesStorageWrite,
-  },
-  'readonly-storage-buffer': {
-    usage: GPUConst.BufferUsage.STORAGE,
-    ...kBindingKind.storageBuf,
-    ...kValidStagesAll,
-  },
-};
+export function bufferBindingTypeInfo(d) {
+  switch (d.type ?? 'uniform') {
+    case 'uniform':
+      return {
+        usage: GPUConst.BufferUsage.UNIFORM,
+        ...kBindingKind.uniformBuf,
+        ...kValidStagesAll,
+      };
+    case 'storage':
+      return {
+        usage: GPUConst.BufferUsage.STORAGE,
+        ...kBindingKind.storageBuf,
+        ...kValidStagesStorageWrite,
+      };
+    case 'read-only-storage':
+      return {
+        usage: GPUConst.BufferUsage.STORAGE,
+        ...kBindingKind.storageBuf,
+        ...kValidStagesAll,
+      };
+  }
+}
+export const kBufferBindingTypes = ['uniform', 'storage', 'read-only-storage'];
+assertTypeTrue();
 
-export const kBufferBindingTypes = keysOf(kBufferBindingTypeInfo);
+export function samplerBindingTypeInfo(d) {
+  switch (d.type ?? 'filtering') {
+    case 'filtering':
+      return { ...kBindingKind.filtSamp, ...kValidStagesAll };
+    case 'non-filtering':
+      return { ...kBindingKind.nonFiltSamp, ...kValidStagesAll };
+    case 'comparison':
+      return { ...kBindingKind.compareSamp, ...kValidStagesAll };
+  }
+}
+export const kSamplerBindingTypes = ['filtering', 'non-filtering', 'comparison'];
+assertTypeTrue();
 
-export const kSamplerBindingTypeInfo = {
-  sampler: { ...kBindingKind.plainSamp, ...kValidStagesAll },
-  'comparison-sampler': { ...kBindingKind.compareSamp, ...kValidStagesAll },
-};
+export function sampledTextureBindingTypeInfo(d) {
+  if (d.multisampled) {
+    return {
+      usage: GPUConst.TextureUsage.SAMPLED,
+      ...kBindingKind.sampledTexMS,
+      ...kValidStagesAll,
+    };
+  } else {
+    return { usage: GPUConst.TextureUsage.SAMPLED, ...kBindingKind.sampledTex, ...kValidStagesAll };
+  }
+}
+export const kTextureSampleTypes = ['float', 'unfilterable-float', 'depth', 'sint', 'uint'];
 
-export const kSamplerBindingTypes = keysOf(kSamplerBindingTypeInfo);
+assertTypeTrue();
 
-export const kTextureBindingTypeInfo = {
-  'sampled-texture': {
-    usage: GPUConst.TextureUsage.SAMPLED,
-    ...kBindingKind.sampledTex,
-    ...kValidStagesAll,
-  },
-  'multisampled-texture': {
-    usage: GPUConst.TextureUsage.SAMPLED,
-    ...kBindingKind.sampledTexMS,
-    ...kValidStagesAll,
-  },
-  'writeonly-storage-texture': {
-    usage: GPUConst.TextureUsage.STORAGE,
-    ...kBindingKind.storageTex,
-    ...kValidStagesStorageWrite,
-  },
-  'readonly-storage-texture': {
-    usage: GPUConst.TextureUsage.STORAGE,
-    ...kBindingKind.storageTex,
-    ...kValidStagesAll,
-  },
-};
+export function storageTextureBindingTypeInfo(d) {
+  switch (d.access) {
+    case 'read-only':
+      return {
+        usage: GPUConst.TextureUsage.STORAGE,
+        ...kBindingKind.storageTex,
+        ...kValidStagesAll,
+      };
+    case 'write-only':
+      return {
+        usage: GPUConst.TextureUsage.STORAGE,
+        ...kBindingKind.storageTex,
+        ...kValidStagesStorageWrite,
+      };
+  }
+}
+export const kStorageTextureAccessValues = ['read-only', 'write-only'];
+assertTypeTrue();
 
-export const kTextureBindingTypes = keysOf(kTextureBindingTypeInfo);
+export function texBindingTypeInfo(e) {
+  if (e.texture !== undefined) return sampledTextureBindingTypeInfo(e.texture);
+  if (e.storageTexture !== undefined) return storageTextureBindingTypeInfo(e.storageTexture);
+  unreachable();
+}
+export function bindingTypeInfo(e) {
+  if (e.buffer !== undefined) return bufferBindingTypeInfo(e.buffer);
+  if (e.texture !== undefined) return sampledTextureBindingTypeInfo(e.texture);
+  if (e.sampler !== undefined) return samplerBindingTypeInfo(e.sampler);
+  if (e.storageTexture !== undefined) return storageTextureBindingTypeInfo(e.storageTexture);
+  unreachable('GPUBindGroupLayoutEntry has no BindingLayout');
+}
 
-// All binding types (merged from above)
+export function bufferBindingEntries(includeUndefined) {
+  return [
+    ...(includeUndefined ? [{ buffer: { type: undefined } }] : []),
+    { buffer: { type: 'uniform' } },
+    { buffer: { type: 'storage' } },
+    { buffer: { type: 'read-only-storage' } },
+  ];
+}
+export function samplerBindingEntries(includeUndefined) {
+  return [
+    ...(includeUndefined ? [{ sampler: { type: undefined } }] : []),
+    { sampler: { type: 'comparison' } },
+    { sampler: { type: 'filtering' } },
+    { sampler: { type: 'non-filtering' } },
+  ];
+}
+export function textureBindingEntries(includeUndefined) {
+  return [
+    ...(includeUndefined ? [{ texture: { multisampled: undefined } }] : []),
+    { texture: { multisampled: false } },
+    { texture: { multisampled: true } },
+  ];
+}
+export function storageTextureBindingEntries(format) {
+  return [
+    { storageTexture: { access: 'read-only', format } },
+    { storageTexture: { access: 'write-only', format } },
+  ];
+}
+export function sampledAndStorageBindingEntries(
+  includeUndefined,
+  storageTextureFormat = 'rgba8unorm'
+) {
+  return [
+    ...textureBindingEntries(includeUndefined),
+    ...storageTextureBindingEntries(storageTextureFormat),
+  ];
+}
+/** Generates all different types of binding entries.
+ * Does not generate variants with different:
+ * - buffer.hasDynamicOffset
+ * - texture.sampleType
+ * - texture.viewDimension
+ * - storageTexture.viewDimension
+ */
+export function allBindingEntries(includeUndefined, storageTextureFormat = 'rgba8unorm') {
+  return [
+    ...bufferBindingEntries(includeUndefined),
+    ...samplerBindingEntries(includeUndefined),
+    ...sampledAndStorageBindingEntries(includeUndefined, storageTextureFormat),
+  ];
+}
 
-// TODO: Update when tests are updated for new binding structure.
-export const kBindingTypeInfo = {
-  ...kBufferBindingTypeInfo,
-  ...kSamplerBindingTypeInfo,
-  ...kTextureBindingTypeInfo,
-};
-
-export const kBindingTypes = keysOf(kBindingTypeInfo);
+// Shader stages
 
 export const kShaderStages = [
   GPUConst.ShaderStage.VERTEX,

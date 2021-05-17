@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 export const description = `
 Test blending results.
 
@@ -10,7 +9,7 @@ TODO:
 
 import { params, poptions } from '../../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
-import { assert } from '../../../../common/framework/util/util.js';
+import { assert, unreachable } from '../../../../common/framework/util/util.js';
 import { GPUTest } from '../../../gpu_test.js';
 
 export const g = makeTestGroup(GPUTest);
@@ -18,17 +17,17 @@ export const g = makeTestGroup(GPUTest);
 const kBlendFactors: GPUBlendFactor[] = [
   'zero',
   'one',
-  'src-color',
-  'one-minus-src-color',
+  'src',
+  'one-minus-src',
   'src-alpha',
   'one-minus-src-alpha',
-  'dst-color',
-  'one-minus-dst-color',
+  'dst',
+  'one-minus-dst',
   'dst-alpha',
   'one-minus-dst-alpha',
   'src-alpha-saturated',
-  'blend-color',
-  'one-minus-blend-color',
+  'constant',
+  'one-minus-constant',
 ];
 
 const kBlendOperations: GPUBlendOperation[] = [
@@ -63,20 +62,16 @@ function computeBlendFactor(
     case 'one':
       return { r: 1, g: 1, b: 1, a: 1 };
     case 'src':
-    case 'src-color':
       return { ...src };
     case 'one-minus-src':
-    case 'one-minus-src-color':
       return mapColor(src, v => 1 - v);
     case 'src-alpha':
       return mapColor(src, () => src.a);
     case 'one-minus-src-alpha':
       return mapColor(src, () => 1 - src.a);
     case 'dst':
-    case 'dst-color':
       return { ...dst };
     case 'one-minus-dst':
-    case 'one-minus-dst-color':
       return mapColor(dst, v => 1 - v);
     case 'dst-alpha':
       return mapColor(dst, () => dst.a);
@@ -87,18 +82,23 @@ function computeBlendFactor(
       return { r: f, g: f, b: f, a: 1 };
     }
     case 'constant':
-    case 'blend-color':
       assert(blendColor !== undefined);
       return { ...blendColor };
     case 'one-minus-constant':
-    case 'one-minus-blend-color':
       assert(blendColor !== undefined);
       return mapColor(blendColor, v => 1 - v);
+    default:
+      unreachable();
   }
 }
 
-function computeBlendOperation(src: GPUColorDict, srcFactor: GPUColorDict,
-  dst: GPUColorDict, dstFactor: GPUColorDict, operation: GPUBlendOperation) {
+function computeBlendOperation(
+  src: GPUColorDict,
+  srcFactor: GPUColorDict,
+  dst: GPUColorDict,
+  dstFactor: GPUColorDict,
+  operation: GPUBlendOperation
+) {
   switch (operation) {
     case 'add':
       return mapColor(src, (_, k) => srcFactor[k] * src[k] + dstFactor[k] * dst[k]);
@@ -125,8 +125,8 @@ g.test('GPUBlendComponent')
     - component= {color, alpha} - whether to test blending the color or the alpha component.
     - srcFactor= {...all GPUBlendFactors}
     - dstFactor= {...all GPUBlendFactors}
-    - operation= {...all GPUBlendOperations}
-  `)
+    - operation= {...all GPUBlendOperations}`
+  )
   .cases(
     params() //
       .combine(poptions('component', ['color', 'alpha'] as const))
@@ -134,34 +134,44 @@ g.test('GPUBlendComponent')
       .combine(poptions('dstFactor', kBlendFactors))
       .combine(poptions('operation', kBlendOperations))
   )
-  .subcases((p) => {
-    const needsBlendColor = (
-      p.srcFactor === 'one-minus-blend-color' || p.srcFactor === 'blend-color' ||
-      p.dstFactor === 'one-minus-blend-color' || p.dstFactor === 'blend-color'
-    );
+  .subcases(p => {
+    const needsBlendConstant =
+      p.srcFactor === 'one-minus-constant' ||
+      p.srcFactor === 'constant' ||
+      p.dstFactor === 'one-minus-constant' ||
+      p.dstFactor === 'constant';
 
     return params()
-      .combine(poptions('srcColor', [
-        { r: 0.11, g: 0.61, b: 0.81, a: 0.44 }
-      ]))
-      .combine(poptions('dstColor', [
-        { r: 0.51, g: 0.22, b: 0.71, a: 0.33 },
-        { r: 0.09, g: 0.73, b: 0.93, a: 0.81 }
-      ]))
-      .combine(poptions('blendColor', needsBlendColor ? [
-        { r: 0.91, g: 0.82, b: 0.73, a: 0.64 },
-      ] : [ undefined ]));
+      .combine(poptions('srcColor', [{ r: 0.11, g: 0.61, b: 0.81, a: 0.44 }]))
+      .combine(
+        poptions('dstColor', [
+          { r: 0.51, g: 0.22, b: 0.71, a: 0.33 },
+          { r: 0.09, g: 0.73, b: 0.93, a: 0.81 },
+        ])
+      )
+      .combine(
+        poptions(
+          'blendConstant',
+          needsBlendConstant ? [{ r: 0.91, g: 0.82, b: 0.73, a: 0.64 }] : [undefined]
+        )
+      );
   })
   .fn(t => {
     const textureFormat: GPUTextureFormat = 'rgba32float';
     const srcColor = t.params.srcColor;
     const dstColor = t.params.dstColor;
-    const blendColor = t.params.blendColor;
+    const blendConstant = t.params.blendConstant;
 
-    const srcFactor = computeBlendFactor(srcColor, dstColor, blendColor, t.params.srcFactor);
-    const dstFactor = computeBlendFactor(srcColor, dstColor, blendColor, t.params.dstFactor);
+    const srcFactor = computeBlendFactor(srcColor, dstColor, blendConstant, t.params.srcFactor);
+    const dstFactor = computeBlendFactor(srcColor, dstColor, blendConstant, t.params.dstFactor);
 
-    const expectedColor = computeBlendOperation(srcColor, srcFactor, dstColor, dstFactor, t.params.operation);
+    const expectedColor = computeBlendOperation(
+      srcColor,
+      srcFactor,
+      dstColor,
+      dstFactor,
+      t.params.operation
+    );
 
     switch (t.params.component) {
       case 'color':
@@ -199,9 +209,8 @@ g.test('GPUBlendComponent')
 };
 [[group(0), binding(0)]] var<uniform> u : Uniform;
 
-[[location(0)]] var<out> output : vec4<f32>;
-[[stage(fragment)]] fn main() {
-  output = u.color;
+[[stage(fragment)]] fn main() -> [[location(0)]] vec4<f32> {
+  return u.color;
 }
           `,
         }),
@@ -210,9 +219,8 @@ g.test('GPUBlendComponent')
       vertex: {
         module: t.device.createShaderModule({
           code: `
-[[builtin(position)]] var<out> Position : vec4<f32>;
-[[stage(vertex)]] fn main() {
-    Position = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+[[stage(vertex)]] fn main() -> [[builtin(position)]] vec4<f32> {
+    return vec4<f32>(0.0, 0.0, 0.0, 1.0);
 }
           `,
         }),
@@ -233,15 +241,15 @@ g.test('GPUBlendComponent')
     const renderPass = commandEncoder.beginRenderPass({
       colorAttachments: [
         {
-          attachment: renderTarget.createView(),
+          view: renderTarget.createView(),
           loadValue: dstColor,
+          storeOp: 'store',
         },
       ],
     });
     renderPass.setPipeline(pipeline);
-    if (blendColor) {
-      /* eslint-disable-next-line deprecation/deprecation */
-      renderPass.setBlendColor(blendColor);
+    if (blendConstant) {
+      renderPass.setBlendConstant(blendConstant);
     }
     renderPass.setBindGroup(
       0,
@@ -269,22 +277,24 @@ g.test('GPUBlendComponent')
     const expectedLow = mapColor(expectedColor, v => v - tolerance);
     const expectedHigh = mapColor(expectedColor, v => v + tolerance);
 
-    t.expectSinglePixelBetweenTwoValuesIn2DTexture(renderTarget, textureFormat, { x: 0, y: 0}, {
-      exp: [
-        new Float32Array([expectedLow.r, expectedLow.g, expectedLow.b, expectedLow.a]),
-        new Float32Array([expectedHigh.r, expectedHigh.g, expectedHigh.b, expectedHigh.a]),
-      ]
-    });
+    t.expectSinglePixelBetweenTwoValuesIn2DTexture(
+      renderTarget,
+      textureFormat,
+      { x: 0, y: 0 },
+      {
+        exp: [
+          new Float32Array([expectedLow.r, expectedLow.g, expectedLow.b, expectedLow.a]),
+          new Float32Array([expectedHigh.r, expectedHigh.g, expectedHigh.b, expectedHigh.a]),
+        ],
+      }
+    );
   });
 
 g.test('formats')
   .desc(
     `Test blending results works for all formats that support it, and that blending is not applied
-  for formats that do not. Blending should be done in linear space for srgb formats.`)
-  .unimplemented();
-
-g.test('multiple_color_attachments')
-  .desc('Test that if there are multiple color attachments, "src-color" refers to attachment index 0.')
+  for formats that do not. Blending should be done in linear space for srgb formats.`
+  )
   .unimplemented();
 
 g.test('clamp,blend_factor')

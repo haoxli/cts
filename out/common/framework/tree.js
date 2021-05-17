@@ -62,15 +62,50 @@ import { assert, StacklessError } from './util/util.js';
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 export class TestTree {
+  /**
+                        * The `queryToLoad` that this test tree was created for.
+                        * Test trees are always rooted at `suite:*`, but they only contain nodes that fit
+                        * within `forQuery`.
+                        *
+                        * This is used for `iterateCollapsedQueries` which only starts collapsing at the next
+                        * `TestQueryLevel` after `forQuery`.
+                        */
 
 
-  constructor(root) {
+
+  constructor(forQuery, root) {
+    this.forQuery = forQuery;
     this.root = root;
+    assert(
+    root.query.level === 1 && root.query.depthInLevel === 0,
+    'TestTree root must be the root (suite:*)');
+
   }
 
-  iterateCollapsedQueries(includeEmptySubtrees) {
-    return TestTree.iterateSubtreeCollapsedQueries(this.root, includeEmptySubtrees);
+  /**
+     * Iterate through the leaves of a version of the tree which has been pruned to exclude
+     * subtrees which:
+     * - are at a deeper `TestQueryLevel` than `this.forQuery`, and
+     * - were not a `Ordering.StrictSubset` of any of the `subqueriesToExpand` during tree creation.
+     */
+  iterateCollapsedQueries(
+  includeEmptySubtrees,
+  alwaysExpandThroughLevel)
+  {
+    const expandThrough = Math.max(this.forQuery.level, alwaysExpandThroughLevel);
+    return TestTree.iterateSubtreeCollapsedQueries(this.root, includeEmptySubtrees, expandThrough);
   }
 
   iterateLeaves() {
@@ -78,14 +113,13 @@ export class TestTree {
   }
 
   /**
-     * If a parent and its child are at different levels, then
-     * generally the parent has only one child, i.e.:
+     * Dissolve nodes which have only one child, e.g.:
      *   a,* { a,b,* { a,b:* { ... } } }
-     * Collapse that down into:
+     * collapses down into:
      *   a,* { a,b:* { ... } }
      * which is less needlessly verbose when displaying the tree in the standalone runner.
      */
-  dissolveLevelBoundaries() {
+  dissolveSingleChildTrees() {
     const newRoot = dissolveSingleChildTrees(this.root);
     assert(newRoot === this.root);
   }
@@ -96,13 +130,19 @@ export class TestTree {
 
   static *iterateSubtreeCollapsedQueries(
   subtree,
-  includeEmptySubtrees)
+  includeEmptySubtrees,
+  expandThroughLevel)
   {
     for (const [, child] of subtree.children) {
       if ('children' in child) {
         // Is a subtree
-        if (child.children.size > 0 && !child.collapsible) {
-          yield* TestTree.iterateSubtreeCollapsedQueries(child, includeEmptySubtrees);
+        const collapsible = child.collapsible && child.query.level > expandThroughLevel;
+        if (child.children.size > 0 && !collapsible) {
+          yield* TestTree.iterateSubtreeCollapsedQueries(
+          child,
+          includeEmptySubtrees,
+          expandThroughLevel);
+
         } else if (child.children.size > 0 || includeEmptySubtrees) {
           // Don't yield empty subtrees (e.g. files with no tests) unless includeEmptySubtrees
           yield child.query;
@@ -168,8 +208,7 @@ subqueriesToExpand)
   // L3 =  case-level, e.g. suite:a,b:c,d:
   let foundCase = false;
   // L0 is suite:*
-  const subtreeL0 = makeTreeForSuite(suite);
-  isCollapsible(subtreeL0.query); // mark seenSubqueriesToExpand
+  const subtreeL0 = makeTreeForSuite(suite, isCollapsible);
   for (const entry of specs) {
     if (entry.file.length === 0 && 'readme' in entry) {
       // Suite-level readme.
@@ -191,15 +230,13 @@ subqueriesToExpand)
       // Entry is a README that is an ancestor or descendant of the query.
       // (It's included for display in the standalone runner.)
 
-      // Mark any applicable subqueriesToExpand as seen.
-      isCollapsible(new TestQueryMultiFile(suite, entry.file));
-
       // readmeSubtree is suite:a,b,*
       // (This is always going to dedup with a file path, if there are any test spec files under
       // the directory that has the README).
       const readmeSubtree = addSubtreeForDirPath(
       subtreeL0,
-      entry.file);
+      entry.file,
+      isCollapsible);
 
       assert(readmeSubtree.description === undefined);
       readmeSubtree.description = entry.readme.trim();
@@ -267,21 +304,26 @@ subqueriesToExpand)
   }
   assert(foundCase, 'Query does not match any cases');
 
-  return new TestTree(subtreeL0);
+  return new TestTree(queryToLoad, subtreeL0);
 }
 
-function makeTreeForSuite(suite) {
+function makeTreeForSuite(
+suite,
+isCollapsible)
+{
+  const query = new TestQueryMultiFile(suite, []);
   return {
     readableRelativeName: suite + kBigSeparator,
-    query: new TestQueryMultiFile(suite, []),
+    query,
     children: new Map(),
-    collapsible: false };
+    collapsible: isCollapsible(query) };
 
 }
 
 function addSubtreeForDirPath(
 tree,
-file)
+file,
+isCollapsible)
 {
   const subqueryFile = [];
   // To start, tree is suite:*
@@ -290,7 +332,11 @@ file)
     subqueryFile.push(part);
     tree = getOrInsertSubtree(part, tree, () => {
       const query = new TestQueryMultiFile(tree.query.suite, subqueryFile);
-      return { readableRelativeName: part + kPathSeparator + kWildcard, query, collapsible: false };
+      return {
+        readableRelativeName: part + kPathSeparator + kWildcard,
+        query,
+        collapsible: isCollapsible(query) };
+
     });
   }
   return tree;
@@ -300,11 +346,11 @@ function addSubtreeForFilePath(
 tree,
 file,
 description,
-checkCollapsible)
+isCollapsible)
 {
   // To start, tree is suite:*
   // This goes from that -> suite:a,* -> suite:a,b,*
-  tree = addSubtreeForDirPath(tree, file);
+  tree = addSubtreeForDirPath(tree, file, isCollapsible);
   // This goes from that -> suite:a,b:*
   const subtree = getOrInsertSubtree('', tree, () => {
     const query = new TestQueryMultiTest(tree.query.suite, tree.query.filePathParts, []);
@@ -313,7 +359,7 @@ checkCollapsible)
       readableRelativeName: file[file.length - 1] + kBigSeparator + kWildcard,
       query,
       description,
-      collapsible: checkCollapsible(query) };
+      collapsible: isCollapsible(query) };
 
   });
   return subtree;
