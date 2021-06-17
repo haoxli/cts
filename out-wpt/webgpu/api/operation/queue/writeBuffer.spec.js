@@ -1,9 +1,8 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ export const description = 'Operation tests for GPUQueue.writeBuffer()';
-import { params, pbool, poptions } from '../../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
-import { range } from '../../../../common/framework/util/util.js';
+import { range } from '../../../../common/util/util.js';
 import { GPUTest } from '../../../gpu_test.js';
 import { align } from '../../../util/math.js';
 
@@ -97,7 +96,11 @@ const kTestData = range(16, i => i);
 
 g.test('array_types')
   .desc('Tests that writeBuffer correctly handles different TypedArrays and ArrayBuffer.')
-  .cases(params().combine(poptions('arrayType', kTypedArrays)).combine(pbool('useArrayBuffer')))
+  .params(u =>
+    u //
+      .combine('arrayType', kTypedArrays)
+      .combine('useArrayBuffer', [false, true])
+  )
   .fn(t => {
     const { arrayType, useArrayBuffer } = t.params;
     const dataOffset = 1;
@@ -124,7 +127,7 @@ Tests that writeBuffer currently handles different offsets and writes. This incl
 - Multiple overlapping writes with decreasing sizes
     `
   )
-  .cases([
+  .paramsSubcasesOnly([
     {
       // Concatenate 2 Uint32Arrays
       writes: [

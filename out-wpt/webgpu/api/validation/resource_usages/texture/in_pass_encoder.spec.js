@@ -43,13 +43,12 @@ Test Coverage:
     - Texture usages should be validated per each render pass. And they should be validated per each
       dispatch call in compute.
 `;
-import { pbool, poptions, params } from '../../../../../common/framework/params_builder.js';
-import { pp } from '../../../../../common/framework/preprocessor.js';
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
-import { assert } from '../../../../../common/framework/util/util.js';
+import { pp } from '../../../../../common/util/preprocessor.js';
+import { assert } from '../../../../../common/util/util.js';
 import {
   kDepthStencilFormats,
-  kDepthStencilFormatInfo,
+  kTextureFormatInfo,
   kShaderStages,
 } from '../../../../capability_info.js';
 import { GPUConst } from '../../../../constants.js';
@@ -200,12 +199,38 @@ const SLICE_COUNT = 2;
 
 // For all tests below, we test compute pass if 'compute' is true, and test render pass otherwise.
 g.test('subresources_and_binding_types_combination_for_color')
-  .params(
-    params()
-      .combine(pbool('compute'))
-      .combine(pbool('binding0InBundle'))
-      .combine(pbool('binding1InBundle'))
-      .combine([
+  .params(u =>
+    u
+      .combine('compute', [false, true])
+      .combineWithParams([
+        { _usageOK: true, type0: 'sampled-texture', type1: 'sampled-texture' },
+        { _usageOK: true, type0: 'sampled-texture', type1: 'readonly-storage-texture' },
+        { _usageOK: false, type0: 'sampled-texture', type1: 'writeonly-storage-texture' },
+        { _usageOK: false, type0: 'sampled-texture', type1: 'render-target' },
+        { _usageOK: true, type0: 'readonly-storage-texture', type1: 'readonly-storage-texture' },
+        { _usageOK: false, type0: 'readonly-storage-texture', type1: 'writeonly-storage-texture' },
+        { _usageOK: false, type0: 'readonly-storage-texture', type1: 'render-target' },
+        // Race condition upon multiple writable storage texture is valid.
+        { _usageOK: true, type0: 'writeonly-storage-texture', type1: 'writeonly-storage-texture' },
+        { _usageOK: false, type0: 'writeonly-storage-texture', type1: 'render-target' },
+        { _usageOK: false, type0: 'render-target', type1: 'render-target' },
+      ])
+      .beginSubcases()
+      .combine('binding0InBundle', [false, true])
+      .combine('binding1InBundle', [false, true])
+      .unless(
+        p =>
+          // We can't set 'render-target' in bundle, so we need to exclude it from bundle.
+          (p.binding0InBundle && p.type0 === 'render-target') ||
+          (p.binding1InBundle && p.type1 === 'render-target') ||
+          // We can't set 'render-target' or bundle in compute.
+          (p.compute &&
+            (p.binding0InBundle ||
+              p.binding1InBundle ||
+              p.type0 === 'render-target' ||
+              p.type1 === 'render-target'))
+      )
+      .combineWithParams([
         // Two texture usages are binding to the same texture subresource.
         {
           levelCount0: 1,
@@ -338,46 +363,15 @@ g.test('subresources_and_binding_types_combination_for_color')
           _resourceSuccess: false,
         },
       ])
-      .combine([
-        { _usageOK: true, type0: 'sampled-texture', type1: 'sampled-texture' },
-        { _usageOK: true, type0: 'sampled-texture', type1: 'readonly-storage-texture' },
-        { _usageOK: false, type0: 'sampled-texture', type1: 'writeonly-storage-texture' },
-        { _usageOK: false, type0: 'sampled-texture', type1: 'render-target' },
-        { _usageOK: true, type0: 'readonly-storage-texture', type1: 'readonly-storage-texture' },
-        { _usageOK: false, type0: 'readonly-storage-texture', type1: 'writeonly-storage-texture' },
-        { _usageOK: false, type0: 'readonly-storage-texture', type1: 'render-target' },
-        // Race condition upon multiple writable storage texture is valid.
-        { _usageOK: true, type0: 'writeonly-storage-texture', type1: 'writeonly-storage-texture' },
-        { _usageOK: false, type0: 'writeonly-storage-texture', type1: 'render-target' },
-        { _usageOK: false, type0: 'render-target', type1: 'render-target' },
-      ])
-
-      // Every color attachment can use only one single subresource.
       .unless(
         p =>
+          // Every color attachment can use only one single subresource.
           (p.type0 === 'render-target' && (p.levelCount0 !== 1 || p.layerCount0 !== 1)) ||
-          (p.type1 === 'render-target' && (p.levelCount1 !== 1 || p.layerCount1 !== 1))
-      )
-
-      // All color attachments' size should be the same.
-      .unless(
-        p =>
-          p.type0 === 'render-target' && p.type1 === 'render-target' && p.baseLevel1 !== BASE_LEVEL
-      )
-      .unless(
-        p =>
-          // We can't set 'render-target' in bundle, so we need to exclude it from bundle.
-          (p.binding0InBundle && p.type0 === 'render-target') ||
-          (p.binding1InBundle && p.type1 === 'render-target')
-      )
-      .unless(
-        p =>
-          // We can't set 'render-target' or bundle in compute.
-          p.compute &&
-          (p.binding0InBundle ||
-            p.binding1InBundle ||
-            p.type0 === 'render-target' ||
-            p.type1 === 'render-target')
+          (p.type1 === 'render-target' && (p.levelCount1 !== 1 || p.layerCount1 !== 1)) ||
+          // All color attachments' size should be the same.
+          (p.type0 === 'render-target' &&
+            p.type1 === 'render-target' &&
+            p.baseLevel1 !== BASE_LEVEL)
       )
   )
   .fn(async t => {
@@ -480,13 +474,14 @@ g.test('subresources_and_binding_types_combination_for_color')
   });
 
 g.test('subresources_and_binding_types_combination_for_aspect')
-  .params(
-    params()
-      .combine(pbool('compute'))
-      .combine(pbool('binding0InBundle'))
-      .combine(pbool('binding1InBundle'))
-      .combine(poptions('format', kDepthStencilFormats))
-      .combine([
+  .params(u =>
+    u
+      .combine('compute', [false, true])
+      .combine('binding0InBundle', [false, true])
+      .combine('binding1InBundle', [false, true])
+      .combine('format', kDepthStencilFormats)
+      .beginSubcases()
+      .combineWithParams([
         {
           baseLevel: BASE_LEVEL,
           baseLayer: BASE_LAYER,
@@ -505,19 +500,19 @@ g.test('subresources_and_binding_types_combination_for_aspect')
           _resourceSuccess: true,
         },
       ])
-      .combine(poptions('aspect0', ['all', 'depth-only', 'stencil-only']))
-      .combine(poptions('aspect1', ['all', 'depth-only', 'stencil-only']))
+      .combine('aspect0', ['all', 'depth-only', 'stencil-only'])
+      .combine('aspect1', ['all', 'depth-only', 'stencil-only'])
       .unless(
         p =>
-          (p.aspect0 === 'stencil-only' && !kDepthStencilFormatInfo[p.format].stencil) ||
-          (p.aspect1 === 'stencil-only' && !kDepthStencilFormatInfo[p.format].stencil)
+          (p.aspect0 === 'stencil-only' && !kTextureFormatInfo[p.format].stencil) ||
+          (p.aspect1 === 'stencil-only' && !kTextureFormatInfo[p.format].stencil)
       )
       .unless(
         p =>
-          (p.aspect0 === 'depth-only' && !kDepthStencilFormatInfo[p.format].depth) ||
-          (p.aspect1 === 'depth-only' && !kDepthStencilFormatInfo[p.format].depth)
+          (p.aspect0 === 'depth-only' && !kTextureFormatInfo[p.format].depth) ||
+          (p.aspect1 === 'depth-only' && !kTextureFormatInfo[p.format].depth)
       )
-      .combine([
+      .combineWithParams([
         {
           type0: 'sampled-texture',
           type1: 'sampled-texture',
@@ -557,7 +552,7 @@ g.test('subresources_and_binding_types_combination_for_aspect')
       _resourceSuccess,
       _usageSuccess,
     } = t.params;
-    await t.selectDeviceOrSkipTestCase(kDepthStencilFormatInfo[format].feature);
+    await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
 
     const texture = t.createTexture({
       arrayLayerCount: TOTAL_LAYERS,
@@ -642,11 +637,11 @@ g.test('subresources_and_binding_types_combination_for_aspect')
   });
 
 g.test('shader_stages_and_visibility')
-  .params(
-    params()
-      .combine(pbool('compute'))
-      .combine(poptions('readVisibility', [0, ...kShaderStages]))
-      .combine(poptions('writeVisibility', [0, ...kShaderStages]))
+  .params(u =>
+    u
+      .combine('compute', [false, true])
+      .combine('readVisibility', [0, ...kShaderStages])
+      .combine('writeVisibility', [0, ...kShaderStages])
       .unless(
         p =>
           // Writeonly-storage-texture binding type is not supported in vertex stage. But it is the
@@ -709,18 +704,16 @@ g.test('shader_stages_and_visibility')
 // call site upon the same index in the same render pass. However, replaced bindings in compute
 // should not be validated.
 g.test('replaced_binding')
-  .cases(
-    params()
-      .combine(pbool('compute'))
-      .combine(pbool('callDrawOrDispatch'))
-      .combine(
-        poptions('entry', [
-          { texture: {} },
-          { texture: { multisampled: true } },
-          { storageTexture: { access: 'read-only', format: 'rgba8unorm' } },
-          { storageTexture: { access: 'write-only', format: 'rgba8unorm' } },
-        ])
-      )
+  .params(u =>
+    u
+      .combine('compute', [false, true])
+      .combine('callDrawOrDispatch', [false, true])
+      .combine('entry', [
+        { texture: {} },
+        { texture: { multisampled: true } },
+        { storageTexture: { access: 'read-only', format: 'rgba8unorm' } },
+        { storageTexture: { access: 'write-only', format: 'rgba8unorm' } },
+      ])
   )
   .fn(async t => {
     const { compute, callDrawOrDispatch, entry } = t.params;
@@ -783,12 +776,13 @@ g.test('replaced_binding')
   });
 
 g.test('bindings_in_bundle')
-  .params(
-    params()
-      .combine(pbool('binding0InBundle'))
-      .combine(pbool('binding1InBundle'))
-      .combine(poptions('type0', ['render-target', ...kTextureBindingTypes]))
-      .combine(poptions('type1', ['render-target', ...kTextureBindingTypes]))
+  .params(u =>
+    u
+      .combine('type0', ['render-target', ...kTextureBindingTypes])
+      .combine('type1', ['render-target', ...kTextureBindingTypes])
+      .beginSubcases()
+      .combine('binding0InBundle', [false, true])
+      .combine('binding1InBundle', [false, true])
       .unless(
         p =>
           // We can't set 'render-target' in bundle, so we need to exclude it from bundle.
@@ -867,14 +861,14 @@ g.test('bindings_in_bundle')
   });
 
 g.test('unused_bindings_in_pipeline')
-  .params(
-    params()
-      .combine(pbool('compute'))
-      .combine(pbool('useBindGroup0'))
-      .combine(pbool('useBindGroup1'))
-      .combine(poptions('setBindGroupsOrder', ['common', 'reversed']))
-      .combine(poptions('setPipeline', ['before', 'middle', 'after', 'none']))
-      .combine(pbool('callDrawOrDispatch'))
+  .params(u =>
+    u
+      .combine('compute', [false, true])
+      .combine('useBindGroup0', [false, true])
+      .combine('useBindGroup1', [false, true])
+      .combine('setBindGroupsOrder', ['common', 'reversed'])
+      .combine('setPipeline', ['before', 'middle', 'after', 'none'])
+      .combine('callDrawOrDispatch', [false, true])
   )
   .fn(async t => {
     const {
@@ -889,14 +883,16 @@ g.test('unused_bindings_in_pipeline')
     const bindGroup0 = t.createBindGroup(0, view, 'readonly-storage-texture', '2d', 'rgba8unorm');
     const bindGroup1 = t.createBindGroup(0, view, 'writeonly-storage-texture', '2d', 'rgba8unorm');
 
-    const wgslVertex = '[[stage(vertex)]] fn main() {}';
+    const wgslVertex = `[[stage(vertex)]] fn main() -> [[builtin(position)]] vec4<f32> {
+  return vec4<f32>();
+}`;
     // TODO: revisit the shader code once 'image' can be supported in wgsl.
     const wgslFragment = pp`
       ${pp._if(useBindGroup0)}
-      [[group(0), binding(0)]] var<image> image0 : [[access(read)]] texture_storage_2d<rgba8unorm>;
+      [[group(0), binding(0)]] var<image> image0 : texture_storage_2d<rgba8unorm, read>;
       ${pp._endif}
       ${pp._if(useBindGroup1)}
-      [[group(1), binding(0)]] var<image> image1 : [[access(read)]] texture_storage_2d<rgba8unorm>;
+      [[group(1), binding(0)]] var<image> image1 : texture_storage_2d<rgba8unorm, read>;
       ${pp._endif}
       [[stage(fragment)]] fn main() {}
     `;
@@ -904,10 +900,10 @@ g.test('unused_bindings_in_pipeline')
     // TODO: revisit the shader code once 'image' can be supported in wgsl.
     const wgslCompute = pp`
       ${pp._if(useBindGroup0)}
-      [[group(0), binding(0)]] var<image> image0 : [[access(read)]] texture_storage_2d<rgba8unorm>;
+      [[group(0), binding(0)]] var<image> image0 : texture_storage_2d<rgba8unorm, read>;
       ${pp._endif}
       ${pp._if(useBindGroup1)}
-      [[group(1), binding(0)]] var<image> image1 : [[access(read)]] texture_storage_2d<rgba8unorm>;
+      [[group(1), binding(0)]] var<image> image1 : texture_storage_2d<rgba8unorm, read>;
       ${pp._endif}
       [[stage(compute)]] fn main() {}
     `;
@@ -976,7 +972,7 @@ g.test('unused_bindings_in_pipeline')
   });
 
 g.test('validation_scope,no_draw_or_dispatch')
-  .params(pbool('compute'))
+  .params(u => u.combine('compute', [false, true]))
   .fn(async t => {
     const { compute } = t.params;
 
@@ -994,7 +990,7 @@ g.test('validation_scope,no_draw_or_dispatch')
   });
 
 g.test('validation_scope,same_draw_or_dispatch')
-  .params(pbool('compute'))
+  .params(u => u.combine('compute', [false, true]))
   .fn(async t => {
     const { compute } = t.params;
 
@@ -1011,7 +1007,7 @@ g.test('validation_scope,same_draw_or_dispatch')
   });
 
 g.test('validation_scope,different_draws_or_dispatches')
-  .params(pbool('compute'))
+  .params(u => u.combine('compute', [false, true]))
   .fn(async t => {
     const { compute } = t.params;
     const { bindGroup0, bindGroup1, encoder, pass, pipeline } = t.testValidationScope(compute);
@@ -1032,7 +1028,7 @@ g.test('validation_scope,different_draws_or_dispatches')
   });
 
 g.test('validation_scope,different_passes')
-  .params(pbool('compute'))
+  .params(u => u.combine('compute', [false, true]))
   .fn(async t => {
     const { compute } = t.params;
     const { bindGroup0, bindGroup1, encoder, pass, pipeline } = t.testValidationScope(compute);

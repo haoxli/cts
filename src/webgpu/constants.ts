@@ -1,4 +1,4 @@
-// Types ensure every field is specified.
+// Note: Types ensure every field is specified.
 
 /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
 function checkType<T>(x: T) {}

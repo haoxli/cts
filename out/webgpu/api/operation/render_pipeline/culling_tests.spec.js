@@ -18,8 +18,7 @@ Use 2 triangles with different winding orders:
   - All CullModes (none, front, back)
   - All depth stencil attachment types (none, depth24plus, depth32float, depth24plus-stencil8)
   - Some primitive topologies (triangle-list, TODO: triangle-strip)
-`;import { poptions, params } from '../../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../../common/framework/test_group.js';
+`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../gpu_test.js';
 
 function faceIsCulled(face, frontFace, cullMode) {
@@ -41,20 +40,19 @@ function faceColor(face, frontFace, cullMode) {
 export const g = makeTestGroup(GPUTest);
 
 g.test('culling').
-params(
-params().
-combine(poptions('frontFace', ['ccw', 'cw'])).
-combine(poptions('cullMode', ['none', 'front', 'back'])).
-combine(
-poptions('depthStencilFormat', [
+params((u) =>
+u.
+combine('frontFace', ['ccw', 'cw']).
+combine('cullMode', ['none', 'front', 'back']).
+beginSubcases().
+combine('depthStencilFormat', [
 null,
 'depth24plus',
 'depth32float',
-'depth24plus-stencil8']))
-
+'depth24plus-stencil8'])
 
 // TODO: test triangle-strip as well
-.combine(poptions('primitiveTopology', ['triangle-list']))).
+.combine('primitiveTopology', ['triangle-list'])).
 
 fn(t => {
   const size = 4;

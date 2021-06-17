@@ -12,9 +12,8 @@ TODO:
   - mode= {draw, drawIndexed}
 `;
 
-import { params, pbool, poptions } from '../../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
-import { assert } from '../../../../common/framework/util/util.js';
+import { assert } from '../../../../common/util/util.js';
 import {
   GPUTest,
   TypedArrayBufferView,
@@ -46,17 +45,17 @@ Params:
   - base_vertex= {0, 9} - only for indexed draws
   `
   )
-  .cases(
-    params()
-      .combine(poptions('first', [0, 3] as const))
-      .combine(poptions('count', [0, 3, 6] as const))
-      .combine(poptions('first_instance', [0, 2] as const))
-      .combine(poptions('instance_count', [0, 1, 4] as const))
-      .combine(pbool('indexed'))
-      .combine(pbool('indirect'))
-      .combine(poptions('vertex_buffer_offset', [0, 32] as const))
-      .expand(p => poptions('index_buffer_offset', p.indexed ? ([0, 16] as const) : [undefined]))
-      .expand(p => poptions('base_vertex', p.indexed ? ([0, 9] as const) : [undefined]))
+  .params(u =>
+    u
+      .combine('first', [0, 3] as const)
+      .combine('count', [0, 3, 6] as const)
+      .combine('first_instance', [0, 2] as const)
+      .combine('instance_count', [0, 1, 4] as const)
+      .combine('indexed', [false, true])
+      .combine('indirect', [false, true])
+      .combine('vertex_buffer_offset', [0, 32] as const)
+      .expand('index_buffer_offset', p => (p.indexed ? ([0, 16] as const) : [undefined]))
+      .expand('base_vertex', p => (p.indexed ? ([0, 9] as const) : [undefined]))
   )
   .fn(t => {
     const renderTargetSize = [72, 36];
@@ -117,7 +116,7 @@ struct Inputs {
   value : u32;
 };
 
-[[group(0), binding(0)]] var<storage> output : [[access(read_write)]] Output;
+[[group(0), binding(0)]] var<storage, read_write> output : Output;
 
 [[stage(fragment)]] fn frag_main() -> [[location(0)]] vec4<f32> {
   output.value = 1u;
@@ -337,12 +336,12 @@ g.test('vertex_attributes,basic')
   - step_mode= {undefined, vertex, instance, mixed} - where mixed only applies for vertex_buffer_count > 1
   `
   )
-  .cases(
-    params()
-      .combine(poptions('vertex_attribute_count', [1, 4, 8, 16]))
-      .combine(poptions('vertex_buffer_count', [1, 4, 8]))
-      .combine(poptions('vertex_format', ['uint32', 'float32'] as const))
-      .combine(poptions('step_mode', [undefined, 'vertex', 'instance', 'mixed'] as const))
+  .params(u =>
+    u
+      .combine('vertex_attribute_count', [1, 4, 8, 16])
+      .combine('vertex_buffer_count', [1, 4, 8])
+      .combine('vertex_format', ['uint32', 'float32'] as const)
+      .combine('step_mode', [undefined, 'vertex', 'instance', 'mixed'] as const)
       .unless(p => p.vertex_attribute_count < p.vertex_buffer_count)
       .unless(p => p.step_mode === 'mixed' && p.vertex_buffer_count <= 1)
   )
@@ -518,7 +517,7 @@ ${shaderLocations.map(i => `  attrib${i} : ${wgslFormat};`).join('\n')}
 [[block]] struct OutBuffer {
   primitives : [[stride(${shaderLocations.length * 4})]] array<OutPrimitive>;
 };
-[[group(0), binding(0)]] var<storage> outBuffer : [[access(read_write)]] OutBuffer;
+[[group(0), binding(0)]] var<storage, read_write> outBuffer : OutBuffer;
 
 [[stage(fragment)]] fn main(input : Inputs) {
 ${shaderLocations

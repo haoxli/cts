@@ -1,7 +1,7 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { Logger } from '../common/framework/logging/logger.js';import { TestQuerySingleCase } from '../common/framework/query/query.js';
-import { objectEquals } from '../common/framework/util/util.js';
+**/import { Logger } from '../common/internal/logging/logger.js';import { TestQuerySingleCase } from '../common/internal/query/query.js';
+import { objectEquals } from '../common/util/util.js';
 
 import { UnitTest } from './unit_test.js';
 

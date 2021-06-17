@@ -1,8 +1,8 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { promises as fs } from 'fs';import { DefaultTestFileLoader } from '../framework/file_loader.js';
-import { TestQueryMultiFile } from '../framework/query/query.js';
-import { assert } from '../framework/util/util.js';
+**/import { promises as fs } from 'fs';import { DefaultTestFileLoader } from '../internal/file_loader.js';
+import { TestQueryMultiFile } from '../internal/query/query.js';
+import { assert } from '../util/util.js';
 
 function printUsageAndExit(rc) {
   console.error(`\

@@ -1,12 +1,12 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/ // Implements the standalone test runner (see also: /standalone/index.html).
-import { DefaultTestFileLoader } from '../framework/file_loader.js';import { Logger } from '../framework/logging/logger.js';
+import { DefaultTestFileLoader } from '../internal/file_loader.js';import { Logger } from '../internal/logging/logger.js';
 
-import { parseQuery } from '../framework/query/parseQuery.js';
+import { parseQuery } from '../internal/query/parseQuery.js';
 
 
-import { assert } from '../framework/util/util.js';
+import { assert } from '../util/util.js';
 
 import { optionEnabled } from './helper/options.js';
 import { TestWorker } from './helper/test_worker.js';

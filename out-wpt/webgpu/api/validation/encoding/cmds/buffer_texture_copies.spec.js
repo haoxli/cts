@@ -7,9 +7,8 @@ the general image_copy tests, or by destroyed,*.
 TODO:
 - Move all the tests here to image_copy/ and test writeTexture() with depth/stencil formats.
 `;
-import { poptions, params } from '../../../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
-import { assert } from '../../../../../common/framework/util/util.js';
+import { assert } from '../../../../../common/util/util.js';
 import {
   kDepthStencilFormats,
   depthStencilBufferTextureCopySupported,
@@ -46,8 +45,12 @@ g.test('depth_stencil_format,copy_usage_and_aspect')
   and copyTextureToBuffer. See https://gpuweb.github.io/gpuweb/#depth-formats for more details.
 `
   )
-  .cases(params().combine(poptions('format', kDepthStencilFormats)))
-  .subcases(() => params().combine(poptions('aspect', ['all', 'depth-only', 'stencil-only'])))
+  .params(u =>
+    u //
+      .combine('format', kDepthStencilFormats)
+      .beginSubcases()
+      .combine('aspect', ['all', 'depth-only', 'stencil-only'])
+  )
   .fn(async t => {
     const { format, aspect } = t.params;
     await t.selectDeviceForTextureFormatOrSkipTestCase(format);
@@ -88,23 +91,20 @@ g.test('depth_stencil_format,copy_buffer_size')
   required buffer size.
 `
   )
-  .cases(
-    params()
-      .combine(poptions('format', kDepthStencilFormats))
-      .combine(poptions('aspect', ['depth-only', 'stencil-only']))
-      .combine(poptions('copyType', ['CopyB2T', 'CopyT2B']))
+  .params(u =>
+    u
+      .combine('format', kDepthStencilFormats)
+      .combine('aspect', ['depth-only', 'stencil-only'])
+      .combine('copyType', ['CopyB2T', 'CopyT2B'])
       .filter(param =>
         depthStencilBufferTextureCopySupported(param.copyType, param.format, param.aspect)
       )
-  )
-  .subcases(() =>
-    params().combine(
-      poptions('copySize', [
+      .beginSubcases()
+      .combine('copySize', [
         { width: 8, height: 1, depthOrArrayLayers: 1 },
         { width: 4, height: 4, depthOrArrayLayers: 1 },
         { width: 4, height: 4, depthOrArrayLayers: 3 },
       ])
-    )
   )
   .fn(async t => {
     const { format, aspect, copyType, copySize } = t.params;
@@ -175,16 +175,17 @@ g.test('depth_stencil_format,copy_buffer_offset')
     copyBufferToTexture() and copyTextureToBuffer().
     `
   )
-  .cases(
-    params()
-      .combine(poptions('format', kDepthStencilFormats))
-      .combine(poptions('aspect', ['depth-only', 'stencil-only']))
-      .combine(poptions('copyType', ['CopyB2T', 'CopyT2B']))
+  .params(u =>
+    u
+      .combine('format', kDepthStencilFormats)
+      .combine('aspect', ['depth-only', 'stencil-only'])
+      .combine('copyType', ['CopyB2T', 'CopyT2B'])
       .filter(param =>
         depthStencilBufferTextureCopySupported(param.copyType, param.format, param.aspect)
       )
+      .beginSubcases()
+      .combine('offset', [1, 2, 4, 6, 8])
   )
-  .subcases(() => poptions('offset', [1, 2, 4, 6, 8]))
   .fn(async t => {
     const { format, aspect, copyType, offset } = t.params;
     await t.selectDeviceForTextureFormatOrSkipTestCase(format);

@@ -2,8 +2,7 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `
 Validation tests for resolveQuerySet.
-`;import { poptions } from '../../../../../common/framework/params_builder.js';import { makeTestGroup } from '../../../../../common/framework/test_group.js';
-import { GPUConst } from '../../../../constants.js';
+`;import { makeTestGroup } from '../../../../../common/framework/test_group.js';import { GPUConst } from '../../../../constants.js';
 import { ValidationTest } from '../../validation_test.js';
 
 export const g = makeTestGroup(ValidationTest);
@@ -18,13 +17,10 @@ Tests that resolve query set with invalid object.
 - invalid destination buffer that failed during creation.
   `).
 
-subcases(
-() =>
-[
+paramsSubcasesOnly([
 { querySetState: 'valid', destinationState: 'valid' }, // control case
 { querySetState: 'invalid', destinationState: 'valid' },
 { querySetState: 'valid', destinationState: 'invalid' }]).
-
 
 fn(async t => {
   const { querySetState, destinationState } = t.params;
@@ -51,7 +47,7 @@ Tests that resolve query set with invalid firstQuery and queryCount:
 - firstQuery and/or queryCount out of range
   `).
 
-subcases(() => [
+paramsSubcasesOnly([
 { firstQuery: 0, queryCount: kQueryCount }, // control case
 { firstQuery: 0, queryCount: kQueryCount + 1 },
 { firstQuery: 1, queryCount: kQueryCount },
@@ -81,8 +77,9 @@ Tests that resolve query set with invalid destinationBuffer:
 - Buffer usage {with, without} QUERY_RESOLVE
   `).
 
-subcases(() =>
-poptions('bufferUsage', [
+paramsSubcasesOnly((u) =>
+u //
+.combine('bufferUsage', [
 GPUConst.BufferUsage.STORAGE,
 GPUConst.BufferUsage.QUERY_RESOLVE // control case
 ])).
@@ -111,7 +108,7 @@ Tests that resolve query set with invalid destinationOffset:
 - destinationOffset out of range
   `).
 
-subcases(() => poptions('destinationOffset', [0, 6, 8, 16])).
+paramsSubcasesOnly(u => u.combine('destinationOffset', [0, 6, 8, 16])).
 fn(async t => {
   const querySet = t.device.createQuerySet({ type: 'occlusion', count: kQueryCount });
   const destination = t.device.createBuffer({

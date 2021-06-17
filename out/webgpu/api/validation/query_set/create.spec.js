@@ -2,8 +2,7 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `
 Tests for validation in createQuerySet.
-`;import { poptions } from '../../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../../common/framework/test_group.js';
+`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { kQueryTypes, kMaxQueryCount } from '../../../capability_info.js';
 import { ValidationTest } from '../validation_test.js';
 
@@ -17,8 +16,12 @@ Tests that create query set with the count for all query types:
 - x= {occlusion, pipeline-statistics, timestamp} query
   `).
 
-cases(poptions('type', kQueryTypes)).
-subcases(() => poptions('count', [0, kMaxQueryCount, kMaxQueryCount + 1])).
+params((u) =>
+u.
+combine('type', kQueryTypes).
+beginSubcases().
+combine('count', [0, kMaxQueryCount, kMaxQueryCount + 1])).
+
 fn(async t => {
   const { type, count } = t.params;
 
@@ -41,9 +44,11 @@ Tests that create query set with the GPUPipelineStatisticName for all query type
 - x= {occlusion, pipeline-statistics, timestamp} query
   `).
 
-cases(poptions('type', kQueryTypes)).
-subcases(() =>
-poptions('pipelineStatistics', [undefined, [], ['clipper-invocations']])).
+params((u) =>
+u.
+combine('type', kQueryTypes).
+beginSubcases().
+combine('pipelineStatistics', [undefined, [], ['clipper-invocations']])).
 
 fn(async t => {
   const { type, pipelineStatistics } = t.params;
@@ -69,8 +74,9 @@ desc(
 Tests that create query set with the duplicate values and all values of GPUPipelineStatisticName for pipeline-statistics query.
   `).
 
-subcases(() =>
-poptions('pipelineStatistics', [
+paramsSubcasesOnly((u) =>
+u //
+.combine('pipelineStatistics', [
 ['clipper-invocations', 'clipper-invocations'],
 [
 'clipper-invocations',

@@ -1,6 +1,9 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ export function makeBufferWithContents(device, dataArray, usage) {
+ **/ /**
+ * Creates a buffer with the contents of some TypedArray.
+ */
+export function makeBufferWithContents(device, dataArray, usage) {
   const buffer = device.createBuffer({
     mappedAtCreation: true,
     size: dataArray.byteLength,

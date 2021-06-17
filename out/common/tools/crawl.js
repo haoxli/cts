@@ -6,9 +6,9 @@
 import * as fs from 'fs';import * as path from 'path';
 
 
-import { validQueryPart } from '../framework/query/validQueryPart.js';
+import { validQueryPart } from '../internal/query/validQueryPart.js';
 
-import { assert, unreachable } from '../framework/util/util.js';
+import { assert, unreachable } from '../util/util.js';
 
 const specFileSuffix = __filename.endsWith('.ts') ? '.spec.ts' : '.spec.js';
 

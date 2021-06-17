@@ -1,6 +1,6 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert } from '../../../../../common/framework/util/util.js';import { mipSize } from '../../../../util/texture/subresource.js';
+**/import { assert } from '../../../../../common/util/util.js';import { virtualMipSize } from '../../../../util/texture/base.js';
 
 
 function makeFullscreenVertexModule(device) {
@@ -99,12 +99,17 @@ texture,
 state,
 subresourceRange) =>
 {
+  assert(params.dimension === '2d');
   for (const viewDescriptor of t.generateTextureViewDescriptorsForRendering(
   params.aspect,
   subresourceRange))
   {
     assert(viewDescriptor.baseMipLevel !== undefined);
-    const [width, height] = mipSize([t.textureWidth, t.textureHeight], viewDescriptor.baseMipLevel);
+    const [width, height] = virtualMipSize(
+    params.dimension,
+    [t.textureWidth, t.textureHeight, 1],
+    viewDescriptor.baseMipLevel);
+
 
     const renderTexture = t.device.createTexture({
       size: [width, height, 1],

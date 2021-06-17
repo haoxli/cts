@@ -1,7 +1,6 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ import { poptions } from '../../../../common/framework/params_builder.js';
-import { kSizedTextureFormatInfo } from '../../../capability_info.js';
+ **/ import { kTextureFormatInfo } from '../../../capability_info.js';
 import { ValidationTest } from '../validation_test.js';
 
 export class ImageCopyTest extends ValidationTest {
@@ -70,7 +69,7 @@ export class ImageCopyTest extends ValidationTest {
     copySize = { width: 1, height: 1, depthOrArrayLayers: 1 },
     origin = { x: 0, y: 0, z: 0 }
   ) {
-    const info = kSizedTextureFormatInfo[format];
+    const info = kTextureFormatInfo[format];
     return this.device.createTexture({
       size: {
         width: Math.max(1, copySize.width + origin.x) * info.blockWidth,
@@ -96,18 +95,12 @@ function valuesToTestDivisibilityBy(number) {
 
 // This is a helper function used for expanding test parameters for texel block alignment tests on offset
 export function texelBlockAlignmentTestExpanderForOffset({ format }) {
-  return poptions(
-    'offset',
-    valuesToTestDivisibilityBy(kSizedTextureFormatInfo[format].bytesPerBlock)
-  );
+  return valuesToTestDivisibilityBy(kTextureFormatInfo[format].bytesPerBlock);
 }
 
 // This is a helper function used for expanding test parameters for texel block alignment tests on rowsPerImage
 export function texelBlockAlignmentTestExpanderForRowsPerImage({ format }) {
-  return poptions(
-    'rowsPerImage',
-    valuesToTestDivisibilityBy(kSizedTextureFormatInfo[format].blockHeight)
-  );
+  return valuesToTestDivisibilityBy(kTextureFormatInfo[format].blockHeight);
 }
 
 // This is a helper function used for expanding test parameters for texel block alignment tests on origin and size
@@ -115,29 +108,23 @@ export function texelBlockAlignmentTestExpanderForValueToCoordinate({ format, co
   switch (coordinateToTest) {
     case 'x':
     case 'width':
-      return poptions(
-        'valueToCoordinate',
-        valuesToTestDivisibilityBy(kSizedTextureFormatInfo[format].blockWidth)
-      );
+      return valuesToTestDivisibilityBy(kTextureFormatInfo[format].blockWidth);
 
     case 'y':
     case 'height':
-      return poptions(
-        'valueToCoordinate',
-        valuesToTestDivisibilityBy(kSizedTextureFormatInfo[format].blockHeight)
-      );
+      return valuesToTestDivisibilityBy(kTextureFormatInfo[format].blockHeight);
 
     case 'z':
     case 'depthOrArrayLayers':
-      return poptions('valueToCoordinate', valuesToTestDivisibilityBy(1));
+      return valuesToTestDivisibilityBy(1);
   }
 }
 
 // This is a helper function used for filtering test parameters
 export function formatCopyableWithMethod({ format, method }) {
   if (method === 'CopyTextureToBuffer') {
-    return kSizedTextureFormatInfo[format].copySrc;
+    return kTextureFormatInfo[format].copySrc;
   } else {
-    return kSizedTextureFormatInfo[format].copyDst;
+    return kTextureFormatInfo[format].copyDst;
   }
 }

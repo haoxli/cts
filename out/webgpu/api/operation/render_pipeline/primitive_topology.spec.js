@@ -55,8 +55,7 @@ Test locations are framebuffer coordinates:
     ****** ** ****** **        {v2,v3,v4} and {v3,v4,v5}.       With primitive restart:
    v1       v3        v5                                        Triangle {v2, v3, v4}
                                                                 and {v3, v4, v5}.
-`;import { params, pbool, poptions } from '../../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../../common/framework/test_group.js';
+`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../gpu_test.js';
 
 const kRTSize = 56;
@@ -445,11 +444,11 @@ desc(
     - primitiveRestart= { true, false } - always false for non-strip topologies
   `).
 
-cases(
-params() //
-.combine(poptions('topology', topologies)).
-combine(pbool('indirect')).
-combine(pbool('primitiveRestart')).
+params((u) =>
+u //
+.combine('topology', topologies).
+combine('indirect', [false, true]).
+combine('primitiveRestart', [false, true]).
 unless(
 p => p.primitiveRestart && p.topology !== 'line-strip' && p.topology !== 'triangle-strip')).
 
@@ -472,18 +471,18 @@ desc(
                    One smaller for line-list. One or two smaller for triangle-list.
     `).
 
-cases(
-params() //
-.combine(poptions('topology', ['line-list', 'triangle-list'])).
-combine(pbool('indirect')).
-expand(function* (p) {
+params((u) =>
+u //
+.combine('topology', ['line-list', 'triangle-list']).
+combine('indirect', [false, true]).
+expand('drawCount', function* (p) {
   switch (p.topology) {
     case 'line-list':
-      yield { drawCount: kDefaultDrawCount - 1 };
+      yield kDefaultDrawCount - 1;
       break;
     case 'triangle-list':
-      yield { drawCount: kDefaultDrawCount - 1 };
-      yield { drawCount: kDefaultDrawCount - 2 };
+      yield kDefaultDrawCount - 1;
+      yield kDefaultDrawCount - 2;
       break;}
 
 })).

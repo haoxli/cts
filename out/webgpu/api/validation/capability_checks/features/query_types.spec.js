@@ -2,8 +2,7 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `
 Tests for capability checking for features enabling optional query types.
-`;import { params, pbool, poptions } from '../../../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../../../common/framework/test_group.js';
+`;import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { ValidationTest } from '../../validation_test.js';
 
 export const g = makeTestGroup(ValidationTest);
@@ -21,11 +20,11 @@ TODO: This test should expect *synchronous* exceptions, not validation errors, p
 As of this writing, the spec needs to be fixed as well.
   `).
 
-params(
-params().
-combine(poptions('type', ['occlusion', 'pipeline-statistics', 'timestamp'])).
-combine(pbool('pipelineStatisticsQueryEnable')).
-combine(pbool('timestampQueryEnable'))).
+params((u) =>
+u.
+combine('type', ['occlusion', 'pipeline-statistics', 'timestamp']).
+combine('pipelineStatisticsQueryEnable', [false, true]).
+combine('timestampQueryEnable', [false, true])).
 
 fn(async t => {
   const { type, pipelineStatisticsQueryEnable, timestampQueryEnable } = t.params;

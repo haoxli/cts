@@ -1,10 +1,10 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ import { DefaultTestFileLoader } from '../../framework/file_loader.js';
-import { Logger } from '../../framework/logging/logger.js';
-import { parseQuery } from '../../framework/query/parseQuery.js';
+ **/ import { DefaultTestFileLoader } from '../../internal/file_loader.js';
+import { Logger } from '../../internal/logging/logger.js';
+import { parseQuery } from '../../internal/query/parseQuery.js';
 
-import { assert } from '../../framework/util/util.js';
+import { assert } from '../../util/util.js';
 
 // should be DedicatedWorkerGlobalScope
 

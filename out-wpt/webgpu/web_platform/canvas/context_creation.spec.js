@@ -7,7 +7,6 @@ Note there are no context creation attributes for WebGPU (as of this writing).
 Options are configured in configureSwapChain instead.
 `;
 import { Fixture } from '../../../common/framework/fixture.js';
-import { pbool, poptions } from '../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 
 export const g = makeTestGroup(Fixture);
@@ -18,8 +17,12 @@ g.test('return_type')
 
     TODO: Test OffscreenCanvas made from transferControlToOffscreen.`
   )
-  .cases(pbool('offscreen'))
-  .subcases(() => poptions('attributes', [undefined, {}]))
+  .params(u =>
+    u //
+      .combine('offscreen', [false, true])
+      .beginSubcases()
+      .combine('attributes', [undefined, {}])
+  )
   .fn(async t => {
     let canvas;
     if (t.params.offscreen) {

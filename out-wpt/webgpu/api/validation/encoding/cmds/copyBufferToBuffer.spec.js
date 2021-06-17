@@ -24,7 +24,6 @@ Test Plan:
   - (destinationOffset + copySize) > size of destination buffer
 * Source buffer and destination buffer are the same buffer
 `;
-import { poptions, params } from '../../../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { kBufferUsages } from '../../../../capability_info.js';
 import { kMaxSafeMultipleOf8 } from '../../../../util/math.js';
@@ -73,10 +72,10 @@ g.test('copy_with_invalid_buffer').fn(async t => {
 });
 
 g.test('buffer_usage')
-  .params(
-    params()
-      .combine(poptions('srcUsage', kBufferUsages))
-      .combine(poptions('dstUsage', kBufferUsages))
+  .paramsSubcasesOnly(u =>
+    u //
+      .combine('srcUsage', kBufferUsages)
+      .combine('dstUsage', kBufferUsages)
   )
   .fn(async t => {
     const { srcUsage, dstUsage } = t.params;
@@ -104,7 +103,7 @@ g.test('buffer_usage')
   });
 
 g.test('copy_size_alignment')
-  .params([
+  .paramsSubcasesOnly([
     { copySize: 0, _isSuccess: true },
     { copySize: 2, _isSuccess: false },
     { copySize: 4, _isSuccess: true },
@@ -135,7 +134,7 @@ g.test('copy_size_alignment')
   });
 
 g.test('copy_offset_alignment')
-  .params([
+  .paramsSubcasesOnly([
     { srcOffset: 0, dstOffset: 0, _isSuccess: true },
     { srcOffset: 2, dstOffset: 0, _isSuccess: false },
     { srcOffset: 4, dstOffset: 0, _isSuccess: true },
@@ -171,7 +170,7 @@ g.test('copy_offset_alignment')
   });
 
 g.test('copy_overflow')
-  .params([
+  .paramsSubcasesOnly([
     { srcOffset: 0, dstOffset: 0, copySize: kMaxSafeMultipleOf8 },
     { srcOffset: 16, dstOffset: 0, copySize: kMaxSafeMultipleOf8 },
     { srcOffset: 0, dstOffset: 16, copySize: kMaxSafeMultipleOf8 },
@@ -209,7 +208,7 @@ g.test('copy_overflow')
   });
 
 g.test('copy_out_of_bounds')
-  .params([
+  .paramsSubcasesOnly([
     { srcOffset: 0, dstOffset: 0, copySize: 32, _isSuccess: true },
     { srcOffset: 0, dstOffset: 0, copySize: 36 },
     { srcOffset: 36, dstOffset: 0, copySize: 4 },
@@ -245,7 +244,7 @@ g.test('copy_out_of_bounds')
   });
 
 g.test('copy_within_same_buffer')
-  .params([
+  .paramsSubcasesOnly([
     { srcOffset: 0, dstOffset: 8, copySize: 4 },
     { srcOffset: 8, dstOffset: 0, copySize: 4 },
     { srcOffset: 0, dstOffset: 4, copySize: 8 },

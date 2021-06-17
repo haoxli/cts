@@ -4,7 +4,7 @@
 Validation tests for setVertexBuffer/setIndexBuffer state (not validation). See also operation tests.
 `;
 import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
-import { range } from '../../../../../../common/framework/util/util.js';
+import { range } from '../../../../../../common/util/util.js';
 import { ValidationTest } from '../../../validation_test.js';
 
 class F extends ValidationTest {

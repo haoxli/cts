@@ -5,12 +5,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as process from 'process';
 
-import { DefaultTestFileLoader } from '../framework/file_loader.js';
-import { Logger } from '../framework/logging/logger.js';
+import { DefaultTestFileLoader } from '../internal/file_loader.js';
+import { prettyPrintLog } from '../internal/logging/log_message.js';
+import { Logger } from '../internal/logging/logger.js';
 
-import { parseQuery } from '../framework/query/parseQuery.js';
-import { parseExpectationsForTestQuery } from '../framework/query/query.js';
-import { assert, unreachable } from '../framework/util/util.js';
+import { parseQuery } from '../internal/query/parseQuery.js';
+import { parseExpectationsForTestQuery } from '../internal/query/query.js';
+import { assert, unreachable } from '../util/util.js';
 
 function usage(rc) {
   console.log('Usage:');
@@ -153,7 +154,7 @@ function printResults(results) {
     console.log(`[${r.status}] ${name} (${r.timems}ms). Log:`);
     if (r.logs) {
       for (const l of r.logs) {
-        console.log('  - ' + l.toJSON().replace(/\n/g, '\n    '));
+        console.log(prettyPrintLog(l));
       }
     }
   }

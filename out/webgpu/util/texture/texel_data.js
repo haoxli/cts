@@ -1,6 +1,6 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert, unreachable } from '../../../common/framework/util/util.js';import {
+**/import { assert, unreachable } from '../../../common/util/util.js';import {
 assertInIntegerRange,
 float32ToFloatBits,
 floatAsNormalizedInteger,
@@ -10,7 +10,8 @@ normalizedIntegerAsFloat,
 packRGB9E5UFloat } from
 '../conversion.js';
 
-export let TexelComponent;(function (TexelComponent) {TexelComponent["R"] = "R";TexelComponent["G"] = "G";TexelComponent["B"] = "B";TexelComponent["A"] = "A";TexelComponent["Depth"] = "Depth";TexelComponent["Stencil"] = "Stencil";})(TexelComponent || (TexelComponent = {}));
+/** A component of a texture format: R, G, B, A, Depth, or Stencil. */
+export let TexelComponent;
 
 
 
@@ -19,10 +20,7 @@ export let TexelComponent;(function (TexelComponent) {TexelComponent["R"] = "R";
 
 
 
-
-
-
-
+/** Arbitrary data, per component of a texel format. */(function (TexelComponent) {TexelComponent["R"] = "R";TexelComponent["G"] = "G";TexelComponent["B"] = "B";TexelComponent["A"] = "A";TexelComponent["Depth"] = "Depth";TexelComponent["Stencil"] = "Stencil";})(TexelComponent || (TexelComponent = {}));
 
 
 
@@ -43,11 +41,11 @@ export let TexelComponent;(function (TexelComponent) {TexelComponent["R"] = "R";
 
 
 /**
-                                                                                                                                                                                                                                                                                    * Create a PerTexelComponent object filled with the same value for all components.
-                                                                                                                                                                                                                                                                                    * @param {TexelComponent[]} components - The component names.
-                                                                                                                                                                                                                                                                                    * @param {T} value - The value to assign to each component.
-                                                                                                                                                                                                                                                                                    * @returns {PerTexelComponent<T>}
-                                                                                                                                                                                                                                                                                    */
+                                                                                                                                                                                                                                                                                                                 * Create a PerTexelComponent object filled with the same value for all components.
+                                                                                                                                                                                                                                                                                                                 * @param {TexelComponent[]} components - The component names.
+                                                                                                                                                                                                                                                                                                                 * @param {T} value - The value to assign to each component.
+                                                                                                                                                                                                                                                                                                                 * @returns {PerTexelComponent<T>}
+                                                                                                                                                                                                                                                                                                                 */
 function makePerTexelComponent(components, value) {
   const values = {};
   for (const c of components) {
@@ -349,14 +347,23 @@ const kBGRA = [TexelComponent.B, TexelComponent.G, TexelComponent.R, TexelCompon
 
 const identity = n => n;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export const kTexelRepresentationInfo =
-
-
-
-
-
-
-
 
 {
   ...{

@@ -1,6 +1,6 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert } from '../../../../../common/framework/util/util.js';import { GPUTest } from '../../../../gpu_test.js';
+**/import { assert } from '../../../../../common/util/util.js';import { GPUTest } from '../../../../gpu_test.js';
 const kSize = 4;
 
 export const kAllWriteOps = ['render', 'render-via-bundle', 'compute', 'b2b-copy', 't2b-copy'];
@@ -53,10 +53,10 @@ export class BufferSyncTest extends GPUTest {
   createStorageWriteComputePipeline(value) {
     const wgslCompute = `
       [[block]] struct Data {
-        [[offset(0)]] a : i32;
+        a : i32;
       };
 
-      [[group(0), binding(0)]] var<storage> data : [[access(read_write)]] Data;
+      [[group(0), binding(0)]] var<storage, read_write> data : Data;
       [[stage(compute)]] fn main() {
         data.a = ${value};
         return;
@@ -84,10 +84,10 @@ export class BufferSyncTest extends GPUTest {
 
       fragment: `
       [[block]] struct Data {
-        [[offset(0)]] a : i32;
+        a : i32;
       };
 
-      [[group(0), binding(0)]] var<storage> data : [[access(read_write)]] Data;
+      [[group(0), binding(0)]] var<storage, read_write> data : Data;
       [[stage(fragment)]] fn frag_main() -> [[location(0)]] vec4<f32> {
         data.a = ${value};
         return vec4<f32>(1.0, 0.0, 0.0, 1.0);

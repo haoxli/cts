@@ -1,6 +1,6 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { LogMessageWithStack } from '../../framework/logging/log_message.js';
+**/import { LogMessageWithStack } from '../../internal/logging/log_message.js';
 
 
 export class TestWorker {

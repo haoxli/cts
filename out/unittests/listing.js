@@ -52,17 +52,17 @@ export const listing = [
   },
   {
     "file": [
+      "query_string"
+    ]
+  },
+  {
+    "file": [
       "test_group"
     ]
   },
   {
     "file": [
       "test_query"
-    ]
-  },
-  {
-    "file": [
-      "url_query"
     ]
   }
 ];

@@ -12,7 +12,6 @@ Wait on another fence, then call expectContents to verify the written buffer.
   - if pass type is the same, x= {single pass, separate passes} (note: render has loose guarantees)
   - if not single pass, x= writes in {same cmdbuf, separate cmdbufs, separate submits, separate queues}
 `;
-import { pbool, poptions, params } from '../../../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 
 import { kAllWriteOps, BufferSyncTest } from './buffer_sync_test.js';
@@ -21,10 +20,10 @@ export const g = makeTestGroup(BufferSyncTest);
 
 g.test('same_cmdbuf')
   .desc('Test write-after-write operations in the same command buffer.')
-  .params(
-    params()
-      .combine(poptions('firstWriteOp', kAllWriteOps))
-      .combine(poptions('secondWriteOp', kAllWriteOps))
+  .paramsSubcasesOnly(u =>
+    u //
+      .combine('firstWriteOp', kAllWriteOps)
+      .combine('secondWriteOp', kAllWriteOps)
   )
   .fn(async t => {
     const { firstWriteOp, secondWriteOp } = t.params;
@@ -40,10 +39,10 @@ g.test('same_cmdbuf')
 
 g.test('separate_cmdbufs')
   .desc('Test write-after-write operations in separate command buffers via the same submit.')
-  .params(
-    params()
-      .combine(poptions('firstWriteOp', kAllWriteOps))
-      .combine(poptions('secondWriteOp', kAllWriteOps))
+  .paramsSubcasesOnly(u =>
+    u //
+      .combine('firstWriteOp', kAllWriteOps)
+      .combine('secondWriteOp', kAllWriteOps)
   )
   .fn(async t => {
     const { firstWriteOp, secondWriteOp } = t.params;
@@ -59,10 +58,10 @@ g.test('separate_cmdbufs')
 
 g.test('separate_submits')
   .desc('Test write-after-write operations via separate submits in the same queue.')
-  .params(
-    params()
-      .combine(poptions('firstWriteOp', ['write-buffer', ...kAllWriteOps]))
-      .combine(poptions('secondWriteOp', ['write-buffer', ...kAllWriteOps]))
+  .paramsSubcasesOnly(u =>
+    u //
+      .combine('firstWriteOp', ['write-buffer', ...kAllWriteOps])
+      .combine('secondWriteOp', ['write-buffer', ...kAllWriteOps])
   )
   .fn(async t => {
     const { firstWriteOp, secondWriteOp } = t.params;
@@ -84,7 +83,11 @@ g.test('two_draws_in_the_same_render_pass')
     a storage buffer. The second write will write 2 into the same buffer in the same pass. Expected
     data in buffer is either 1 or 2. It may use bundle in each draw.`
   )
-  .params(params().combine(pbool('firstDrawUseBundle')).combine(pbool('secondDrawUseBundle')))
+  .paramsSubcasesOnly(u =>
+    u //
+      .combine('firstDrawUseBundle', [false, true])
+      .combine('secondDrawUseBundle', [false, true])
+  )
   .fn(async t => {
     const { firstDrawUseBundle, secondDrawUseBundle } = t.params;
     const buffer = await t.createBufferWithValue(0);

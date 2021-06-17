@@ -7,9 +7,8 @@ TODO:
 - Test result for all combinations of args (make sure each case is distinguishable from others
 - Test underflow/overflow has consistent behavior
 - ?
-`;import { params, poptions } from '../../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../../common/framework/test_group.js';
-import { assert, unreachable } from '../../../../common/framework/util/util.js';
+`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
+import { assert, unreachable } from '../../../../common/util/util.js';
 import { GPUTest } from '../../../gpu_test.js';
 
 export const g = makeTestGroup(GPUTest);
@@ -127,35 +126,27 @@ desc(
     - dstFactor= {...all GPUBlendFactors}
     - operation= {...all GPUBlendOperations}`).
 
-cases(
-params() //
-.combine(poptions('component', ['color', 'alpha'])).
-combine(poptions('srcFactor', kBlendFactors)).
-combine(poptions('dstFactor', kBlendFactors)).
-combine(poptions('operation', kBlendOperations))).
+params((u) =>
+u //
+.combine('component', ['color', 'alpha']).
+combine('srcFactor', kBlendFactors).
+combine('dstFactor', kBlendFactors).
+combine('operation', kBlendOperations).
+beginSubcases().
+combine('srcColor', [{ r: 0.11, g: 0.61, b: 0.81, a: 0.44 }]).
+combine('dstColor', [
+{ r: 0.51, g: 0.22, b: 0.71, a: 0.33 },
+{ r: 0.09, g: 0.73, b: 0.93, a: 0.81 }]).
 
-subcases(p => {
+expand('blendConstant', p => {
   const needsBlendConstant =
   p.srcFactor === 'one-minus-constant' ||
   p.srcFactor === 'constant' ||
   p.dstFactor === 'one-minus-constant' ||
   p.dstFactor === 'constant';
+  return needsBlendConstant ? [{ r: 0.91, g: 0.82, b: 0.73, a: 0.64 }] : [undefined];
+})).
 
-  return params().
-  combine(poptions('srcColor', [{ r: 0.11, g: 0.61, b: 0.81, a: 0.44 }])).
-  combine(
-  poptions('dstColor', [
-  { r: 0.51, g: 0.22, b: 0.71, a: 0.33 },
-  { r: 0.09, g: 0.73, b: 0.93, a: 0.81 }])).
-
-
-  combine(
-  poptions(
-  'blendConstant',
-  needsBlendConstant ? [{ r: 0.91, g: 0.82, b: 0.73, a: 0.64 }] : [undefined]));
-
-
-}).
 fn(t => {
   const textureFormat = 'rgba32float';
   const srcColor = t.params.srcColor;

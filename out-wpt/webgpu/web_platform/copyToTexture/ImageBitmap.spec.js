@@ -11,10 +11,9 @@ TODO: Test ImageBitmap generated from all possible ImageBitmapSource, relevant I
 
 TODO: Test zero-sized copies from all sources (just make sure params cover it) (e.g. 0x0, 0x4, 4x0).
 `;
-import { poptions, params } from '../../../common/framework/params_builder.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
-import { unreachable } from '../../../common/framework/util/util.js';
-import { kRegularTextureFormatInfo } from '../../capability_info.js';
+import { unreachable } from '../../../common/util/util.js';
+import { kTextureFormatInfo, kValidTextureFormatsForCopyIB2T } from '../../capability_info.js';
 import { GPUTest } from '../../gpu_test.js';
 import { kTexelRepresentationInfo } from '../../util/texture/texel_data.js';
 
@@ -186,7 +185,7 @@ got [${failedByteActualValues.join(', ')}]`;
 
   // Helper functions to generate imagePixels based input configs.
   getImagePixels({ format, width, height, transparentOp, orientationOp }) {
-    const bytesPerPixel = kRegularTextureFormatInfo[format].bytesPerBlock;
+    const bytesPerPixel = kTextureFormatInfo[format].bytesPerBlock;
 
     // Generate input contents by iterating 'Color' enum
     const imagePixels = new Uint8ClampedArray(bytesPerPixel * width * height);
@@ -218,28 +217,14 @@ g.test('from_ImageData')
   in CPU back resource.
   `
   )
-  .cases(
-    params()
-      .combine(poptions('alpha', ['none', 'premultiply']))
-      .combine(poptions('orientation', ['none', 'flipY']))
-      .combine(
-        poptions('dstColorFormat', [
-          'rgba8unorm',
-          'bgra8unorm',
-          'rgba8unorm-srgb',
-          'bgra8unorm-srgb',
-          'rgb10a2unorm',
-          'rgba16float',
-          'rgba32float',
-          'rg8unorm',
-          'rg16float',
-        ])
-      )
-  )
-  .subcases(() =>
-    params()
-      .combine(poptions('width', [1, 2, 4, 15, 255, 256]))
-      .combine(poptions('height', [1, 2, 4, 15, 255, 256]))
+  .params(u =>
+    u
+      .combine('alpha', ['none', 'premultiply'])
+      .combine('orientation', ['none', 'flipY'])
+      .combine('dstColorFormat', kValidTextureFormatsForCopyIB2T)
+      .beginSubcases()
+      .combine('width', [1, 2, 4, 15, 255, 256])
+      .combine('height', [1, 2, 4, 15, 255, 256])
   )
   .fn(async t => {
     const { width, height, alpha, orientation, dstColorFormat } = t.params;
@@ -274,7 +259,7 @@ g.test('from_ImageData')
     });
 
     // Construct expected value for different dst color format
-    const dstBytesPerPixel = kRegularTextureFormatInfo[dstColorFormat].bytesPerBlock;
+    const dstBytesPerPixel = kTextureFormatInfo[dstColorFormat].bytesPerBlock;
     const expectedPixels = t.getImagePixels({
       format: dstColorFormat,
       width,
@@ -299,27 +284,13 @@ g.test('from_canvas')
   texture correctly. These imageBitmaps are highly possible living in GPU back resource.
   `
   )
-  .cases(
-    params()
-      .combine(poptions('orientation', ['none', 'flipY']))
-      .combine(
-        poptions('dstColorFormat', [
-          'rgba8unorm',
-          'bgra8unorm',
-          'rgba8unorm-srgb',
-          'bgra8unorm-srgb',
-          'rgb10a2unorm',
-          'rgba16float',
-          'rgba32float',
-          'rg8unorm',
-          'rg16float',
-        ])
-      )
-  )
-  .subcases(() =>
-    params()
-      .combine(poptions('width', [1, 2, 4, 15, 255, 256]))
-      .combine(poptions('height', [1, 2, 4, 15, 255, 256]))
+  .params(u =>
+    u
+      .combine('orientation', ['none', 'flipY'])
+      .combine('dstColorFormat', kValidTextureFormatsForCopyIB2T)
+      .beginSubcases()
+      .combine('width', [1, 2, 4, 15, 255, 256])
+      .combine('height', [1, 2, 4, 15, 255, 256])
   )
   .fn(async t => {
     const { width, height, orientation, dstColorFormat } = t.params;
@@ -379,7 +350,7 @@ g.test('from_canvas')
         GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
-    const dstBytesPerPixel = kRegularTextureFormatInfo[dstColorFormat].bytesPerBlock;
+    const dstBytesPerPixel = kTextureFormatInfo[dstColorFormat].bytesPerBlock;
     const expectedData = t.getImagePixels({
       format: dstColorFormat,
       width,

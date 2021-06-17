@@ -1,16 +1,19 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { GPUTest } from '../../gpu_test.js';export class ShaderValidationTest extends GPUTest {
+**/import { GPUTest } from '../../gpu_test.js'; /**
+                                                 * Base fixture for WGSL shader validation tests.
+                                                 */
+export class ShaderValidationTest extends GPUTest {
   /**
-                                                                                                   * Add a test expectation for whether a createShaderModule call succeeds or not.
-                                                                                                   *
-                                                                                                   * @example
-                                                                                                   * ```ts
-                                                                                                   * t.expectCompileResult(true, `wgsl code`); // Expect success
-                                                                                                   * t.expectCompileResult(false, `wgsl code`); // Expect validation error with any error string
-                                                                                                   * t.expectCompileResult('v-0000', `wgsl code`); // Expect validation error containing 'v-0000'
-                                                                                                   * ```
-                                                                                                   */
+                                                    * Add a test expectation for whether a createShaderModule call succeeds or not.
+                                                    *
+                                                    * @example
+                                                    * ```ts
+                                                    * t.expectCompileResult(true, `wgsl code`); // Expect success
+                                                    * t.expectCompileResult(false, `wgsl code`); // Expect validation error with any error string
+                                                    * t.expectCompileResult('substr', `wgsl code`); // Expect validation error containing 'substr'
+                                                    * ```
+                                                    */
   expectCompileResult(result, code) {
     // If an error is expected, push an error scope to catch it.
     // Otherwise, the test harness will catch unexpected errors.

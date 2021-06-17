@@ -13,8 +13,7 @@ Tests a render pass with a resolveTarget resolves correctly for many combination
   - TODO?: resolveTarget mip level {0, >0} (TODO?: different mip level from colorAttachment)
   - TODO?: resolveTarget {2d array layer, TODO: 3d slice} {0, >0} with {2d, TODO: 3d} resolveTarget
     (different z from colorAttachment)
-`;import { params, poptions } from '../../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../../common/framework/test_group.js';
+`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../gpu_test.js';
 
 const kSlotsToResolve = [
@@ -29,13 +28,14 @@ const kFormat = 'rgba8unorm';
 export const g = makeTestGroup(GPUTest);
 
 g.test('render_pass_resolve').
-params(
-params().
-combine(poptions('storeOperation', ['clear', 'store'])).
-combine(poptions('numColorAttachments', [2, 4])).
-combine(poptions('slotsToResolve', kSlotsToResolve)).
-combine(poptions('resolveTargetBaseMipLevel', [0, 1])).
-combine(poptions('resolveTargetBaseArrayLayer', [0, 1]))).
+params((u) =>
+u.
+combine('storeOperation', ['clear', 'store']).
+beginSubcases().
+combine('numColorAttachments', [2, 4]).
+combine('slotsToResolve', kSlotsToResolve).
+combine('resolveTargetBaseMipLevel', [0, 1]).
+combine('resolveTargetBaseArrayLayer', [0, 1])).
 
 fn(t => {
   const targets = [];

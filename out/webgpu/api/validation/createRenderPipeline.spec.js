@@ -23,9 +23,8 @@ TODO: review existing tests, write descriptions, and make sure tests are complet
 >       alphaToCoverageEnabled is { true (fails), false (passes) }.
 >     - sampleMask is being used and alphaToCoverageEnabled is { true (fails), false (passes) }.
 
-`;import { poptions } from '../../../common/framework/params_builder.js';
-import { makeTestGroup } from '../../../common/framework/test_group.js';
-import { kAllTextureFormats, kAllTextureFormatInfo } from '../../capability_info.js';
+`;import { makeTestGroup } from '../../../common/framework/test_group.js';
+import { kTextureFormats, kTextureFormatInfo } from '../../capability_info.js';
 
 import { ValidationTest } from './validation_test.js';
 
@@ -131,10 +130,10 @@ g.test('at_least_one_color_state_is_required').fn(async t => {
 });
 
 g.test('color_formats_must_be_renderable').
-params(poptions('format', kAllTextureFormats)).
+params(u => u.combine('format', kTextureFormats)).
 fn(async t => {
   const format = t.params.format;
-  const info = kAllTextureFormatInfo[format];
+  const info = kTextureFormatInfo[format];
   await t.selectDeviceOrSkipTestCase(info.feature);
 
   const descriptor = t.getDescriptor({ targets: [{ format }] });
@@ -151,7 +150,7 @@ fn(async t => {
 });
 
 g.test('sample_count_must_be_valid').
-params([
+paramsSimple([
 { sampleCount: 0, _success: false },
 { sampleCount: 1, _success: true },
 { sampleCount: 2, _success: false },
@@ -177,7 +176,7 @@ fn(async t => {
 });
 
 g.test('sample_count_must_be_equal_to_the_one_of_every_attachment_in_the_render_pass').
-params([
+paramsSimple([
 { attachmentSamples: 4, pipelineSamples: 4, _success: true }, // It is allowed to use multisampled render pass and multisampled render pipeline.
 { attachmentSamples: 4, pipelineSamples: 1, _success: false }, // It is not allowed to use multisampled render pass and non-multisampled render pipeline.
 { attachmentSamples: 1, pipelineSamples: 4, _success: false } // It is not allowed to use non-multisampled render pass and multisampled render pipeline.

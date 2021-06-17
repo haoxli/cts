@@ -1,6 +1,6 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert } from '../../../common/framework/util/util.js';
+**/import { assert } from '../../../common/util/util.js';
 
 
 
