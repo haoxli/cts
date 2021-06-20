@@ -4,6 +4,7 @@
 import {
   assertInIntegerRange,
   float32ToFloatBits,
+  float32ToFloat16Bits,
   floatAsNormalizedInteger,
   gammaCompress,
   gammaDecompress,
@@ -302,10 +303,7 @@ function makeFloatInfo(componentOrder, bitLength) {
     pack: components => {
       switch (bitLength) {
         case 16:
-          components = applyEach(
-            n => float32ToFloatBits(n, 1, 5, 10, 15),
-            componentOrder
-          )(components);
+          components = applyEach(n => float32ToFloat16Bits(n), componentOrder)(components);
           return packComponents(componentOrder, components, 16, 'uint');
         case 32:
           return packComponents(componentOrder, components, bitLength, 'float');
