@@ -356,7 +356,7 @@ class ImageCopyTest extends GPUTest {
       expected
     );
 
-    this.expectContents(buffer, bufferData);
+    this.expectGPUBufferValuesEqual(buffer, bufferData);
   }
 
   /**

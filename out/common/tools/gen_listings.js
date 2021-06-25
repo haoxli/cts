@@ -57,8 +57,9 @@ export const listing = ${JSON.stringify(listing, undefined, 2)};
 
     try {
       fs.unlinkSync(outFile + '.map');
-
-    } catch (ex) {}
+    } catch (ex) {
+      // ignore if file didn't exist
+    }
   }
 })();
 //# sourceMappingURL=gen_listings.js.map

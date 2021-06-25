@@ -22,7 +22,6 @@ import { GPUTest } from './gpu_test.js';
 export const g = makeTestGroup(GPUTest);
 
 // Note: spaces in test names are replaced with underscores: webgpu:examples:test_name=
-
 g.test('test_name').fn(t => {});
 
 g.test('not_implemented_yet,without_plan').unimplemented();
@@ -223,7 +222,7 @@ g.test('gpu,buffers').fn(async t => {
 
   // Use the expectContents helper to check the actual contents of a GPUBuffer.
   // Like shouldReject, it must be awaited.
-  t.expectContents(src, data);
+  t.expectGPUBufferValuesEqual(src, data);
 });
 
 // One of the following two tests should be skipped on most platforms.

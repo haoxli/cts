@@ -21,7 +21,8 @@ let haveSomeResults = false;
 const runnow = optionEnabled('runnow');
 const debug = optionEnabled('debug');
 
-const logger = new Logger(debug);
+Logger.globalDebugMode = debug;
+const logger = new Logger();
 
 const worker = optionEnabled('worker') ? new TestWorker(debug) : undefined;
 
@@ -112,8 +113,7 @@ function makeCaseHTML(t) {
             attr('title', 'Log stack to console').
             appendTo(caselog).
             on('click', () => {
-
-              console.log(l);
+              consoleLogError(l);
             });
             $('<pre>').addClass('testcaselogtext').appendTo(caselog).text(l.toJSON());
           }
@@ -192,6 +192,18 @@ parentLevel)
   return { runSubtree: runMySubtree, generateSubtreeHTML: generateMyHTML };
 }
 
+function consoleLogError(e) {
+  if (e === undefined) return;
+
+  globalThis._stack = e;
+
+  console.log('_stack =', e);
+  if ('extra' in e && e.extra !== undefined) {
+
+    console.log('_stack.extra =', e.extra);
+  }
+}
+
 function makeTreeNodeHeaderHTML(
 n,
 runSubtree,
@@ -242,8 +254,7 @@ onChange)
     attr('title', 'Log test creation stack to console').
     appendTo(header).
     on('click', () => {
-
-      console.log(n.testCreationStack);
+      consoleLogError(n.testCreationStack);
     });
   }
   const nodetitle = $('<div>').addClass('nodetitle').appendTo(header);

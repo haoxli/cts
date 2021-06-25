@@ -14,7 +14,6 @@ export const g = makeTestGroup(TestGroupTest);
 
 g.test('UnitTest_fixture').fn(async t0 => {
   let seen = 0;
-
   function count(t) {
     seen++;
   }
@@ -65,11 +64,9 @@ g.test('stack').fn(async t0 => {
   g.test('fail').fn(t => {
     t.fail();
   });
-
   g.test('throw').fn(t => {
     throw new Error('hello');
   });
-
   g.test('throw_nested').fn(t => {
     doNestedThrow2();
   });
@@ -239,7 +236,6 @@ g.test('subcases').fn(async t0 => {
 
 g.test('throws').fn(async t0 => {
   const g = makeTestGroupForUnitTesting(UnitTest);
-
 
   g.test('a').fn(t => {
     throw new Error();

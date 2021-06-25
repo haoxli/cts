@@ -145,7 +145,7 @@ export const checkContentsBySampling = (t, params, texture, state, subresourceRa
           }
         }
       }
-      t.expectContents(resultBuffer, expectedValues);
+      t.expectGPUBufferValuesEqual(resultBuffer, expectedValues);
     }
   }
 };

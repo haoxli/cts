@@ -5,6 +5,7 @@ Basic command buffer compute tests.
 `;
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../gpu_test.js';
+import { checkElementsEqualGenerated } from '../../../util/check_contents.js';
 
 export const g = makeTestGroup(GPUTest);
 
@@ -64,7 +65,7 @@ g.test('memcpy').fn(async t => {
   pass.endPass();
   t.device.queue.submit([encoder.finish()]);
 
-  t.expectContents(dst, data);
+  t.expectGPUBufferValuesEqual(dst, data);
 });
 
 g.test('large_dispatch')
@@ -89,12 +90,12 @@ Test reasonably-sized large dispatches (see also stress tests).
     // The output storage buffer is filled with this value.
     const val = 0x01020304;
     const badVal = 0xbaadf00d;
-    const data = new Uint32Array([val]);
 
     const wgSize = t.params.workgroupSize;
-    const bufferSize = Uint32Array.BYTES_PER_ELEMENT * t.params.dispatchSize * wgSize;
+    const bufferLength = t.params.dispatchSize * wgSize;
+    const bufferByteSize = Uint32Array.BYTES_PER_ELEMENT * bufferLength;
     const dst = t.device.createBuffer({
-      size: bufferSize,
+      size: bufferByteSize,
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.STORAGE,
     });
 
@@ -142,7 +143,7 @@ Test reasonably-sized large dispatches (see also stress tests).
     });
 
     const bg = t.device.createBindGroup({
-      entries: [{ binding: 0, resource: { buffer: dst, offset: 0, size: bufferSize } }],
+      entries: [{ binding: 0, resource: { buffer: dst, offset: 0, size: bufferByteSize } }],
       layout: pipeline.getBindGroupLayout(0),
     });
 
@@ -154,7 +155,10 @@ Test reasonably-sized large dispatches (see also stress tests).
     pass.endPass();
     t.device.queue.submit([encoder.finish()]);
 
-    t.expectSingleValueContents(dst, data, bufferSize);
+    t.expectGPUBufferValuesPassCheck(dst, a => checkElementsEqualGenerated(a, i => val), {
+      type: Uint32Array,
+      typedLength: bufferLength,
+    });
 
     dst.destroy();
   });

@@ -1,12 +1,46 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { timeout } from './timeout.js'; /**
-                                            * Asserts `condition` is true. Otherwise, throws an `Error` with the provided message.
+**/import { Logger } from '../internal/logging/logger.js';import { timeout } from './timeout.js';
+
+/**
+                                                                                                   * Error with arbitrary `extra` data attached, for debugging.
+                                                                                                   * The extra data is omitted if not running the test in debug mode (`?debug=1`).
+                                                                                                   */
+export class ErrorWithExtra extends Error {
+
+
+  /**
+                                            * `extra` function is only called if in debug mode.
+                                            * If an `ErrorWithExtra` is passed, its message is used and its extras are passed through.
                                             */
+
+
+  constructor(baseOrMessage, newExtra) {
+    const message = typeof baseOrMessage === 'string' ? baseOrMessage : baseOrMessage.message;
+    super(message);
+
+    const oldExtras = baseOrMessage instanceof ErrorWithExtra ? baseOrMessage.extra : {};
+    this.extra = Logger.globalDebugMode ?
+    { ...oldExtras, ...newExtra() } :
+    { omitted: 'pass ?debug=1' };
+  }}
+
+
+/**
+      * Asserts `condition` is true. Otherwise, throws an `Error` with the provided message.
+      */
 export function assert(condition, msg) {
   if (!condition) {
     throw new Error(msg && (typeof msg === 'string' ? msg : msg()));
   }
+}
+
+/** If the argument is an Error, throw it. Otherwise, pass it back. */
+export function assertOK(value) {
+  if (value instanceof Error) {
+    throw value;
+  }
+  return value;
 }
 
 /**
@@ -110,5 +144,14 @@ export function objectEquals(x, y) {
    */
 export function range(n, fn) {
   return [...new Array(n)].map((_, i) => fn(i));
+}
+
+/**
+   * Generates a range of values `fn(0)..fn(n-1)`.
+   */
+export function* iterRange(n, fn) {
+  for (let i = 0; i < n; ++i) {
+    yield fn(i);
+  }
 }
 //# sourceMappingURL=util.js.map

@@ -1,4 +1,30 @@
+import { Logger } from '../internal/logging/logger.js';
+
 import { timeout } from './timeout.js';
+
+/**
+ * Error with arbitrary `extra` data attached, for debugging.
+ * The extra data is omitted if not running the test in debug mode (`?debug=1`).
+ */
+export class ErrorWithExtra extends Error {
+  readonly extra: {};
+
+  /**
+   * `extra` function is only called if in debug mode.
+   * If an `ErrorWithExtra` is passed, its message is used and its extras are passed through.
+   */
+  constructor(message: string, extra: () => {});
+  constructor(base: ErrorWithExtra, newExtra: () => {});
+  constructor(baseOrMessage: string | ErrorWithExtra, newExtra: () => {}) {
+    const message = typeof baseOrMessage === 'string' ? baseOrMessage : baseOrMessage.message;
+    super(message);
+
+    const oldExtras = baseOrMessage instanceof ErrorWithExtra ? baseOrMessage.extra : {};
+    this.extra = Logger.globalDebugMode
+      ? { ...oldExtras, ...newExtra() }
+      : { omitted: 'pass ?debug=1' };
+  }
+}
 
 /**
  * Asserts `condition` is true. Otherwise, throws an `Error` with the provided message.
@@ -7,6 +33,14 @@ export function assert(condition: boolean, msg?: string | (() => string)): asser
   if (!condition) {
     throw new Error(msg && (typeof msg === 'string' ? msg : msg()));
   }
+}
+
+/** If the argument is an Error, throw it. Otherwise, pass it back. */
+export function assertOK<T>(value: Error | T): T {
+  if (value instanceof Error) {
+    throw value;
+  }
+  return value;
 }
 
 /**
@@ -111,3 +145,43 @@ export function objectEquals(x: unknown, y: unknown): boolean {
 export function range<T>(n: number, fn: (i: number) => T): T[] {
   return [...new Array(n)].map((_, i) => fn(i));
 }
+
+/**
+ * Generates a range of values `fn(0)..fn(n-1)`.
+ */
+export function* iterRange<T>(n: number, fn: (i: number) => T): Iterable<T> {
+  for (let i = 0; i < n; ++i) {
+    yield fn(i);
+  }
+}
+
+export type TypedArrayBufferView =
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | Int8Array
+  | Int16Array
+  | Int32Array
+  | Float32Array
+  | Float64Array;
+
+export type TypedArrayBufferViewConstructor<
+  A extends TypedArrayBufferView = TypedArrayBufferView
+> = {
+  // Interface copied from Uint8Array, and made generic.
+  readonly prototype: A;
+  readonly BYTES_PER_ELEMENT: number;
+
+  new (): A;
+  new (elements: Iterable<number>): A;
+  new (array: ArrayLike<number> | ArrayBufferLike): A;
+  new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): A;
+  new (length: number): A;
+
+  from(arrayLike: ArrayLike<number>): A;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  from(arrayLike: Iterable<number>, mapfn?: (v: number, k: number) => number, thisArg?: any): A;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  from<T>(arrayLike: ArrayLike<T>, mapfn: (v: T, k: number) => number, thisArg?: any): A;
+  of(...items: number[]): A;
+};

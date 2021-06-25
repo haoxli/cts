@@ -86,7 +86,7 @@ class F extends GPUTest {
     }
 
     this.debug(`expectedData: [${expectedData.join(', ')}]`);
-    this.expectContents(buffer, expectedData);
+    this.expectGPUBufferValuesEqual(buffer, expectedData);
   }
 }
 

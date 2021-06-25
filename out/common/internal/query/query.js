@@ -175,12 +175,7 @@ wptURL)
   const expectations = [];
   for (const entry of rawExpectations) {
     assert(typeof entry === 'object');
-    const rawExpectation =
-
-
-
-
-    entry;
+    const rawExpectation = entry;
     assert(rawExpectation.query !== undefined, 'Expectation missing query string');
     assert(rawExpectation.expectation !== undefined, 'Expectation missing expectation string');
 

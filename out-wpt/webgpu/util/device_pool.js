@@ -166,35 +166,35 @@ class DescriptorToHolderMap {
  * (it just means some GPUDevice objects won't get deduplicated).
  */
 function canonicalizeDescriptor(desc) {
-  const featuresCanonicalized = desc.nonGuaranteedFeatures
-    ? Array.from(new Set(desc.nonGuaranteedFeatures)).sort()
+  const featuresCanonicalized = desc.requiredFeatures
+    ? Array.from(new Set(desc.requiredFeatures)).sort()
     : [];
 
   const limitsCanonicalized = { ...DefaultLimits };
-  if (desc.nonGuaranteedLimits) {
-    for (const k of Object.keys(desc.nonGuaranteedLimits)) {
-      if (desc.nonGuaranteedLimits[k] !== undefined) {
-        limitsCanonicalized[k] = desc.nonGuaranteedLimits[k];
+  if (desc.requiredLimits) {
+    for (const k of Object.keys(desc.requiredLimits)) {
+      if (desc.requiredLimits[k] !== undefined) {
+        limitsCanonicalized[k] = desc.requiredLimits[k];
       }
     }
   }
 
   // Type ensures every field is carried through.
   const descriptorCanonicalized = {
-    nonGuaranteedFeatures: featuresCanonicalized,
-    nonGuaranteedLimits: limitsCanonicalized,
+    requiredFeatures: featuresCanonicalized,
+    requiredLimits: limitsCanonicalized,
   };
 
   return [descriptorCanonicalized, JSON.stringify(descriptorCanonicalized)];
 }
 
-function isNonGuaranteedFeatureSupported(adapter, descriptor) {
+function supportsFeature(adapter, descriptor) {
   if (descriptor === undefined) {
     return true;
   }
 
-  for (const feature of descriptor.nonGuaranteedFeatures) {
-    if (!adapter.features.has(feature.toString())) {
+  for (const feature of descriptor.requiredFeatures) {
+    if (!adapter.features.has(feature)) {
       return false;
     }
   }
@@ -222,7 +222,7 @@ class DeviceHolder {
     const gpu = getGPU();
     const adapter = await gpu.requestAdapter();
     assert(adapter !== null, 'requestAdapter returned null');
-    if (!isNonGuaranteedFeatureSupported(adapter, descriptor)) {
+    if (!supportsFeature(adapter, descriptor)) {
       throw new FeaturesNotSupported('One or more features are not supported');
     }
     const device = await adapter.requestDevice(descriptor);

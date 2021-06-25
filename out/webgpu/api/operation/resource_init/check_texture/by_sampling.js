@@ -147,7 +147,7 @@ subresourceRange) =>
           }
         }
       }
-      t.expectContents(resultBuffer, expectedValues);
+      t.expectGPUBufferValuesEqual(resultBuffer, expectedValues);
     }
   }
 };

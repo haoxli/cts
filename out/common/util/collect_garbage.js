@@ -26,8 +26,9 @@ export async function attemptGarbageCollection() {
     getInterface(Components.interfaces.nsIDOMWindowUtils).
     garbageCollect();
     return;
-
-  } catch (e) {}
+  } catch (e) {
+    // ignore any failure
+  }
 
   if (w.gc) {
     w.gc();

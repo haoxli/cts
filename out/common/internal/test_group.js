@@ -319,7 +319,6 @@ class RunCaseSpecific {
 
       try {
         await inst.doInit();
-
         await this.fn(inst);
       } finally {
         // Runs as long as constructor succeeded, even if initialization or the test failed.

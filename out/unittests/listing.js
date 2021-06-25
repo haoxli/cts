@@ -17,6 +17,11 @@ export const listing = [
   },
   {
     "file": [
+      "check_contents"
+    ]
+  },
+  {
+    "file": [
       "getStackTrace"
     ]
   },

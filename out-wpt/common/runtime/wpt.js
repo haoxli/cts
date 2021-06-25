@@ -38,7 +38,7 @@ setup({
         )
       : [];
 
-  const log = new Logger(false);
+  const log = new Logger();
 
   for (const testcase of testcases) {
     const name = testcase.query.toString();

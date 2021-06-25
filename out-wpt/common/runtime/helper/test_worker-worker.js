@@ -6,7 +6,7 @@ import { parseQuery } from '../../internal/query/parseQuery.js';
 
 import { assert } from '../../util/util.js';
 
-// should be DedicatedWorkerGlobalScope
+// Should be DedicatedWorkerGlobalScope, but importing lib "webworker" conflicts with lib "dom".
 
 const loader = new DefaultTestFileLoader();
 
@@ -15,7 +15,8 @@ self.onmessage = async ev => {
   const expectations = ev.data.expectations;
   const debug = ev.data.debug;
 
-  const log = new Logger(debug);
+  Logger.globalDebugMode = debug;
+  const log = new Logger();
 
   const testcases = Array.from(await loader.loadCases(parseQuery(query)));
   assert(testcases.length === 1, 'worker query resulted in != 1 cases');

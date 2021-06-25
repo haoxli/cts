@@ -13,12 +13,12 @@ TODO:
 `;
 
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
-import { assert } from '../../../../common/util/util.js';
 import {
-  GPUTest,
+  assert,
   TypedArrayBufferView,
   TypedArrayBufferViewConstructor,
-} from '../../../gpu_test.js';
+} from '../../../../common/util/util.js';
+import { GPUTest } from '../../../gpu_test.js';
 
 export const g = makeTestGroup(GPUTest);
 
@@ -287,7 +287,7 @@ struct Inputs {
 
     const didDraw = t.params.count && t.params.instance_count;
 
-    t.expectContents(resultBuffer, new Uint32Array([didDraw ? 1 : 0]));
+    t.expectGPUBufferValuesEqual(resultBuffer, new Uint32Array([didDraw ? 1 : 0]));
 
     const baseVertex = t.params.base_vertex ?? 0;
     for (let primitiveId = 0; primitiveId < numX; ++primitiveId) {
@@ -582,7 +582,7 @@ ${shaderLocations
     renderPass.endPass();
     t.device.queue.submit([commandEncoder.finish()]);
 
-    t.expectContents(resultBuffer, expectedData);
+    t.expectGPUBufferValuesEqual(resultBuffer, expectedData);
   });
 
 g.test('vertex_attributes,formats')

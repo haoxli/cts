@@ -14,7 +14,7 @@ export class MappingTest extends GPUTest {
     }
     buffer.unmap();
 
-    this.expectContents(buffer, expected, offset);
+    this.expectGPUBufferValuesEqual(buffer, expected, offset);
   }
 
   checkMapWriteZeroed(arrayBuffer, expectedSize) {

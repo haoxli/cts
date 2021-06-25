@@ -240,7 +240,6 @@ g.test('from_ImageData')
 
     // Generate correct expected values
     const imageData = new ImageData(imagePixels, width, height);
-
     const imageBitmap = await createImageBitmap(imageData, {
       premultiplyAlpha: alpha,
       imageOrientation: orientation,

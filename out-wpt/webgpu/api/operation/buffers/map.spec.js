@@ -5,12 +5,21 @@ Test the operation of buffer mapping, specifically the data contents written via
 map-write/mappedAtCreation, and the contents of buffers returned by getMappedRange on
 buffers which are mapped-read/mapped-write/mappedAtCreation.
 
+range: used for getMappedRange
+mapRegion: used for mapAsync
+
+mapRegionBoundModes is used to get mapRegion from range:
+ - default-expand: expand mapRegion to buffer bound by setting offset/size to undefined
+ - explicit-expand: expand mapRegion to buffer bound by explicitly calculating offset/size
+ - minimal: make mapRegion to be the same as range which is the minimal range to make getMappedRange input valid
+
 TODO: Test that ranges not written preserve previous contents.
 TODO: Test that mapping-for-write again shows the values previously written.
 TODO: Some testing (probably minimal) of accessing with different TypedArray/DataView types.
 `;
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert } from '../../../../common/util/util.js';
+import { checkElementsEqual } from '../../../util/check_contents.js';
 
 import { MappingTest } from './mapping_test.js';
 
@@ -116,7 +125,7 @@ map-read and check the read-back result.`
     const mapRegion = getRegionForMap(size, [rangeOffset, rangeSize], t.params);
     await buffer.mapAsync(GPUMapMode.READ, ...mapRegion);
     const actual = new Uint8Array(buffer.getMappedRange(...range));
-    t.expectBuffer(actual, new Uint8Array(expected.buffer));
+    t.expectOK(checkElementsEqual(actual, new Uint8Array(expected.buffer)));
   });
 
 g.test('mappedAtCreation')

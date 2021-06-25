@@ -2,6 +2,8 @@
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { assert } from '../../../../../common/util/util.js';
 import { GPUTest } from '../../../../gpu_test.js';
+import { checkElementsEqualEither } from '../../../../util/check_contents.js';
+
 const kSize = 4;
 
 export const kAllWriteOps = ['render', 'render-via-bundle', 'compute', 'b2b-copy', 't2b-copy'];
@@ -234,7 +236,7 @@ export class BufferSyncTest extends GPUTest {
   verifyData(buffer, expectedValue) {
     const bufferData = new Uint32Array(1);
     bufferData[0] = expectedValue;
-    this.expectContents(buffer, bufferData);
+    this.expectGPUBufferValuesEqual(buffer, bufferData);
   }
 
   verifyDataTwoValidValues(buffer, expectedValue1, expectedValue2) {
@@ -242,6 +244,10 @@ export class BufferSyncTest extends GPUTest {
     bufferData1[0] = expectedValue1;
     const bufferData2 = new Uint32Array(1);
     bufferData2[0] = expectedValue2;
-    this.expectContentsTwoValidValues(buffer, bufferData1, bufferData2);
+    this.expectGPUBufferValuesPassCheck(
+      buffer,
+      a => checkElementsEqualEither(a, [bufferData1, bufferData2]),
+      { type: Uint32Array, typedLength: 1 }
+    );
   }
 }

@@ -275,7 +275,6 @@ fn(async t => {
 
   // Generate correct expected values
   const imageData = new ImageData(imagePixels, width, height);
-
   const imageBitmap = await createImageBitmap(imageData, {
     premultiplyAlpha: alpha,
     imageOrientation: orientation });
@@ -366,7 +365,6 @@ fn(async t => {
 
   // Use putImageData to prevent color space conversion.
   imageCanvasContext.putImageData(imageData, 0, 0);
-
 
   const imageBitmap = await createImageBitmap(imageCanvas, {
     premultiplyAlpha: 'premultiply',

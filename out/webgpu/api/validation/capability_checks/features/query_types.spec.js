@@ -29,15 +29,15 @@ combine('timestampQueryEnable', [false, true])).
 fn(async t => {
   const { type, pipelineStatisticsQueryEnable, timestampQueryEnable } = t.params;
 
-  const nonGuaranteedFeatures = [];
+  const requiredFeatures = [];
   if (pipelineStatisticsQueryEnable) {
-    nonGuaranteedFeatures.push('pipeline-statistics-query');
+    requiredFeatures.push('pipeline-statistics-query');
   }
   if (timestampQueryEnable) {
-    nonGuaranteedFeatures.push('timestamp-query');
+    requiredFeatures.push('timestamp-query');
   }
 
-  await t.selectDeviceOrSkipTestCase({ nonGuaranteedFeatures });
+  await t.selectDeviceOrSkipTestCase({ requiredFeatures });
 
   const count = 1;
   const pipelineStatistics =

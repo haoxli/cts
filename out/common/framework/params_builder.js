@@ -159,6 +159,7 @@ ParamsBuilderBase
   {
     return this.expandWithParams(function* (p) {
       for (const value of expander(p)) {
+        // TypeScript doesn't know here that NewPKey is always a single literal string type.
         yield { [key]: value };
       }
     });
@@ -254,6 +255,7 @@ ParamsBuilderBase
   {
     return this.expandWithParams(function* (p) {
       for (const value of expander(p)) {
+        // TypeScript doesn't know here that NewPKey is always a single literal string type.
         yield { [key]: value };
       }
     });

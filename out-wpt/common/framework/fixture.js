@@ -1,7 +1,7 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { TestCaseRecorder } from '../internal/logging/test_case_recorder.js';
-import { assert } from '../util/util.js';
+import { assert, unreachable } from '../util/util.js';
 
 export class SkipTestCase extends Error {}
 export class UnexpectedPassError extends Error {}
@@ -183,5 +183,21 @@ export class Fixture {
       this.rec.expectationFailed(new Error(msg));
     }
     return cond;
+  }
+
+  /** If the argument is an Error, fail (or warn). Otherwise, no-op. */
+  expectOK(error, { mode = 'fail', niceStack } = {}) {
+    if (error instanceof Error) {
+      if (niceStack) {
+        error.stack = niceStack.stack;
+      }
+      if (mode === 'fail') {
+        this.rec.expectationFailed(error);
+      } else if (mode === 'warn') {
+        this.rec.warn(error);
+      } else {
+        unreachable();
+      }
+    }
   }
 }

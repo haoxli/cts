@@ -52,7 +52,7 @@ g.test('b2t2b').fn(async t => {
 
   t.device.queue.submit([encoder.finish()]);
 
-  t.expectContents(dst, data);
+  t.expectGPUBufferValuesEqual(dst, data);
 });
 
 g.test('b2t2t2b').fn(async t => {
@@ -102,5 +102,5 @@ g.test('b2t2t2b').fn(async t => {
 
   t.device.queue.submit([encoder.finish()]);
 
-  t.expectContents(dst, data);
+  t.expectGPUBufferValuesEqual(dst, data);
 });

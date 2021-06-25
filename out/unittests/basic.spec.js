@@ -8,9 +8,7 @@ import { UnitTest } from './unit_test.js';
 
 export const g = makeTestGroup(UnitTest);
 
-
 g.test('test,sync').fn(t => {});
-
 
 g.test('test,async').fn(async t => {});
 

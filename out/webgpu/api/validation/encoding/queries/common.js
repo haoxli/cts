@@ -19,7 +19,7 @@ t,
 encoder,
 querySet)
 {
-  const attachment = t.device.
+  const view = t.device.
   createTexture({
     format: 'rgba8unorm',
     size: { width: 16, height: 16, depthOrArrayLayers: 1 },
@@ -29,8 +29,9 @@ querySet)
   return encoder.beginRenderPass({
     colorAttachments: [
     {
-      attachment,
-      loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 } }],
+      view,
+      loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+      storeOp: 'store' }],
 
 
     occlusionQuerySet: querySet });

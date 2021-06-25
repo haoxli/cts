@@ -1,19 +1,25 @@
+import { ErrorWithExtra } from '../../util/util.js';
 import { extractImportantStackTrace } from '../stack.js';
 
 export class LogMessageWithStack extends Error {
-  private stackHidden: boolean = false;
+  readonly extra: unknown;
+
+  private stackHiddenMessage: string | undefined = undefined;
   private timesSeen: number = 1;
 
-  constructor(name: string, ex: Error) {
+  constructor(name: string, ex: Error | ErrorWithExtra) {
     super(ex.message);
 
     this.name = name;
     this.stack = ex.stack;
+    if ('extra' in ex) {
+      this.extra = ex.extra;
+    }
   }
 
   /** Set a flag so the stack is not printed in toJSON(). */
-  setStackHidden() {
-    this.stackHidden = true;
+  setStackHidden(stackHiddenMessage: string) {
+    this.stackHiddenMessage = stackHiddenMessage;
   }
 
   /** Increment the "seen x times" counter. */
@@ -24,11 +30,13 @@ export class LogMessageWithStack extends Error {
   toJSON(): string {
     let m = this.name;
     if (this.message) m += ': ' + this.message;
-    if (!this.stackHidden && this.stack) {
+    if (this.stackHiddenMessage === undefined && this.stack) {
       m += '\n' + extractImportantStackTrace(this);
+    } else if (this.stackHiddenMessage) {
+      m += `\n  (${this.stackHiddenMessage})`;
     }
     if (this.timesSeen > 1) {
-      m += `\n(seen ${this.timesSeen} times with identical stack, not necessarily in a row; enable ?debug=1 to stop)`;
+      m += `\n  (duplicated ${this.timesSeen} times (possibly non-consecutively); use ?debug=1 to show all)`;
     }
     return m;
   }

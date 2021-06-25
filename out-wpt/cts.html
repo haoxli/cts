@@ -107,6 +107,15 @@
 <meta name=variant content='webgpu:api,operation,rendering,draw:vertex_attributes,formats:*'>
 <meta name=variant content='webgpu:api,operation,rendering,indirect_draw:basics,drawIndirect:*'>
 <meta name=variant content='webgpu:api,operation,rendering,indirect_draw:basics,drawIndexedIndirect:*'>
+<meta name=variant content='webgpu:api,operation,resource_init,buffer:partial_write_buffer:*'>
+<meta name=variant content='webgpu:api,operation,resource_init,buffer:map_whole_buffer:*'>
+<meta name=variant content='webgpu:api,operation,resource_init,buffer:map_partial_buffer:*'>
+<meta name=variant content='webgpu:api,operation,resource_init,buffer:mapped_at_creation_whole_buffer:*'>
+<meta name=variant content='webgpu:api,operation,resource_init,buffer:mapped_at_creation_partial_buffer:*'>
+<meta name=variant content='webgpu:api,operation,resource_init,buffer:copy_buffer_to_buffer_copy_source:*'>
+<meta name=variant content='webgpu:api,operation,resource_init,buffer:copy_buffer_to_texture:*'>
+<meta name=variant content='webgpu:api,operation,resource_init,buffer:resolve_query_set_to_partial_buffer:*'>
+<meta name=variant content='webgpu:api,operation,resource_init,buffer:copy_texture_to_partial_buffer:*'>
 <meta name=variant content='webgpu:api,operation,resource_init,texture_zero:uninitialized_texture_is_zero:*'>
 <meta name=variant content='webgpu:api,operation,sampling,anisotropy:anisotropic_filter_checkerboard:*'>
 <meta name=variant content='webgpu:api,operation,sampling,anisotropy:anisotropic_filter_mipmap_color:*'>
@@ -139,6 +148,8 @@
 <meta name=variant content='webgpu:api,validation,attachment_compatibility:render_pass_or_bundle_and_pipeline,depth_format:*'>
 <meta name=variant content='webgpu:api,validation,attachment_compatibility:render_pass_or_bundle_and_pipeline,sample_count:*'>
 <meta name=variant content='webgpu:api,validation,buffer,create:size:*'>
+<meta name=variant content='webgpu:api,validation,buffer,destroy:all_usages:*'>
+<meta name=variant content='webgpu:api,validation,buffer,destroy:error_buffer:*'>
 <meta name=variant content='webgpu:api,validation,buffer,destroy:twice:*'>
 <meta name=variant content='webgpu:api,validation,buffer,destroy:while_mapped:*'>
 <meta name=variant content='webgpu:api,validation,buffer,mapping:mapAsync,usage:*'>
@@ -399,3 +410,4 @@
 <meta name=variant content='webgpu:web_platform,canvas,getSwapChainPreferredFormat:value:*'>
 <meta name=variant content='webgpu:web_platform,copyToTexture,ImageBitmap:from_ImageData:*'>
 <meta name=variant content='webgpu:web_platform,copyToTexture,ImageBitmap:from_canvas:*'>
+<meta name=variant content='webgpu:web_platform,copyToTexture,canvas:copy_contents_from_canvas:*'>
