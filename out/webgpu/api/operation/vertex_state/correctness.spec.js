@@ -657,7 +657,11 @@ expand('offset', p => {
   return [
   0,
   componentSize,
+  componentSize * 2,
+  componentSize * 3,
   p.arrayStride / 2,
+  p.arrayStride - formatSize - componentSize * 3,
+  p.arrayStride - formatSize - componentSize * 2,
   p.arrayStride - formatSize - componentSize,
   p.arrayStride - formatSize];
 
