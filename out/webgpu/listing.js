@@ -695,7 +695,37 @@ export const listing = [
       "encoding",
       "cmds",
       "render",
-      "other"
+      "indirect_draw"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "render",
+      "setIndexBuffer"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "render",
+      "setPipeline"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
+      "cmds",
+      "render",
+      "setVertexBuffer"
     ]
   },
   {
@@ -1046,6 +1076,13 @@ export const listing = [
       "execution"
     ],
     "readme": "Tests that check the result of valid shader execution."
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "robust_access"
+    ]
   },
   {
     "file": [

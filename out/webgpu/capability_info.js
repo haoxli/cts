@@ -3,48 +3,11 @@
 **/ // TODO: The generated Typedoc for this file is hard to navigate because it's alphabetized.
 // Consider using namespaces or renames to fix this?
 
+import { keysOf, makeTable, numericKeysOf } from '../common/util/data_tables.js';
 import { assertTypeTrue } from '../common/util/types.js';
 import { assert, unreachable } from '../common/util/util.js';
 
 import { GPUConst } from './constants.js';
-
-
-
-function keysOf(obj) {
-  return Object.keys(obj);
-}
-
-function numericKeysOf(obj) {
-  return Object.keys(obj).map(n => Number(n));
-}
-
-/**
-   * Creates an info lookup object from a more nicely-formatted table. See below for examples.
-   *
-   * Note: Using `as const` on the arguments to this function is necessary to infer the correct type.
-   */
-function makeTable(
-
-
-
-
-members,
-defaults,
-table)
-
-
-{
-  const result = {};
-  for (const [k, v] of Object.entries(table)) {
-    const item = {};
-    for (let i = 0; i < members.length; ++i) {
-      item[members[i]] = v[i] ?? defaults[i];
-    }
-    result[k] = item;
-  }
-
-  return result;
-}
 
 // Queries
 

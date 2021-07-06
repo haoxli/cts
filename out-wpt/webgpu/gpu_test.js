@@ -2,13 +2,13 @@
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { Fixture } from '../common/framework/fixture.js';
 import { attemptGarbageCollection } from '../common/util/collect_garbage.js';
-import { assert } from '../common/util/util.js';
+import { assert, unreachable } from '../common/util/util.js';
 
 import { kTextureFormatInfo, kQueryTypeInfo } from './capability_info.js';
 import { makeBufferWithContents } from './util/buffer.js';
 import { checkElementsEqual, checkElementsBetween } from './util/check_contents.js';
 import { DevicePool, TestOOMedShouldAttemptGC } from './util/device_pool.js';
-import { align } from './util/math.js';
+import { align, roundDown } from './util/math.js';
 import { fillTextureDataWithTexelValue, getTextureCopyLayout } from './util/texture/layout.js';
 import { kTexelRepresentationInfo } from './util/texture/texel_data.js';
 
@@ -146,7 +146,6 @@ export class GPUTest extends Fixture {
 
     const c = this.device.createCommandEncoder();
     c.copyBufferToBuffer(src, srcOffset, dst, 0, size);
-
     this.queue.submit([c.finish()]);
 
     return dst;
@@ -160,11 +159,56 @@ export class GPUTest extends Fixture {
    * The copy will not cause an OOB error because the buffer size must be 4-aligned.
    */
   createAlignedCopyForMapRead(src, size, offset) {
-    const alignedOffset = Math.floor(offset / 4) * 4;
-    const offsetDifference = offset - alignedOffset;
-    const alignedSize = align(size + offsetDifference, 4);
-    const dst = this.createCopyForMapRead(src, alignedOffset, alignedSize);
-    return { dst, begin: offsetDifference, end: offsetDifference + size };
+    const alignedOffset = roundDown(offset, 4);
+    const subarrayByteStart = offset - alignedOffset;
+    const alignedSize = align(size + subarrayByteStart, 4);
+    const mappable = this.createCopyForMapRead(src, alignedOffset, alignedSize);
+    return { mappable, subarrayByteStart };
+  }
+
+  /**
+   * Snapshot the current contents of a range of a GPUBuffer, and return them as a TypedArray.
+   * Also provides a cleanup() function to unmap and destroy the staging buffer.
+   */
+  async readGPUBufferRangeTyped(src, { srcByteOffset = 0, method = 'copy', type, typedLength }) {
+    assert(
+      srcByteOffset % type.BYTES_PER_ELEMENT === 0,
+      'srcByteOffset must be a multiple of BYTES_PER_ELEMENT'
+    );
+
+    const byteLength = typedLength * type.BYTES_PER_ELEMENT;
+    let mappable;
+    let mapOffset, mapSize, subarrayByteStart;
+    if (method === 'copy') {
+      ({ mappable, subarrayByteStart } = this.createAlignedCopyForMapRead(
+        src,
+        byteLength,
+        srcByteOffset
+      ));
+    } else if (method === 'map') {
+      mappable = src;
+      mapOffset = roundDown(srcByteOffset, 8);
+      mapSize = align(byteLength, 4);
+      subarrayByteStart = srcByteOffset - mapOffset;
+    } else {
+      unreachable();
+    }
+
+    assert(subarrayByteStart % type.BYTES_PER_ELEMENT === 0);
+    const subarrayStart = subarrayByteStart / type.BYTES_PER_ELEMENT;
+
+    // 2. Map the staging buffer, and create the TypedArray from it.
+    await mappable.mapAsync(GPUMapMode.READ, mapOffset, mapSize);
+    const mapped = new type(mappable.getMappedRange(mapOffset, mapSize));
+    const data = mapped.subarray(subarrayStart, typedLength);
+
+    return {
+      data,
+      cleanup() {
+        mappable.unmap();
+        mappable.destroy();
+      },
+    };
   }
 
   /**
@@ -173,29 +217,36 @@ export class GPUTest extends Fixture {
   expectGPUBufferValuesPassCheck(
     src,
     check,
-    { srcByteOffset = 0, type, typedLength, mode = 'fail' }
+    { srcByteOffset = 0, type, typedLength, method = 'copy', mode = 'fail' }
   ) {
-    const byteLength = typedLength * type.BYTES_PER_ELEMENT;
-    const { dst, begin, end } = this.createAlignedCopyForMapRead(src, byteLength, srcByteOffset);
+    const readbackPromise = this.readGPUBufferRangeTyped(src, {
+      srcByteOffset,
+      type,
+      typedLength,
+      method,
+    });
 
     this.eventualAsyncExpectation(async niceStack => {
-      await dst.mapAsync(GPUMapMode.READ);
-      // TODO: begin and end are byte offsets, but used here as array offsets.
-      const mapped = new type(dst.getMappedRange());
-      const actual = mapped.subarray(begin, end);
-      this.expectOK(check(actual), { mode, niceStack });
-      dst.destroy();
+      const readback = await readbackPromise;
+      this.expectOK(check(readback.data), { mode, niceStack });
+      readback.cleanup();
     });
   }
 
   /**
    * Expect a GPUBuffer's contents to equal the values in the provided TypedArray.
    */
-  expectGPUBufferValuesEqual(src, expected, srcByteOffset = 0, { mode = 'fail' } = {}) {
+  expectGPUBufferValuesEqual(
+    src,
+    expected,
+    srcByteOffset = 0,
+    { method = 'copy', mode = 'fail' } = {}
+  ) {
     this.expectGPUBufferValuesPassCheck(src, a => checkElementsEqual(a, expected), {
       srcByteOffset,
       type: expected.constructor,
       typedLength: expected.length,
+      method,
       mode,
     });
   }
@@ -345,6 +396,8 @@ export class GPUTest extends Fixture {
 
   /**
    * Create a GPUBuffer with the specified contents and usage.
+   *
+   * TODO: Several call sites would be simplified if this took ArrayBuffer as well.
    */
   makeBufferWithContents(dataArray, usage) {
     return makeBufferWithContents(this.device, dataArray, usage);
