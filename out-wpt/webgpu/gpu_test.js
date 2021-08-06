@@ -6,7 +6,11 @@ import { assert, unreachable } from '../common/util/util.js';
 
 import { kTextureFormatInfo, kQueryTypeInfo } from './capability_info.js';
 import { makeBufferWithContents } from './util/buffer.js';
-import { checkElementsEqual, checkElementsBetween } from './util/check_contents.js';
+import {
+  checkElementsEqual,
+  checkElementsBetween,
+  checkElementsFloat16Between,
+} from './util/check_contents.js';
 import { DevicePool, TestOOMedShouldAttemptGC } from './util/device_pool.js';
 import { align, roundDown } from './util/math.js';
 import { fillTextureDataWithTexelValue, getTextureCopyLayout } from './util/texture/layout.js';
@@ -144,6 +148,8 @@ export class GPUTest extends Fixture {
       usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
     });
 
+    this.trackForCleanup(dst);
+
     const c = this.device.createCommandEncoder();
     c.copyBufferToBuffer(src, srcOffset, dst, 0, size);
     this.queue.submit([c.finish()]);
@@ -272,6 +278,8 @@ export class GPUTest extends Fixture {
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
 
+    this.trackForCleanup(buffer);
+
     const commandEncoder = this.device.createCommandEncoder();
     commandEncoder.copyTextureToBuffer(
       { texture: src, mipLevel: layout?.mipLevel, origin: { x: 0, y: 0, z: slice } },
@@ -298,6 +306,8 @@ export class GPUTest extends Fixture {
       size: byteLength,
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
+
+    this.trackForCleanup(buffer);
 
     const commandEncoder = this.device.createCommandEncoder();
     commandEncoder.copyTextureToBuffer(
@@ -338,7 +348,13 @@ export class GPUTest extends Fixture {
     src,
     format,
     { x, y },
-    { exp, slice = 0, layout, generateWarningOnly = false }
+    {
+      exp,
+      slice = 0,
+      layout,
+      generateWarningOnly = false,
+      checkElementsBetweenFn = checkElementsBetween,
+    }
   ) {
     assert(exp[0].constructor === exp[1].constructor);
     const constructor = exp[0].constructor;
@@ -346,11 +362,35 @@ export class GPUTest extends Fixture {
     const typedLength = exp[0].length;
 
     const buffer = this.readSinglePixelFrom2DTexture(src, format, { x, y }, { slice, layout });
-    this.expectGPUBufferValuesPassCheck(buffer, a => checkElementsBetween(a, exp), {
+    this.expectGPUBufferValuesPassCheck(buffer, a => checkElementsBetweenFn(a, exp), {
       type: constructor,
       typedLength,
       mode: generateWarningOnly ? 'warn' : 'fail',
     });
+  }
+
+  /**
+   * Equivalent to {@link expectSinglePixelBetweenTwoValuesIn2DTexture} but uses a special check func
+   * to interpret incoming values as float16
+   */
+  expectSinglePixelBetweenTwoValuesFloat16In2DTexture(
+    src,
+    format,
+    { x, y },
+    { exp, slice = 0, layout, generateWarningOnly = false }
+  ) {
+    this.expectSinglePixelBetweenTwoValuesIn2DTexture(
+      src,
+      format,
+      { x, y },
+      {
+        exp,
+        slice,
+        layout,
+        generateWarningOnly,
+        checkElementsBetweenFn: checkElementsFloat16Between,
+      }
+    );
   }
 
   /**
@@ -399,8 +439,8 @@ export class GPUTest extends Fixture {
    *
    * TODO: Several call sites would be simplified if this took ArrayBuffer as well.
    */
-  makeBufferWithContents(dataArray, usage) {
-    return makeBufferWithContents(this.device, dataArray, usage);
+  makeBufferWithContents(dataArray, usage, opts = {}) {
+    return this.trackForCleanup(makeBufferWithContents(this.device, dataArray, usage, opts));
   }
 
   /**
@@ -416,6 +456,8 @@ export class GPUTest extends Fixture {
       format,
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.SAMPLED,
     });
+
+    this.trackForCleanup(texture);
 
     const textureEncoder = this.device.createCommandEncoder();
     for (let i = 0; i < mipLevelCount; i++) {

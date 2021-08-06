@@ -394,7 +394,7 @@ async t => {
   const resolveTargetTexture = t.createTexture({ arrayLayerCount: 2 });
 
   const colorAttachment = t.getColorAttachment(multisampledColorTexture);
-  colorAttachment.resolveTarget = resolveTargetTexture.createView();
+  colorAttachment.resolveTarget = resolveTargetTexture.createView({ dimension: '2d-array' });
 
   const descriptor = {
     colorAttachments: [colorAttachment] };

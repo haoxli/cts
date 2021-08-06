@@ -21,6 +21,8 @@ export class ImageCopyTest extends ValidationTest {
           usage: GPUBufferUsage.COPY_SRC,
         });
 
+        this.trackForCleanup(buffer);
+
         const encoder = this.device.createCommandEncoder();
         encoder.copyBufferToTexture({ buffer, ...textureDataLayout }, textureCopyView, size);
 
@@ -42,6 +44,8 @@ export class ImageCopyTest extends ValidationTest {
           size: dataSize,
           usage: GPUBufferUsage.COPY_DST,
         });
+
+        this.trackForCleanup(buffer);
 
         const encoder = this.device.createCommandEncoder();
         encoder.copyTextureToBuffer(textureCopyView, { buffer, ...textureDataLayout }, size);
@@ -67,7 +71,8 @@ export class ImageCopyTest extends ValidationTest {
   createAlignedTexture(
     format,
     copySize = { width: 1, height: 1, depthOrArrayLayers: 1 },
-    origin = { x: 0, y: 0, z: 0 }
+    origin = { x: 0, y: 0, z: 0 },
+    dimension = '2d'
   ) {
     const info = kTextureFormatInfo[format];
     return this.device.createTexture({
@@ -77,6 +82,7 @@ export class ImageCopyTest extends ValidationTest {
         depthOrArrayLayers: Math.max(1, copySize.depthOrArrayLayers + origin.z),
       },
 
+      dimension,
       format,
       usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST,
     });

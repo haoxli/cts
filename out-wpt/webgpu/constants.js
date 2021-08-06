@@ -61,11 +61,13 @@ export const GPUConst = {
   MapMode,
 };
 
+/** Base limits, per spec. */
 export const DefaultLimits = {
   maxTextureDimension1D: 8192,
   maxTextureDimension2D: 8192,
   maxTextureDimension3D: 2048,
   maxTextureArrayLayers: 2048,
+
   maxBindGroups: 4,
   maxDynamicUniformBuffersPerPipelineLayout: 8,
   maxDynamicStorageBuffersPerPipelineLayout: 4,
@@ -74,9 +76,19 @@ export const DefaultLimits = {
   maxStorageBuffersPerShaderStage: 4,
   maxStorageTexturesPerShaderStage: 4,
   maxUniformBuffersPerShaderStage: 12,
+
   maxUniformBufferBindingSize: 16384,
   maxStorageBufferBindingSize: 134217728,
+  minUniformBufferOffsetAlignment: 256,
+  minStorageBufferOffsetAlignment: 256,
+
   maxVertexBuffers: 8,
   maxVertexAttributes: 16,
   maxVertexBufferArrayStride: 2048,
+  maxInterStageShaderComponents: 60,
+
+  maxComputeWorkgroupStorageSize: 16352,
+  maxComputeWorkgroupInvocations: 256,
+  maxComputeWorkgroupSize: [256, 256, 64],
+  maxComputePerDimensionDispatchSize: 65535,
 };

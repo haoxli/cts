@@ -901,7 +901,7 @@ export const listing = [
       "validation",
       "queue",
       "copyToTexture",
-      "ImageBitmap"
+      "CopyExternalImageToTexture"
     ]
   },
   {
@@ -1166,6 +1166,13 @@ export const listing = [
       "web_platform",
       "canvas",
       "getSwapChainPreferredFormat"
+    ]
+  },
+  {
+    "file": [
+      "web_platform",
+      "canvas",
+      "readbackFromWebGPUCanvas"
     ]
   },
   {

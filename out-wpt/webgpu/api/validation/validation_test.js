@@ -4,11 +4,11 @@
 import { kMaxQueryCount } from '../../capability_info.js';
 import { GPUTest } from '../../gpu_test.js';
 
-export const kRenderEncodeTypes = ['render pass', 'render bundle'];
+import { CommandBufferMaker } from './util/command_buffer_maker.js';
 
-export const kProgrammableEncoderTypes = ['compute pass', ...kRenderEncodeTypes];
+const kResourceStateValues = ['valid', 'invalid', 'destroyed'];
 
-export const kEncoderTypes = ['non-pass', ...kProgrammableEncoderTypes];
+export const kResourceStates = kResourceStateValues;
 
 /**
  * Base fixture for WebGPU validation tests.
@@ -32,7 +32,7 @@ export class ValidationTest extends GPUTest {
 
     switch (state) {
       case 'valid':
-        return this.device.createTexture(descriptor);
+        return this.trackForCleanup(this.device.createTexture(descriptor));
       case 'invalid':
         return this.getErrorTexture();
       case 'destroyed': {
@@ -55,7 +55,7 @@ export class ValidationTest extends GPUTest {
 
     switch (state) {
       case 'valid':
-        return this.device.createBuffer(descriptor);
+        return this.trackForCleanup(this.device.createBuffer(descriptor));
 
       case 'invalid': {
         // Make the buffer invalid because of an invalid combination of usages but keep the
@@ -81,25 +81,16 @@ export class ValidationTest extends GPUTest {
    * Create a GPUQuerySet in the specified state.
    * A `descriptor` may optionally be passed, which is used when `state` is not `'invalid'`.
    */
-  createQuerySetWithState(state, descriptor) {
-    descriptor = descriptor ?? {
-      type: 'occlusion',
-      count: 2,
-    };
+  createQuerySetWithState(state, desc) {
+    const descriptor = { type: 'occlusion', count: 2, ...desc };
 
     switch (state) {
       case 'valid':
-        return this.device.createQuerySet(descriptor);
+        return this.trackForCleanup(this.device.createQuerySet(descriptor));
       case 'invalid': {
         // Make the queryset invalid because of the count out of bounds.
-        this.device.pushErrorScope('validation');
-        const queryset = this.device.createQuerySet({
-          type: 'occlusion',
-          count: kMaxQueryCount + 1,
-        });
-
-        this.device.popErrorScope();
-        return queryset;
+        descriptor.count = kMaxQueryCount + 1;
+        return this.expectGPUError('validation', () => this.device.createQuerySet(descriptor));
       }
       case 'destroyed': {
         const queryset = this.device.createQuerySet(descriptor);
@@ -111,12 +102,16 @@ export class ValidationTest extends GPUTest {
 
   /** Create an arbitrarily-sized GPUBuffer with the STORAGE usage. */
   getStorageBuffer() {
-    return this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.STORAGE });
+    return this.trackForCleanup(
+      this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.STORAGE })
+    );
   }
 
   /** Create an arbitrarily-sized GPUBuffer with the UNIFORM usage. */
   getUniformBuffer() {
-    return this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.UNIFORM });
+    return this.trackForCleanup(
+      this.device.createBuffer({ size: 1024, usage: GPUBufferUsage.UNIFORM })
+    );
   }
 
   /** Return an invalid GPUBuffer. */
@@ -136,30 +131,36 @@ export class ValidationTest extends GPUTest {
    * Return an arbitrarily-configured GPUTexture with the `SAMPLED` usage and specified sampleCount.
    */
   getSampledTexture(sampleCount = 1) {
-    return this.device.createTexture({
-      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.SAMPLED,
-      sampleCount,
-    });
+    return this.trackForCleanup(
+      this.device.createTexture({
+        size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.SAMPLED,
+        sampleCount,
+      })
+    );
   }
 
   /** Return an arbitrarily-configured GPUTexture with the `STORAGE` usage. */
   getStorageTexture() {
-    return this.device.createTexture({
-      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.STORAGE,
-    });
+    return this.trackForCleanup(
+      this.device.createTexture({
+        size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.STORAGE,
+      })
+    );
   }
 
   /** Return an arbitrarily-configured GPUTexture with the `RENDER_ATTACHMENT` usage. */
   getRenderTexture() {
-    return this.device.createTexture({
-      size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
+    return this.trackForCleanup(
+      this.device.createTexture({
+        size: { width: 16, height: 16, depthOrArrayLayers: 1 },
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      })
+    );
   }
 
   /** Return an invalid GPUTexture. */
@@ -214,6 +215,11 @@ export class ValidationTest extends GPUTest {
     }
   }
 
+  /** Create a GPURenderPipeline in the specified state. */
+  createRenderPipelineWithState(state) {
+    return state === 'valid' ? this.createNoOpRenderPipeline() : this.createErrorRenderPipeline();
+  }
+
   /** Return a GPURenderPipeline with default options and no-op vertex and fragment shaders. */
   createNoOpRenderPipeline() {
     return this.device.createRenderPipeline({
@@ -233,16 +239,34 @@ export class ValidationTest extends GPUTest {
         }),
 
         entryPoint: 'main',
-        targets: [{ format: 'rgba8unorm' }],
+        targets: [{ format: 'rgba8unorm', writeMask: 0 }],
       },
 
       primitive: { topology: 'triangle-list' },
     });
   }
 
+  /** Return an invalid GPURenderPipeline. */
+  createErrorRenderPipeline() {
+    this.device.pushErrorScope('validation');
+    const pipeline = this.device.createRenderPipeline({
+      vertex: {
+        module: this.device.createShaderModule({
+          code: '',
+        }),
+
+        entryPoint: '',
+      },
+    });
+
+    this.device.popErrorScope();
+    return pipeline;
+  }
+
   /** Return a GPUComputePipeline with a no-op shader. */
-  createNoOpComputePipeline() {
+  createNoOpComputePipeline(layout) {
     return this.device.createComputePipeline({
+      layout,
       compute: {
         module: this.device.createShaderModule({
           code: '[[stage(compute), workgroup_size(1)]] fn main() {}',
@@ -275,9 +299,6 @@ export class ValidationTest extends GPUTest {
    * GPURenderBundleEncoder, and a `finish` method returning a GPUCommandBuffer.
    * Allows testing methods which have the same signature across multiple encoder interfaces.
    *
-   * TODO(https://github.com/gpuweb/cts/pull/489#issuecomment-812283347):
-   * Make this have stricter validation to ensure errors are generated in the right API call.
-   *
    * @example
    * ```
    * g.test('popDebugGroup')
@@ -297,73 +318,82 @@ export class ValidationTest extends GPUTest {
    *   });
    * ```
    */
-  createEncoder(encoderType) {
-    const colorFormat = 'rgba8unorm';
+  createEncoder(encoderType, { attachmentInfo, occlusionQuerySet } = {}) {
+    const fullAttachmentInfo = {
+      // Defaults if not overridden:
+      colorFormats: ['rgba8unorm'],
+      sampleCount: 1,
+      // Passed values take precedent.
+      ...attachmentInfo,
+    };
+
     switch (encoderType) {
       case 'non-pass': {
         const encoder = this.device.createCommandEncoder();
-        // TypeScript introduces an intersection type here where it seems like there shouldn't be
-        // one. Maybe there is a soundness issue here, but I don't think there is one in practice.
-        return {
-          encoder,
-          finish: () => {
-            return encoder.finish();
-          },
-        };
+
+        return new CommandBufferMaker(this, encoder, shouldSucceed =>
+          this.expectGPUError('validation', () => encoder.finish(), !shouldSucceed)
+        );
       }
       case 'render bundle': {
         const device = this.device;
-        const encoder = device.createRenderBundleEncoder({
-          colorFormats: [colorFormat],
-        });
+        const rbEncoder = device.createRenderBundleEncoder(fullAttachmentInfo);
+        const pass = this.createEncoder('render pass', { attachmentInfo });
 
-        const pass = this.createEncoder('render pass');
-        return {
-          encoder,
-          finish: () => {
-            const bundle = encoder.finish();
-            pass.encoder.executeBundles([bundle]);
-            return pass.finish();
-          },
-        };
+        return new CommandBufferMaker(this, rbEncoder, shouldSucceed => {
+          // If !shouldSucceed, the resulting bundle should be invalid.
+          const rb = this.expectGPUError('validation', () => rbEncoder.finish(), !shouldSucceed);
+          pass.encoder.executeBundles([rb]);
+          // Then, the pass should also be invalid if the bundle was invalid.
+          return pass.validateFinish(shouldSucceed);
+        });
       }
       case 'compute pass': {
         const commandEncoder = this.device.createCommandEncoder();
         const encoder = commandEncoder.beginComputePass();
-        return {
-          encoder,
-          finish: () => {
-            encoder.endPass();
-            return commandEncoder.finish();
-          },
-        };
+
+        return new CommandBufferMaker(this, encoder, shouldSucceed => {
+          encoder.endPass();
+          return this.expectGPUError('validation', () => commandEncoder.finish(), !shouldSucceed);
+        });
       }
       case 'render pass': {
-        const commandEncoder = this.device.createCommandEncoder();
-        const view = this.device
-          .createTexture({
-            format: colorFormat,
-            size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-            usage: GPUTextureUsage.RENDER_ATTACHMENT,
-          })
-          .createView();
-        const encoder = commandEncoder.beginRenderPass({
-          colorAttachments: [
-            {
-              view,
-              loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
-              storeOp: 'store',
-            },
-          ],
-        });
+        const makeAttachmentView = format =>
+          this.trackForCleanup(
+            this.device.createTexture({
+              size: [16, 16, 1],
+              format,
+              usage: GPUTextureUsage.RENDER_ATTACHMENT,
+              sampleCount: fullAttachmentInfo.sampleCount,
+            })
+          ).createView();
 
-        return {
-          encoder,
-          finish: () => {
-            encoder.endPass();
-            return commandEncoder.finish();
-          },
+        const passDesc = {
+          colorAttachments: Array.from(fullAttachmentInfo.colorFormats, format => ({
+            view: makeAttachmentView(format),
+            loadValue: [0, 0, 0, 0],
+            storeOp: 'store',
+          })),
+
+          depthStencilAttachment:
+            fullAttachmentInfo.depthStencilFormat !== undefined
+              ? {
+                  view: makeAttachmentView(fullAttachmentInfo.depthStencilFormat),
+                  depthLoadValue: 0,
+                  depthStoreOp: 'discard',
+                  stencilLoadValue: 1,
+                  stencilStoreOp: 'discard',
+                }
+              : undefined,
+          occlusionQuerySet,
         };
+
+        const commandEncoder = this.device.createCommandEncoder();
+        const encoder = commandEncoder.beginRenderPass(passDesc);
+        return new CommandBufferMaker(this, encoder, shouldSucceed => {
+          encoder.endPass();
+          return this.expectGPUError('validation', () => commandEncoder.finish(), !shouldSucceed);
+        });
       }
     }
 

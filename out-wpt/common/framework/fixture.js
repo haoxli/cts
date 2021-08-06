@@ -24,6 +24,7 @@ export class Fixture {
 
   eventualExpectations = [];
   numOutstandingAsyncExpectations = 0;
+  objectsToCleanUp = [];
 
   /** @internal */
   constructor(rec, params) {
@@ -65,6 +66,18 @@ export class Fixture {
         this.rec.threw(ex);
       }
     }
+
+    // And clean up any objects now that they're done being used.
+    for (const o of this.objectsToCleanUp) {
+      if ('getExtension' in o) {
+        const WEBGL_lose_context = o.getExtension('WEBGL_lose_context');
+        if (WEBGL_lose_context) WEBGL_lose_context.loseContext();
+      } else if ('destroy' in o) {
+        o.destroy();
+      } else {
+        o.close();
+      }
+    }
   }
 
   /** @internal */
@@ -75,6 +88,31 @@ export class Fixture {
   /** @internal */
   doFinalize() {
     return this.finalize();
+  }
+
+  /**
+   * Tracks an object to be cleaned up after the test finishes.
+   *
+   * TODO: Use this in more places. (Will be easier once .destroy() is allowed on invalid objects.)
+   */
+  trackForCleanup(o) {
+    this.objectsToCleanUp.push(o);
+    return o;
+  }
+
+  /** Tracks an object, if it's destroyable, to be cleaned up after the test finishes. */
+  tryTrackForCleanup(o) {
+    if (typeof o === 'object' && o !== null) {
+      if (
+        'destroy' in o ||
+        'close' in o ||
+        o instanceof WebGLRenderingContext ||
+        o instanceof WebGL2RenderingContext
+      ) {
+        this.objectsToCleanUp.push(o);
+      }
+    }
+    return o;
   }
 
   /** Log a debug message. */

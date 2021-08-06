@@ -9,6 +9,8 @@ import { assert, unreachable } from '../common/util/util.js';
 
 import { GPUConst } from './constants.js';
 
+// Base device limits can be found in constants.ts.
+
 // Queries
 
 /** Maximum number of queries in GPUQuerySet, by spec. */
@@ -225,7 +227,7 @@ kAllTextureFormatInfo;
 export const kTextureFormats = keysOf(kAllTextureFormatInfo);
 
 /** Valid GPUTextureFormats for `copyExternalImageToTexture`, by spec. */
-export const kValidTextureFormatsForCopyIB2T = [
+export const kValidTextureFormatsForCopyE2T = [
 'rgba8unorm',
 'rgba8unorm-srgb',
 'bgra8unorm',
@@ -305,8 +307,9 @@ type,
 format,
 aspect)
 {
+  const appliedType = type === 'WriteTexture' ? 'CopyB2T' : type;
   const supportedAspects =
-  kDepthStencilFormatCapabilityInBufferTextureCopy[format][type];
+  kDepthStencilFormatCapabilityInBufferTextureCopy[format][appliedType];
   return supportedAspects.includes(aspect);
 }
 

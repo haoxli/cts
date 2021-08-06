@@ -170,11 +170,15 @@ function canonicalizeDescriptor(desc) {
     ? Array.from(new Set(desc.requiredFeatures)).sort()
     : [];
 
-  const limitsCanonicalized = { ...DefaultLimits };
+  /** Canonicalized version of the requested limits: in canonical order, with only values which are
+   * specified _and_ non-default. */
+  const limitsCanonicalized = {};
   if (desc.requiredLimits) {
-    for (const k of Object.keys(desc.requiredLimits)) {
-      if (desc.requiredLimits[k] !== undefined) {
-        limitsCanonicalized[k] = desc.requiredLimits[k];
+    for (const [k, defaultValue] of Object.entries(DefaultLimits)) {
+      const requestedValue = desc.requiredLimits[k];
+      // Skip adding a limit to limitsCanonicalized if it is the same as the default.
+      if (requestedValue !== undefined && requestedValue !== defaultValue) {
+        limitsCanonicalized[k] = requestedValue;
       }
     }
   }

@@ -154,4 +154,60 @@ export function* iterRange(n, fn) {
     yield fn(i);
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function subarrayAsU8(
+buf,
+{ start = 0, length })
+{
+  if (buf instanceof ArrayBuffer) {
+    return new Uint8Array(buf, start, length);
+  } else {
+    const sub = buf.subarray(start, length !== undefined ? start + length : undefined);
+    return new Uint8Array(sub.buffer, sub.byteOffset, sub.byteLength);
+  }
+}
+
+/**
+   * Copy a range of bytes from one ArrayBuffer or TypedArray to another.
+   *
+   * `start`/`length` are in elements (or in bytes, if ArrayBuffer).
+   */
+export function memcpy(
+src,
+dst)
+{
+  subarrayAsU8(dst.dst, dst).set(subarrayAsU8(src.src, src));
+}
 //# sourceMappingURL=util.js.map

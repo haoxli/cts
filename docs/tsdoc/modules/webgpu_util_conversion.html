@@ -73,6 +73,7 @@
 							<h3>Functions</h3>
 							<ul class="tsd-index-list">
 								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_conversion.html#assertinintegerrange" class="tsd-kind-icon">assert<wbr>InInteger<wbr>Range</a></li>
+								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_conversion.html#float16bitstofloat32" class="tsd-kind-icon">float16<wbr>Bits<wbr>ToFloat32</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_conversion.html#float32tofloat16bits" class="tsd-kind-icon">float32<wbr>ToFloat16<wbr>Bits</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_conversion.html#float32tofloatbits" class="tsd-kind-icon">float32<wbr>ToFloat<wbr>Bits</a></li>
 								<li class="tsd-kind-function tsd-parent-kind-module"><a href="webgpu_util_conversion.html#floatasnormalizedinteger" class="tsd-kind-icon">float<wbr>AsNormalized<wbr>Integer</a></li>
@@ -97,7 +98,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/haoxli/cts/blob/e2aeec9/src/webgpu/util/conversion.ts#L156">src/webgpu/util/conversion.ts:156</a></li>
+									<li>Defined in <a href="https://github.com/haoxli/cts/blob/f778e99/src/webgpu/util/conversion.ts#L167">src/webgpu/util/conversion.ts:167</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -124,6 +125,34 @@
 					</ul>
 				</section>
 				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-module">
+					<a name="float16bitstofloat32" class="tsd-anchor"></a>
+					<h3>float16<wbr>Bits<wbr>ToFloat32</h3>
+					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
+						<li class="tsd-signature tsd-kind-icon">float16<wbr>Bits<wbr>ToFloat32<span class="tsd-signature-symbol">(</span>float16Bits<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">number</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/haoxli/cts/blob/f778e99/src/webgpu/util/conversion.ts#L102">src/webgpu/util/conversion.ts:102</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Decodes an IEEE754 16 bit floating point number into a JS <code>number</code> and returns.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>float16Bits: <span class="tsd-signature-type">number</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">number</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-function tsd-parent-kind-module">
 					<a name="float32tofloat16bits" class="tsd-anchor"></a>
 					<h3>float32<wbr>ToFloat16<wbr>Bits</h3>
 					<ul class="tsd-signatures tsd-kind-function tsd-parent-kind-module">
@@ -133,7 +162,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/haoxli/cts/blob/e2aeec9/src/webgpu/util/conversion.ts#L95">src/webgpu/util/conversion.ts:95</a></li>
+									<li>Defined in <a href="https://github.com/haoxli/cts/blob/f778e99/src/webgpu/util/conversion.ts#L95">src/webgpu/util/conversion.ts:95</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -163,7 +192,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/haoxli/cts/blob/e2aeec9/src/webgpu/util/conversion.ts#L48">src/webgpu/util/conversion.ts:48</a></li>
+									<li>Defined in <a href="https://github.com/haoxli/cts/blob/f778e99/src/webgpu/util/conversion.ts#L48">src/webgpu/util/conversion.ts:48</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -206,7 +235,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/haoxli/cts/blob/e2aeec9/src/webgpu/util/conversion.ts#L9">src/webgpu/util/conversion.ts:9</a></li>
+									<li>Defined in <a href="https://github.com/haoxli/cts/blob/f778e99/src/webgpu/util/conversion.ts#L9">src/webgpu/util/conversion.ts:9</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -241,7 +270,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/haoxli/cts/blob/e2aeec9/src/webgpu/util/conversion.ts#L170">src/webgpu/util/conversion.ts:170</a></li>
+									<li>Defined in <a href="https://github.com/haoxli/cts/blob/f778e99/src/webgpu/util/conversion.ts#L181">src/webgpu/util/conversion.ts:181</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -269,7 +298,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/haoxli/cts/blob/e2aeec9/src/webgpu/util/conversion.ts#L178">src/webgpu/util/conversion.ts:178</a></li>
+									<li>Defined in <a href="https://github.com/haoxli/cts/blob/f778e99/src/webgpu/util/conversion.ts#L189">src/webgpu/util/conversion.ts:189</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -297,7 +326,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/haoxli/cts/blob/e2aeec9/src/webgpu/util/conversion.ts#L25">src/webgpu/util/conversion.ts:25</a></li>
+									<li>Defined in <a href="https://github.com/haoxli/cts/blob/f778e99/src/webgpu/util/conversion.ts#L25">src/webgpu/util/conversion.ts:25</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -332,7 +361,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/haoxli/cts/blob/e2aeec9/src/webgpu/util/conversion.ts#L108">src/webgpu/util/conversion.ts:108</a></li>
+									<li>Defined in <a href="https://github.com/haoxli/cts/blob/f778e99/src/webgpu/util/conversion.ts#L119">src/webgpu/util/conversion.ts:119</a></li>
 								</ul>
 							</aside>
 							<div class="tsd-comment tsd-typography">
@@ -380,6 +409,9 @@
 						<a href="webgpu_util_conversion.html#assertinintegerrange" class="tsd-kind-icon">assert<wbr>InInteger<wbr>Range</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-module">
+						<a href="webgpu_util_conversion.html#float16bitstofloat32" class="tsd-kind-icon">float16<wbr>Bits<wbr>ToFloat32</a>
+					</li>
+					<li class=" tsd-kind-function tsd-parent-kind-module">
 						<a href="webgpu_util_conversion.html#float32tofloat16bits" class="tsd-kind-icon">float32<wbr>ToFloat16<wbr>Bits</a>
 					</li>
 					<li class=" tsd-kind-function tsd-parent-kind-module">
@@ -418,15 +450,14 @@
 				<li class="tsd-kind-type-alias tsd-has-type-parameter"><span class="tsd-kind-icon">Type alias with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
-				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
-				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
-			</ul>
-			<ul class="tsd-legend">
 				<li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li>
 				<li class="tsd-kind-class tsd-has-type-parameter"><span class="tsd-kind-icon">Class with type parameter</span></li>
 			</ul>
 			<ul class="tsd-legend">
 				<li class="tsd-kind-enum"><span class="tsd-kind-icon">Enumeration</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
 			</ul>
 		</div>
 	</div>
