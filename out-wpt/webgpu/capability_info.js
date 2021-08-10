@@ -573,16 +573,16 @@ assertTypeTrue();
 
 /** Binding type info (including class limits) for the specified GPUStorageTextureBindingLayout. */
 export function storageTextureBindingTypeInfo(d) {
-  switch (d.access) {
+  switch (d.access ?? 'write-only') {
     case 'read-only':
       return {
-        usage: GPUConst.TextureUsage.STORAGE,
+        usage: GPUConst.TextureUsage.STORAGE_BINDING,
         ...kBindingKind.storageTex,
         ...kValidStagesAll,
       };
     case 'write-only':
       return {
-        usage: GPUConst.TextureUsage.STORAGE,
+        usage: GPUConst.TextureUsage.STORAGE_BINDING,
         ...kBindingKind.storageTex,
         ...kValidStagesStorageWrite,
       };

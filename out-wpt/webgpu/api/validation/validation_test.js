@@ -25,8 +25,8 @@ export class ValidationTest extends GPUTest {
       usage:
         GPUTextureUsage.COPY_SRC |
         GPUTextureUsage.COPY_DST |
-        GPUTextureUsage.SAMPLED |
-        GPUTextureUsage.STORAGE |
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.STORAGE_BINDING |
         GPUTextureUsage.RENDER_ATTACHMENT,
     };
 
@@ -135,7 +135,7 @@ export class ValidationTest extends GPUTest {
       this.device.createTexture({
         size: { width: 16, height: 16, depthOrArrayLayers: 1 },
         format: 'rgba8unorm',
-        usage: GPUTextureUsage.SAMPLED,
+        usage: GPUTextureUsage.TEXTURE_BINDING,
         sampleCount,
       })
     );
@@ -147,7 +147,7 @@ export class ValidationTest extends GPUTest {
       this.device.createTexture({
         size: { width: 16, height: 16, depthOrArrayLayers: 1 },
         format: 'rgba8unorm',
-        usage: GPUTextureUsage.STORAGE,
+        usage: GPUTextureUsage.STORAGE_BINDING,
       })
     );
   }
@@ -169,7 +169,7 @@ export class ValidationTest extends GPUTest {
     const texture = this.device.createTexture({
       size: { width: 0, height: 0, depthOrArrayLayers: 0 },
       format: 'rgba8unorm',
-      usage: GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.TEXTURE_BINDING,
     });
 
     this.device.popErrorScope();

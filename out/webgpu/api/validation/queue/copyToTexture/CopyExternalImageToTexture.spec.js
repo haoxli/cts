@@ -199,7 +199,7 @@ u //
 '2d',
 'bitmaprenderer',
 'experimental-webgl',
-'gpupresent',
+'webgpu',
 'webgl',
 'webgl2']).
 

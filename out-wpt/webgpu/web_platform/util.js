@@ -1,6 +1,6 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ import { raceWithRejectOnTimeout } from '../../common/util/util.js';
+ **/ import { ErrorWithExtra, raceWithRejectOnTimeout } from '../../common/util/util.js';
 /**
  * Starts playing a video and waits for it to be consumable.
  * Promise resolves after the callback has been called.
@@ -23,13 +23,16 @@ export function startPlayingAndWaitForVideo(video, callback) {
       };
 
       if (video.error) {
-        reject(new Error('Video failed to load: ' + video.error));
+        reject(
+          new ErrorWithExtra('Video.error: ' + video.error.message, () => ({ error: video.error }))
+        );
+
         return;
       }
 
       video.addEventListener(
         'error',
-        e => reject(new Error('Video playback failed: ' + e.message)),
+        event => reject(new ErrorWithExtra('Video received "error" event', () => ({ event }))),
         true
       );
 
@@ -52,7 +55,7 @@ export function startPlayingAndWaitForVideo(video, callback) {
       video.loop = true;
       video.muted = true;
       video.preload = 'auto';
-      video.play();
+      video.play().catch(reject);
     }),
     2000,
     'Video never became ready'

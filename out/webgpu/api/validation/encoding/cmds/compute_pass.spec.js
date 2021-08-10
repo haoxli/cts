@@ -61,7 +61,7 @@ fn(t => {
   validateFinishAndSubmitGivenState(state);
 });
 
-const kMaxDispatch = DefaultLimits.maxComputePerDimensionDispatchSize;
+const kMaxDispatch = DefaultLimits.maxComputeWorkgroupsPerDimension;
 g.test('dispatch_sizes').
 desc(
 `Test 'direct' and 'indirect' dispatch with various sizes.

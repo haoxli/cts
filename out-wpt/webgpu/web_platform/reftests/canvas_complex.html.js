@@ -7,7 +7,7 @@ import { runRefTest } from './gpu_ref_test.js';
 
 export function run(format) {
   runRefTest(async t => {
-    const ctx = cvs.getContext('gpupresent');
+    const ctx = cvs.getContext('webgpu');
 
     switch (format) {
       case 'bgra8unorm':
@@ -17,7 +17,7 @@ export function run(format) {
         unreachable();
     }
 
-    const swapChain = ctx.configureSwapChain({
+    ctx.configure({
       device: t.device,
       format,
       usage: GPUTextureUsage.COPY_DST,
@@ -71,7 +71,7 @@ export function run(format) {
 
     buffer.unmap();
 
-    const texture = swapChain.getCurrentTexture();
+    const texture = ctx.getCurrentTexture();
 
     const encoder = t.device.createCommandEncoder();
     encoder.copyBufferToTexture({ buffer, bytesPerRow }, { texture }, [2, 2, 1]);

@@ -98,21 +98,15 @@ got [${failedByteActualValues.join(', ')}]`;
     return undefined;
   }
 
-  doTestAndCheckResult(
-    imageBitmapCopyView,
-    dstTextureCopyView,
-    copySize,
-    bytesPerPixel,
-    expectedData
-  ) {
-    this.device.queue.copyImageBitmapToTexture(imageBitmapCopyView, dstTextureCopyView, copySize);
+  doTestAndCheckResult(srcCopyView, dstTextureCopyView, copySize, bytesPerPixel, expectedData) {
+    this.device.queue.copyExternalImageToTexture(srcCopyView, dstTextureCopyView, copySize);
 
-    const imageBitmap = imageBitmapCopyView.imageBitmap;
+    const imageSource = srcCopyView.source;
     const dstTexture = dstTextureCopyView.texture;
 
-    const bytesPerRow = calculateRowPitch(imageBitmap.width, bytesPerPixel);
+    const bytesPerRow = calculateRowPitch(imageSource.width, bytesPerPixel);
     const testBuffer = this.device.createBuffer({
-      size: bytesPerRow * imageBitmap.height,
+      size: bytesPerRow * imageSource.height,
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
     });
 
@@ -121,7 +115,7 @@ got [${failedByteActualValues.join(', ')}]`;
     encoder.copyTextureToBuffer(
       { texture: dstTexture, mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
       { buffer: testBuffer, bytesPerRow },
-      { width: imageBitmap.width, height: imageBitmap.height, depthOrArrayLayers: 1 }
+      { width: imageSource.width, height: imageSource.height, depthOrArrayLayers: 1 }
     );
 
     this.device.queue.submit([encoder.finish()]);
@@ -129,8 +123,8 @@ got [${failedByteActualValues.join(', ')}]`;
     this.checkCopyImageBitmapResult(
       testBuffer,
       expectedData,
-      imageBitmap.width,
-      imageBitmap.height,
+      imageSource.width,
+      imageSource.height,
       bytesPerPixel
     );
   }
@@ -273,7 +267,7 @@ g.test('from_ImageData')
     });
 
     t.doTestAndCheckResult(
-      { imageBitmap, origin: { x: 0, y: 0 } },
+      { source: imageBitmap, origin: { x: 0, y: 0 } },
       { texture: dst },
       { width: imageBitmap.width, height: imageBitmap.height, depthOrArrayLayers: 1 },
       dstBytesPerPixel,
@@ -364,7 +358,7 @@ g.test('from_canvas')
     });
 
     t.doTestAndCheckResult(
-      { imageBitmap, origin: { x: 0, y: 0 } },
+      { source: imageBitmap, origin: { x: 0, y: 0 } },
       { texture: dst },
       { width: imageBitmap.width, height: imageBitmap.height, depthOrArrayLayers: 1 },
       dstBytesPerPixel,
