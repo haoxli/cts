@@ -309,6 +309,14 @@ export const listing = [
       "api",
       "operation",
       "render_pipeline",
+      "pipeline_output_targets"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "render_pipeline",
       "primitive_topology"
     ]
   },
