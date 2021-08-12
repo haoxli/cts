@@ -4,8 +4,7 @@
 export class LogMessageWithStack extends Error {
 
 
-  stackHiddenMessage = undefined;
-  timesSeen = 1;
+  firstLineOnlyMessage = undefined;
 
   constructor(name, ex) {
     super(ex.message);
@@ -17,26 +16,21 @@ export class LogMessageWithStack extends Error {
     }
   }
 
-  /** Set a flag so the stack is not printed in toJSON(). */
-  setStackHidden(stackHiddenMessage) {
-    this.stackHiddenMessage ??= stackHiddenMessage;
-  }
-
-  /** Increment the "seen x times" counter. */
-  incrementTimesSeen() {
-    this.timesSeen++;
+  /** Set a flag so the details and stack are not printed in toJSON(). */
+  setFirstLineOnly(firstLineOnlyMessage) {
+    this.firstLineOnlyMessage ??= firstLineOnlyMessage;
   }
 
   toJSON() {
     let m = this.name;
-    if (this.message) m += ': ' + this.message;
-    if (this.stackHiddenMessage === undefined && this.stack) {
-      m += '\n' + extractImportantStackTrace(this);
-    } else if (this.stackHiddenMessage) {
-      m += `\n  (${this.stackHiddenMessage})`;
-    }
-    if (this.timesSeen > 1) {
-      m += `\n  (duplicated ${this.timesSeen} times (possibly non-consecutively); use ?debug=1 to show all)`;
+    if (this.firstLineOnlyMessage !== undefined) {
+      if (this.message) m += ': ' + this.message.split('\n')[0];
+      if (this.firstLineOnlyMessage !== '') {
+        m += ` (elided: ${this.firstLineOnlyMessage})`;
+      }
+    } else {
+      if (this.message) m += ': ' + this.message;
+      if (this.stack) m += '\n' + extractImportantStackTrace(this);
     }
     return m;
   }}

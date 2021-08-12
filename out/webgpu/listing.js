@@ -952,6 +952,14 @@ export const listing = [
       "api",
       "validation",
       "queue",
+      "submit"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "queue",
       "writeBuffer"
     ]
   },
@@ -1030,15 +1038,6 @@ export const listing = [
       "device_lost"
     ],
     "readme": "Tests of behavior while the device is lost.\n\n- x= every method in the API.\n\nTODO: implement"
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "state",
-      "device_mismatched"
-    ],
-    "readme": "Tests of behavior on one device using objects from another device.\n\n- x= every place in the API where an object is passed (as this, an arg, or a dictionary member).\n\nTODO: implement"
   },
   {
     "file": [

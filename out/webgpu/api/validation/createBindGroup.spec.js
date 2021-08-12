@@ -492,4 +492,37 @@ fn(t => {
 
   }, state === 'invalid');
 });
+
+g.test('bind_group_layout,device_mismatch').
+desc(
+'Tests createBindGroup cannot be called with a bind group layout created from another device').
+
+paramsSubcasesOnly(u => u.combine('mismatched', [true, false])).
+unimplemented();
+
+g.test('binding_resources,device_mismatch').
+desc(
+`
+    Tests createBindGroup cannot be called with various resources created from another device
+    Test with two resources to make sure all resources can be validated:
+    - resource0 and resource1 from same device
+    - resource0 and resource1 from different device
+    `).
+
+paramsSubcasesOnly((u) =>
+u.
+combine('bindingResource', [
+'buffer',
+'sampler',
+'texture',
+'storageTexture',
+'externalTexture']).
+
+combineWithParams([
+{ resource0Mismatched: false, resource1Mismatched: false }, //control case
+{ resource0Mismatched: true, resource1Mismatched: false },
+{ resource0Mismatched: false, resource1Mismatched: true }])).
+
+
+unimplemented();
 //# sourceMappingURL=createBindGroup.spec.js.map
