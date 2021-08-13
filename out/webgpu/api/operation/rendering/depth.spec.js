@@ -75,7 +75,7 @@ fn(async t => {
   const depthTexture = t.device.createTexture({
     size: { width: 1, height: 1 },
     format,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.SAMPLED });
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
 
   const depthTextureView = depthTexture.createView();
 
@@ -162,7 +162,7 @@ fn(async t => {
   const depthTexture = t.device.createTexture({
     size: { width: 1, height: 1 },
     format: depthBufferFormat,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.SAMPLED });
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
 
   const depthTextureView = depthTexture.createView();
 

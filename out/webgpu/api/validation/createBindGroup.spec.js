@@ -140,8 +140,8 @@ u //
 combine('usage', kTextureUsages).
 unless(({ entry, usage }) => {
   const info = texBindingTypeInfo(entry);
-  // Can't create the texture for this (usage=STORAGE and sampleCount=4), so skip.
-  return usage === GPUConst.TextureUsage.STORAGE && info.resource === 'sampledTexMS';
+  // Can't create the texture for this (usage=STORAGE_BINDING and sampleCount=4), so skip.
+  return usage === GPUConst.TextureUsage.STORAGE_BINDING && info.resource === 'sampledTexMS';
 })).
 
 fn(async t => {
@@ -204,7 +204,7 @@ fn(async t => {
   const goodDescriptor = {
     size: { width: 16, height: 16, depthOrArrayLayers: 1 },
     format,
-    usage: GPUTextureUsage.SAMPLED };
+    usage: GPUTextureUsage.TEXTURE_BINDING };
 
 
   // Control case
@@ -278,7 +278,7 @@ fn(async t => {
   const texture = t.device.createTexture({
     size: { width: 16, height, depthOrArrayLayers },
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.SAMPLED,
+    usage: GPUTextureUsage.TEXTURE_BINDING,
     dimension: getTextureDimensionFromView(dimension) });
 
 

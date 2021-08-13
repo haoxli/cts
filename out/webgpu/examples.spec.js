@@ -242,7 +242,7 @@ fn(async t => {
     t.device.createTexture({
       format: 'bc1-rgba-unorm',
       size: [4, 4, 1],
-      usage: GPUTextureUsage.SAMPLED });
+      usage: GPUTextureUsage.TEXTURE_BINDING });
 
   },
   shouldError);

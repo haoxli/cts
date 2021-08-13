@@ -345,8 +345,8 @@ export function textureDimensionAndFormatCompatible(dimension, format) {
 export const kTextureUsageInfo = {
   [GPUConst.TextureUsage.COPY_SRC]: {},
   [GPUConst.TextureUsage.COPY_DST]: {},
-  [GPUConst.TextureUsage.SAMPLED]: {},
-  [GPUConst.TextureUsage.STORAGE]: {},
+  [GPUConst.TextureUsage.TEXTURE_BINDING]: {},
+  [GPUConst.TextureUsage.STORAGE_BINDING]: {},
   [GPUConst.TextureUsage.RENDER_ATTACHMENT]: {},
 };
 
@@ -566,12 +566,16 @@ assertTypeTrue();
 export function sampledTextureBindingTypeInfo(d) {
   if (d.multisampled) {
     return {
-      usage: GPUConst.TextureUsage.SAMPLED,
+      usage: GPUConst.TextureUsage.TEXTURE_BINDING,
       ...kBindingKind.sampledTexMS,
       ...kValidStagesAll,
     };
   } else {
-    return { usage: GPUConst.TextureUsage.SAMPLED, ...kBindingKind.sampledTex, ...kValidStagesAll };
+    return {
+      usage: GPUConst.TextureUsage.TEXTURE_BINDING,
+      ...kBindingKind.sampledTex,
+      ...kValidStagesAll,
+    };
   }
 }
 /** List of all GPUTextureSampleType values. */

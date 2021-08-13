@@ -41,7 +41,7 @@ fn(async t => {
   const texture = t.device.createTexture({
     format: textureFormat,
     size: [4, 4],
-    usage: GPUTextureUsage.SAMPLED });
+    usage: GPUTextureUsage.TEXTURE_BINDING });
 
 
   const success = viewFormat === undefined || viewFormat === textureFormat;
@@ -70,7 +70,7 @@ fn(t => {
     format: 'rgba8unorm',
     dimension: textureDimension,
     size,
-    usage: GPUTextureUsage.SAMPLED };
+    usage: GPUTextureUsage.TEXTURE_BINDING };
 
   const texture = t.device.createTexture(textureDescriptor);
 
@@ -103,7 +103,7 @@ fn(async t => {
   const texture = t.device.createTexture({
     format,
     size: [4, 4, 1],
-    usage: GPUTextureUsage.SAMPLED });
+    usage: GPUTextureUsage.TEXTURE_BINDING });
 
 
   const success =
@@ -195,7 +195,7 @@ fn(t => {
     [kWidth, kWidth, kWidth] :
     unreachable(),
     mipLevelCount: textureLevels,
-    usage: GPUTextureUsage.SAMPLED };
+    usage: GPUTextureUsage.TEXTURE_BINDING };
 
 
   const viewDescriptor = { dimension: viewDimension, baseArrayLayer, arrayLayerCount };
@@ -246,7 +246,7 @@ fn(t => {
     size:
     textureDimension === '1d' ? [32] : textureDimension === '3d' ? [32, 32, 32] : [32, 32, 18],
     mipLevelCount: textureLevels,
-    usage: GPUTextureUsage.SAMPLED };
+    usage: GPUTextureUsage.TEXTURE_BINDING };
 
 
   const viewDescriptor = { dimension: viewDimension, baseMipLevel, mipLevelCount };
@@ -281,7 +281,7 @@ fn(async t => {
   const texture = t.device.createTexture({
     format: 'rgba8unorm',
     size,
-    usage: GPUTextureUsage.SAMPLED });
+    usage: GPUTextureUsage.TEXTURE_BINDING });
 
 
   const success = dimension === '2d' || size[0] === size[1];

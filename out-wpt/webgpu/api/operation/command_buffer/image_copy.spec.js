@@ -942,7 +942,7 @@ class ImageCopyTest extends GPUTest {
 
     const inputTexture = this.device.createTexture({
       size: copySize,
-      usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
       format: 'r32float',
     });
 

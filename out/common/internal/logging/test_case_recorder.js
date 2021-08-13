@@ -13,7 +13,7 @@ LogSeverity;(function (LogSeverity) {LogSeverity[LogSeverity["Pass"] = 0] = "Pas
 
 
 
-const kMaxDetailedLogs = 2;
+const kMaxLogStacks = 2;
 const kMinSeverityForStack = LogSeverity.Warn;
 
 /** Holds onto a LiveTestCaseResult owned by the Logger, and writes the results into it. */
@@ -136,18 +136,18 @@ export class TestCaseRecorder {
 
       // Go back and setFirstLineOnly for everything of a lower log level
       for (const log of this.logs) {
-        log.setFirstLineOnly('below max severity');
+        log.setStackHidden('below max severity');
       }
     }
     if (level === this.hideStacksBelowSeverity) {
       this.logLinesAtCurrentSeverity++;
     } else if (level < kMinSeverityForStack) {
-      logMessage.setFirstLineOnly('');
+      logMessage.setStackHidden('');
     } else if (level < this.hideStacksBelowSeverity) {
-      logMessage.setFirstLineOnly('below max severity');
+      logMessage.setStackHidden('below max severity');
     }
-    if (this.logLinesAtCurrentSeverity > kMaxDetailedLogs) {
-      logMessage.setFirstLineOnly(`only ${kMaxDetailedLogs} shown`);
+    if (this.logLinesAtCurrentSeverity > kMaxLogStacks) {
+      logMessage.setStackHidden(`only ${kMaxLogStacks} shown`);
     }
 
     this.logs.push(logMessage);

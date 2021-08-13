@@ -4,7 +4,7 @@
 export class LogMessageWithStack extends Error {
 
 
-  firstLineOnlyMessage = undefined;
+  stackHiddenMessage = undefined;
 
   constructor(name, ex) {
     super(ex.message);
@@ -16,21 +16,20 @@ export class LogMessageWithStack extends Error {
     }
   }
 
-  /** Set a flag so the details and stack are not printed in toJSON(). */
-  setFirstLineOnly(firstLineOnlyMessage) {
-    this.firstLineOnlyMessage ??= firstLineOnlyMessage;
+  /** Set a flag so the stack is not printed in toJSON(). */
+  setStackHidden(stackHiddenMessage) {
+    this.stackHiddenMessage ??= stackHiddenMessage;
   }
 
   toJSON() {
     let m = this.name;
-    if (this.firstLineOnlyMessage !== undefined) {
-      if (this.message) m += ': ' + this.message.split('\n')[0];
-      if (this.firstLineOnlyMessage !== '') {
-        m += ` (elided: ${this.firstLineOnlyMessage})`;
+    if (this.message) m += ': ' + this.message;
+    if (this.stack) {
+      if (this.stackHiddenMessage === undefined) {
+        m += '\n' + extractImportantStackTrace(this);
+      } else if (this.stackHiddenMessage) {
+        m += `\n  at (elided: ${this.stackHiddenMessage})`;
       }
-    } else {
-      if (this.message) m += ': ' + this.message;
-      if (this.stack) m += '\n' + extractImportantStackTrace(this);
     }
     return m;
   }}

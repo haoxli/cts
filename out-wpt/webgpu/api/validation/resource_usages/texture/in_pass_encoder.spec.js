@@ -71,7 +71,7 @@ class TextureUsageTracking extends ValidationTest {
       mipLevelCount = 1,
       sampleCount = 1,
       format = 'rgba8unorm',
-      usage = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.SAMPLED,
+      usage = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     } = options;
 
     return this.device.createTexture({
@@ -145,7 +145,7 @@ class TextureUsageTracking extends ValidationTest {
     // Create two bind groups. Resource usages conflict between these two bind groups. But resource
     // usage inside each bind group doesn't conflict.
     const view = this.createTexture({
-      usage: GPUTextureUsage.STORAGE | GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
     }).createView();
     const bindGroupLayouts = [
       this.createBindGroupLayout(0, 'sampled-texture', '2d'),
@@ -412,7 +412,10 @@ g.test('subresources_and_binding_types_combination_for_color')
     const texture = t.createTexture({
       arrayLayerCount: TOTAL_LAYERS,
       mipLevelCount: TOTAL_LEVELS,
-      usage: GPUTextureUsage.SAMPLED | GPUTextureUsage.STORAGE | GPUTextureUsage.RENDER_ATTACHMENT,
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.STORAGE_BINDING |
+        GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
     const dimension0 = layerCount0 !== 1 ? '2d-array' : '2d';
@@ -731,8 +734,8 @@ g.test('shader_stages_and_visibility')
     // vertex stage is not included. Otherwise, it uses output attachment instead.
     const writeHasVertexStage = Boolean(writeVisibility & GPUShaderStage.VERTEX);
     const texUsage = writeHasVertexStage
-      ? GPUTextureUsage.SAMPLED | GPUTextureUsage.RENDER_ATTACHMENT
-      : GPUTextureUsage.SAMPLED | GPUTextureUsage.STORAGE;
+      ? GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT
+      : GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING;
 
     const texture = t.createTexture({ usage: texUsage });
     const view = texture.createView();
@@ -800,7 +803,7 @@ g.test('replaced_binding')
 
     const sampledView = t.createTexture().createView();
     const sampledStorageView = t
-      .createTexture({ usage: GPUTextureUsage.STORAGE | GPUTextureUsage.SAMPLED })
+      .createTexture({ usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING })
       .createView();
 
     // Create bindGroup0. It has two bindings. These two bindings use different views/subresources.
@@ -868,10 +871,10 @@ g.test('bindings_in_bundle')
           switch (type) {
             case 'multisampled-texture':
             case 'sampled-texture':
-              return 'SAMPLED';
+              return 'TEXTURE_BINDING';
             case 'readonly-storage-texture':
             case 'writeonly-storage-texture':
-              return 'STORAGE';
+              return 'STORAGE_BINDING';
             case 'render-target':
               return 'RENDER_ATTACHMENT';
           }
@@ -895,7 +898,7 @@ g.test('bindings_in_bundle')
           // Storage textures can't be multisampled.
           (p._sampleCount !== undefined &&
             p._sampleCount > 1 &&
-            (p._usage0 === 'STORAGE' || p._usage1 === 'STORAGE')) ||
+            (p._usage0 === 'STORAGE_BINDING' || p._usage1 === 'STORAGE_BINDING')) ||
           // If both are sampled, we create two views of the same texture, so both must be multisampled.
           (p.type0 === 'multisampled-texture' && p.type1 === 'sampled-texture') ||
           (p.type0 === 'sampled-texture' && p.type1 === 'multisampled-texture')
@@ -1003,7 +1006,7 @@ g.test('unused_bindings_in_pipeline')
       setPipeline,
       callDrawOrDispatch,
     } = t.params;
-    const view = t.createTexture({ usage: GPUTextureUsage.STORAGE }).createView();
+    const view = t.createTexture({ usage: GPUTextureUsage.STORAGE_BINDING }).createView();
     const bindGroup0 = t.createBindGroup(0, view, 'readonly-storage-texture', '2d', {
       format: 'rgba8unorm',
     });

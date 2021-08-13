@@ -97,8 +97,8 @@ g.test('usage')
       ])
       .beginSubcases()
       .combine('usage', [
-        GPUConst.TextureUsage.COPY_SRC | GPUConst.TextureUsage.SAMPLED,
-        GPUConst.TextureUsage.COPY_DST | GPUConst.TextureUsage.SAMPLED,
+        GPUConst.TextureUsage.COPY_SRC | GPUConst.TextureUsage.TEXTURE_BINDING,
+        GPUConst.TextureUsage.COPY_DST | GPUConst.TextureUsage.TEXTURE_BINDING,
         GPUConst.TextureUsage.COPY_SRC | GPUConst.TextureUsage.COPY_DST,
       ])
   )
@@ -142,7 +142,7 @@ g.test('sample_count')
       size: { width: 4, height: 4, depthOrArrayLayers: 1 },
       sampleCount,
       format: 'rgba8unorm',
-      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.SAMPLED,
+      usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING,
     });
 
     const success = sampleCount === 1;
