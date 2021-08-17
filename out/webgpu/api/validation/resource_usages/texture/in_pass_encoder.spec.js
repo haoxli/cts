@@ -697,7 +697,7 @@ fn(async t => {
   const aspectSampleType = (format, aspect) => {
     switch (aspect) {
       case 'depth-only':
-        return 'float';
+        return 'depth';
       case 'stencil-only':
         return 'uint';
       case 'all':
@@ -705,7 +705,7 @@ fn(async t => {
         if (kTextureFormatInfo[format].stencil) {
           return 'uint';
         }
-        return 'float';}
+        return 'depth';}
 
   };
 
