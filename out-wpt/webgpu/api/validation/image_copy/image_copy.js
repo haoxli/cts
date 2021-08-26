@@ -1,6 +1,10 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ import { kTextureFormatInfo } from '../../../capability_info.js';
+ **/ import {
+  kTextureFormatInfo,
+  depthStencilFormatCopyableAspects,
+} from '../../../capability_info.js';
+
 import { ValidationTest } from '../validation_test.js';
 
 export class ImageCopyTest extends ValidationTest {
@@ -99,8 +103,13 @@ function valuesToTestDivisibilityBy(number) {
   return values;
 }
 
-// This is a helper function used for expanding test parameters for texel block alignment tests on offset
+// This is a helper function used for expanding test parameters for offset alignment, by spec
 export function texelBlockAlignmentTestExpanderForOffset({ format }) {
+  const info = kTextureFormatInfo[format];
+  if (info.depth || info.stencil) {
+    return valuesToTestDivisibilityBy(4);
+  }
+
   return valuesToTestDivisibilityBy(kTextureFormatInfo[format].bytesPerBlock);
 }
 
@@ -128,9 +137,26 @@ export function texelBlockAlignmentTestExpanderForValueToCoordinate({ format, co
 
 // This is a helper function used for filtering test parameters
 export function formatCopyableWithMethod({ format, method }) {
-  if (method === 'CopyTextureToBuffer') {
-    return kTextureFormatInfo[format].copySrc;
-  } else {
-    return kTextureFormatInfo[format].copyDst;
+  const info = kTextureFormatInfo[format];
+  if (info.depth || info.stencil) {
+    const supportedAspects = depthStencilFormatCopyableAspects(method, format);
+
+    return supportedAspects.length > 0;
   }
+  if (method === 'CopyT2B') {
+    return info.copySrc;
+  } else {
+    return info.copyDst;
+  }
+}
+
+// This is a helper function used for filtering test parameters
+export function getACopyableAspectWithMethod({ format, method }) {
+  const info = kTextureFormatInfo[format];
+  if (info.depth || info.stencil) {
+    const supportedAspects = depthStencilFormatCopyableAspects(method, format);
+
+    return supportedAspects[0];
+  }
+  return 'all';
 }

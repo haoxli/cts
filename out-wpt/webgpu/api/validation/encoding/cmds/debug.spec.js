@@ -13,7 +13,7 @@ Test Coverage:
     - Test inserting a debug marker with empty and non-empty strings.
 `;
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
-import { kEncoderTypes } from '../../util/command_buffer_maker.js';
+import { kEncoderTypes } from '../../../../util/command_buffer_maker.js';
 import { ValidationTest } from '../../validation_test.js';
 
 export const g = makeTestGroup(ValidationTest);

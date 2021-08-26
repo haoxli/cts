@@ -1,7 +1,7 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { kUnitCaseParamsBuilder } from '../../../../../../common/framework/params_builder.js';
-import { kRenderEncodeTypes } from '../../../util/command_buffer_maker.js';
+import { kRenderEncodeTypes } from '../../../../../util/command_buffer_maker.js';
 export const kRenderEncodeTypeParams = kUnitCaseParamsBuilder.combine(
   'encoderType',
   kRenderEncodeTypes

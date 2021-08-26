@@ -19,9 +19,10 @@ import {
   texBindingTypeInfo,
 } from '../../capability_info.js';
 import { GPUConst } from '../../constants.js';
+import { kResourceStates } from '../../gpu_test.js';
 import { getTextureDimensionFromView } from '../../util/texture/base.js';
 
-import { kResourceStates, ValidationTest } from './validation_test.js';
+import { ValidationTest } from './validation_test.js';
 
 function clone(descriptor) {
   return JSON.parse(JSON.stringify(descriptor));

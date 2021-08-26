@@ -14,8 +14,9 @@ TODO: merge these notes and implement.
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { range, unreachable } from '../../../../../common/util/util.js';
 import { kMinDynamicBufferOffsetAlignment } from '../../../../capability_info.js';
-import { kProgrammableEncoderTypes } from '../../util/command_buffer_maker.js';
-import { kResourceStates, ValidationTest } from '../../validation_test.js';
+import { kResourceStates } from '../../../../gpu_test.js';
+import { kProgrammableEncoderTypes } from '../../../../util/command_buffer_maker.js';
+import { ValidationTest } from '../../validation_test.js';
 
 class F extends ValidationTest {
   encoderTypeToStageFlag(encoderType) {

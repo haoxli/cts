@@ -12,12 +12,13 @@ import {
   kTextureUsages,
   kValidTextureFormatsForCopyE2T,
 } from '../../../../capability_info.js';
+import { kResourceStates } from '../../../../gpu_test.js';
 import {
   createCanvas,
   createOnscreenCanvas,
   createOffscreenCanvas,
 } from '../../../../util/create_elements.js';
-import { kResourceStates, ValidationTest } from '../../validation_test.js';
+import { ValidationTest } from '../../validation_test.js';
 
 const kDefaultBytesPerPixel = 4; // using 'bgra8unorm' or 'rgba8unorm'
 const kDefaultWidth = 32;
