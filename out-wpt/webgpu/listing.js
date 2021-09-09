@@ -63,6 +63,14 @@ export const listing = [
       "api",
       "operation",
       "buffers",
+      "map_ArrayBuffer"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "buffers",
       "map_detach"
     ]
   },
@@ -1099,6 +1107,14 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "builtin",
+      "logical_built_in_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "robust_access"
     ]
   },
@@ -1122,13 +1138,6 @@ export const listing = [
       "validation"
     ],
     "readme": "Positive and negative tests for all the validation rules of the shading language."
-  },
-  {
-    "file": [
-      "shader",
-      "validation",
-      "builtin_function"
-    ]
   },
   {
     "file": [
