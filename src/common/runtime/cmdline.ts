@@ -1,9 +1,4 @@
 /* eslint no-console: "off" */
-/* eslint no-process-exit: "off" */
-
-import * as fs from 'fs';
-import * as path from 'path';
-import * as process from 'process';
 
 import { DefaultTestFileLoader } from '../internal/file_loader.js';
 import { prettyPrintLog } from '../internal/logging/log_message.js';
@@ -11,44 +6,56 @@ import { Logger } from '../internal/logging/logger.js';
 import { LiveTestCaseResult } from '../internal/logging/result.js';
 import { parseQuery } from '../internal/query/parseQuery.js';
 import { parseExpectationsForTestQuery } from '../internal/query/query.js';
+import { setGPUProvider } from '../util/navigator_gpu.js';
 import { assert, unreachable } from '../util/util.js';
+
+import sys from './helper/sys.js';
 
 function usage(rc: number): never {
   console.log('Usage:');
-  console.log('  tools/run [OPTIONS...] QUERIES...');
-  console.log("  tools/run 'unittests:*' 'webgpu:buffers,*'");
+  console.log(`  tools/run_${sys.type} [OPTIONS...] QUERIES...`);
+  console.log(`  tools/run_${sys.type} 'unittests:*' 'webgpu:buffers,*'`);
   console.log('Options:');
   console.log('  --verbose       Print result/log of every test as it runs.');
+  console.log('  --list          Print all testcase names that match the given query and exit.');
   console.log('  --debug         Include debug messages in logging.');
   console.log('  --print-json    Print the complete result JSON in the output.');
   console.log('  --expectations  Path to expectations file.');
-  return process.exit(rc);
+  console.log('  --gpu-provider  Path to node module that provides the GPU implementation.');
+  return sys.exit(rc);
 }
 
-if (!fs.existsSync('src/common/runtime/cmdline.ts')) {
+if (!sys.existsSync('src/common/runtime/cmdline.ts')) {
   console.log('Must be run from repository root');
   usage(1);
 }
 
 let verbose = false;
+let listTestcases = false;
 let debug = false;
 let printJSON = false;
 let loadWebGPUExpectations: Promise<unknown> | undefined = undefined;
 
 const queries: string[] = [];
-for (let i = 2; i < process.argv.length; ++i) {
-  const a = process.argv[i];
+for (let i = 0; i < sys.args.length; ++i) {
+  const a = sys.args[i];
   if (a.startsWith('-')) {
     if (a === '--verbose') {
       verbose = true;
+    } else if (a === '--list') {
+      listTestcases = true;
     } else if (a === '--debug') {
       debug = true;
     } else if (a === '--print-json') {
       printJSON = true;
     } else if (a === '--expectations') {
-      const expectationsFile = path.resolve(process.cwd(), process.argv[++i]);
+      const expectationsFile = new URL(sys.args[++i], `file://${sys.cwd()}`).pathname;
       loadWebGPUExpectations = import(expectationsFile).then(m => m.expectations);
+    } else if (a === '--gpu-provider') {
+      const modulePath = sys.args[++i];
+      setGPUProvider(() => require(modulePath).gpu);
     } else {
+      console.log('unrecognized flag: ', a);
       usage(1);
     }
   } else {
@@ -57,6 +64,7 @@ for (let i = 2; i < process.argv.length; ++i) {
 }
 
 if (queries.length === 0) {
+  console.log('no queries specified');
   usage(0);
 }
 
@@ -81,6 +89,11 @@ if (queries.length === 0) {
 
   for (const testcase of testcases) {
     const name = testcase.query.toString();
+    if (listTestcases) {
+      console.log(name);
+      continue;
+    }
+
     const [rec, res] = log.record(name);
     await testcase.run(rec, expectations);
 
@@ -104,6 +117,10 @@ if (queries.length === 0) {
       default:
         unreachable('unrecognized status');
     }
+  }
+
+  if (listTestcases) {
+    return;
   }
 
   assert(total > 0, 'found no tests!');
@@ -143,11 +160,11 @@ Skipped              = ${rpt(skipped.length)}
 Failed               = ${rpt(failed.length)}`);
 
   if (failed.length || warned.length) {
-    process.exit(1);
+    sys.exit(1);
   }
 })().catch(ex => {
   console.log(ex.stack ?? ex.toString());
-  process.exit(1);
+  sys.exit(1);
 });
 
 function printResults(results: Array<[string, LiveTestCaseResult]>): void {

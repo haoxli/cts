@@ -538,7 +538,7 @@ export const kPerStageBindingLimits =
   'storageBuf': { class: 'storageBuf', max: 8 },
   'sampler': { class: 'sampler', max: 16 },
   'sampledTex': { class: 'sampledTex', max: 16 },
-  'storageTex': { class: 'storageTex', max: 8 } };
+  'storageTex': { class: 'storageTex', max: 4 } };
 
 
 /**
@@ -704,10 +704,7 @@ export function textureBindingEntries(includeUndefined) {
    * Note: Generates different `access` options, but not `format` or `viewDimension` options.
    */
 export function storageTextureBindingEntries(format) {
-  return [
-  { storageTexture: { access: 'read-only', format } },
-  { storageTexture: { access: 'write-only', format } }];
-
+  return [{ storageTexture: { access: 'write-only', format } }];
 }
 /** Generate a list of possible texture-or-storageTexture-typed BGLEntry values. */
 export function sampledAndStorageBindingEntries(
