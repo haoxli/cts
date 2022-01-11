@@ -92,7 +92,7 @@ class VertexStateTest extends GPUTest {
         }
 
         vsInputs += `  [[location(${i})]] attrib${i} : ${shaderType};\n`;
-        vsBindings += `[[block]] struct S${i} { data : array<vec4<${a.shaderBaseType}>, ${maxCount}>; };\n`;
+        vsBindings += `struct S${i} { data : array<vec4<${a.shaderBaseType}>, ${maxCount}>; };\n`;
         vsBindings += `[[group(0), binding(${i})]] var<${storageType}> providedData${i} : S${i};\n`;
 
         // Generate the all the checks for the attributes.
@@ -159,7 +159,7 @@ ${vsChecks}
 }
 
 struct VSOutputs {
-  [[location(0)]] result : i32;
+  [[location(0), interpolate(flat)]] result : i32;
   [[builtin(position)]] position : vec4<f32>;
 };
 
@@ -178,7 +178,8 @@ struct VSOutputs {
   return output;
 }
 
-[[stage(fragment)]] fn fsMain([[location(0)]] result : i32) -> [[location(0)]] i32 {
+[[stage(fragment)]] fn fsMain([[location(0), interpolate(flat)]] result : i32)
+  -> [[location(0)]] i32 {
   return result;
 }
     `;
@@ -259,7 +260,7 @@ struct VSOutputs {
   }
 
   // Generate TestData for the format with interesting test values.
-  // TODO cache the result on the fixture?
+  // MAINTENANCE_TODO cache the result on the fixture?
   // Note that the test data always starts with an interesting value, so that using the first
   // test value in a test is still meaningful.
   generateTestData(format) {
