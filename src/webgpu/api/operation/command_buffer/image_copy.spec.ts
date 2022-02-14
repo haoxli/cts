@@ -1783,6 +1783,7 @@ aspect and copyTextureToBuffer() with depth aspect.
       })
       .combine('mipLevel', [0, 2])
   )
+  .batch(20)
   .fn(async t => {
     const {
       format,
