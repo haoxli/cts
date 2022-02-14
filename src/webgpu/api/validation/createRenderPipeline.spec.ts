@@ -32,6 +32,8 @@ import {
   kDepthStencilFormats,
   kCompareFunctions,
   kStencilOperations,
+  kBlendFactors,
+  kBlendOperations,
 } from '../../capability_info.js';
 import { kTexelRepresentationInfo } from '../../util/texture/texel_data.js';
 
@@ -82,7 +84,7 @@ class F extends ValidationTest {
     }
 
     return `
-    [[stage(fragment)]] fn main() -> [[location(0)]] ${outputType} {
+    @stage(fragment) fn main() -> @location(0) ${outputType} {
       return ${result};
     }`;
   }
@@ -114,7 +116,7 @@ class F extends ValidationTest {
       vertex: {
         module: this.device.createShaderModule({
           code: `
-            [[stage(vertex)]] fn main() -> [[builtin(position)]] vec4<f32> {
+            @stage(vertex) fn main() -> @builtin(position) vec4<f32> {
               return vec4<f32>(0.0, 0.0, 0.0, 1.0);
             }`,
         }),
@@ -557,12 +559,97 @@ g.test('pipeline_output_targets,blend')
   });
 
 g.test('pipeline_output_targets,format_blendable')
-  .desc(`If blending is used, the target's format must be blendable (support "float" sample type).`)
-  .unimplemented();
+  .desc(
+    `
+  Tests if blending is used, the target's format must be blendable (support "float" sample type).
+  - For all the formats, test that blending can be enabled if and only if the format is blendable.`
+  )
+  .params(u =>
+    u.combine('isAsync', [false, true]).combine('format', kRenderableColorTextureFormats)
+  )
+  .fn(async t => {
+    const { isAsync, format } = t.params;
+    const info = kTextureFormatInfo[format];
+    await t.selectDeviceOrSkipTestCase(info.feature);
+
+    const _success = info.sampleType === 'float';
+
+    const blendComponent: GPUBlendComponent = {
+      srcFactor: 'src-alpha',
+      dstFactor: 'dst-alpha',
+      operation: 'add',
+    };
+    t.doCreateRenderPipelineTest(
+      isAsync,
+      _success,
+      t.getDescriptor({
+        targets: [
+          {
+            format,
+            blend: {
+              color: blendComponent,
+              alpha: blendComponent,
+            },
+          },
+        ],
+        fragmentShaderCode: t.getFragmentShaderCode('float', 4),
+      })
+    );
+  });
 
 g.test('pipeline_output_targets,blend_min_max')
-  .desc(`If the blend operation is "min" or "max", srcFactor and dstFactor must be "one".`)
-  .unimplemented();
+  .desc(
+    `
+  For the blend components on either GPUBlendState.color or GPUBlendState.alpha:
+  - Tests if the combination of 'srcFactor', 'dstFactor' and 'operation' is valid (if the blend
+    operation is "min" or "max", srcFactor and dstFactor must be "one").
+  `
+  )
+  .params(u =>
+    u
+      .combine('isAsync', [false, true])
+      .combine('component', ['color', 'alpha'] as const)
+      .beginSubcases()
+      .combine('srcFactor', kBlendFactors)
+      .combine('dstFactor', kBlendFactors)
+      .combine('operation', kBlendOperations)
+  )
+  .fn(async t => {
+    const { isAsync, component, srcFactor, dstFactor, operation } = t.params;
+
+    const defaultBlendComponent: GPUBlendComponent = {
+      srcFactor: 'src-alpha',
+      dstFactor: 'dst-alpha',
+      operation: 'add',
+    };
+    const blendComponentToTest = {
+      srcFactor,
+      dstFactor,
+      operation,
+    };
+    const fragmentShaderCode = t.getFragmentShaderCode('float', 4);
+    const format = 'rgba8unorm';
+
+    const descriptor = t.getDescriptor({
+      targets: [
+        {
+          format,
+          blend: {
+            color: component === 'color' ? blendComponentToTest : defaultBlendComponent,
+            alpha: component === 'alpha' ? blendComponentToTest : defaultBlendComponent,
+          },
+        },
+      ],
+      fragmentShaderCode,
+    });
+
+    if (operation === 'min' || operation === 'max') {
+      const _success = srcFactor === 'one' && dstFactor === 'one';
+      t.doCreateRenderPipelineTest(isAsync, _success, descriptor);
+    } else {
+      t.doCreateRenderPipelineTest(isAsync, true, descriptor);
+    }
+  });
 
 g.test('pipeline_layout,device_mismatch')
   .desc(
@@ -586,7 +673,7 @@ g.test('pipeline_layout,device_mismatch')
       vertex: {
         module: t.device.createShaderModule({
           code: `
-        [[stage(vertex)]] fn main() -> [[builtin(position)]] vec4<f32> {
+        @stage(vertex) fn main() -> @builtin(position) vec4<f32> {
           return vec4<f32>(0.0, 0.0, 0.0, 1.0);
         }
       `,
@@ -622,7 +709,7 @@ g.test('shader_module,device_mismatch')
     }
 
     const code = `
-      [[stage(vertex)]] fn main() -> [[builtin(position)]] vec4<f32> {
+      @stage(vertex) fn main() -> @builtin(position) vec4<f32> {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
       }
     `;
