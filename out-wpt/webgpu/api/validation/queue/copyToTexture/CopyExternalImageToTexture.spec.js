@@ -176,7 +176,7 @@ g.test('source_canvas,contexts')
     `
   Test HTMLCanvasElement as source image with different contexts.
 
-  Call HTMLCanvasElment.getContext() with different context type.
+  Call HTMLCanvasElement.getContext() with different context type.
   Only '2d', 'experimental-webgl', 'webgl', 'webgl2' is valid context
   type.
 
@@ -246,9 +246,10 @@ g.test('source_offscreenCanvas,contexts')
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
-    // Workaround the compile error that 'webgpu' is not a valid
-    // OffscreenRenderingContextId.
+    // MAINTENANCE_TODO: Workaround for @types/offscreencanvas missing an overload of
+    // `OffscreenCanvas.getContext` that takes `string` or a union of context types.
     const ctx = canvas.getContext(contextType);
+
     if (ctx === null) {
       t.skip('Failed to get context for canvas element');
       return;

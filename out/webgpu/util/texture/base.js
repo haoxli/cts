@@ -4,8 +4,8 @@
 import { reifyExtent3D } from '../../util/unions.js';
 
 /**
-                                                       * Compute the maximum mip level count allowed for a given texture size and texture dimension.
-                                                       */
+ * Compute the maximum mip level count allowed for a given texture size and texture dimension.
+ */
 export function maxMipLevelCount({
   size,
   dimension = '2d' })
@@ -32,9 +32,9 @@ export function maxMipLevelCount({
 }
 
 /**
-   * Compute the "physical size" of a mip level: the size of the level, rounded up to a
-   * multiple of the texel block size.
-   */
+ * Compute the "physical size" of a mip level: the size of the level, rounded up to a
+ * multiple of the texel block size.
+ */
 export function physicalMipSize(
 baseSize,
 format,
@@ -43,11 +43,15 @@ level)
 {
   switch (dimension) {
     case '1d':
-      assert(level === 0 && baseSize.height === 1 && baseSize.depthOrArrayLayers === 1);
+      assert(level === 0, '1d textures cannot be mipmapped');
+      assert(baseSize.height === 1 && baseSize.depthOrArrayLayers === 1, '1d texture not Wx1x1');
       return { width: baseSize.width, height: 1, depthOrArrayLayers: 1 };
 
     case '2d':{
-        assert(Math.max(baseSize.width, baseSize.height) >> level > 0);
+        assert(
+        Math.max(baseSize.width, baseSize.height) >> level > 0,
+        () => `level (${level}) too large for base size (${baseSize.width}x${baseSize.height})`);
+
 
         const virtualWidthAtLevel = Math.max(baseSize.width >> level, 1);
         const virtualHeightAtLevel = Math.max(baseSize.height >> level, 1);
@@ -67,9 +71,14 @@ level)
       }
 
     case '3d':{
-        assert(Math.max(baseSize.width, baseSize.height, baseSize.depthOrArrayLayers) >> level > 0);
         assert(
-        kTextureFormatInfo[format].blockWidth === 1 && kTextureFormatInfo[format].blockHeight === 1);
+        Math.max(baseSize.width, baseSize.height, baseSize.depthOrArrayLayers) >> level > 0,
+        () =>
+        `level (${level}) too large for base size (${baseSize.width}x${baseSize.height}x${baseSize.depthOrArrayLayers})`);
+
+        assert(
+        kTextureFormatInfo[format].blockWidth === 1 && kTextureFormatInfo[format].blockHeight === 1,
+        'not implemented for 3d block formats');
 
         return {
           width: Math.max(baseSize.width >> level, 1),
@@ -81,14 +90,16 @@ level)
 }
 
 /**
-   * Compute the "virtual size" of a mip level of a texture (not accounting for texel block rounding).
-   */
+ * Compute the "virtual size" of a mip level of a texture (not accounting for texel block rounding).
+ *
+ * MAINTENANCE_TODO: Change input/output to Required<GPUExtent3DDict> for consistency.
+ */
 export function virtualMipSize(
 dimension,
 size,
 mipLevel)
 {
-  const shiftMinOne = n => Math.max(1, n >> mipLevel);
+  const shiftMinOne = (n) => Math.max(1, n >> mipLevel);
   switch (dimension) {
     case '1d':
       assert(size[2] === 1);
@@ -103,9 +114,9 @@ mipLevel)
 }
 
 /**
-   * Get texture dimension from view dimension in order to create an compatible texture for a given
-   * view dimension.
-   */
+ * Get texture dimension from view dimension in order to create an compatible texture for a given
+ * view dimension.
+ */
 export function getTextureDimensionFromView(viewDimension) {
   switch (viewDimension) {
     case '1d':
@@ -134,7 +145,10 @@ export function viewDimensionsForTextureDimension(textureDimension) {
 
 }
 
-/** Reifies the optional fields of `GPUTextureDescriptor`. */
+/** Reifies the optional fields of `GPUTextureDescriptor`.
+ * MAINTENANCE_TODO: viewFormats should not be omitted here, but it seems likely that the
+ * @webgpu/types definition will have to change before we can include it again.
+ */
 export function reifyTextureDescriptor(
 desc)
 {

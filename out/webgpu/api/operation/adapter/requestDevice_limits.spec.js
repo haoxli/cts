@@ -17,10 +17,10 @@ export const g = makeTestGroup(Fixture);
 g.test('unknown_limits').
 desc(
 `
-    Test that specifiying limits that aren't part of the supported limit set causes
+    Test that specifying limits that aren't part of the supported limit set causes
     requestDevice to reject.`).
 
-fn(async t => {
+fn(async (t) => {
   const adapter = await navigator.gpu.requestAdapter();
   assert(adapter !== null);
 
@@ -39,11 +39,11 @@ desc(
 params((u) =>
 u.
 combine('limit', kLimitTypes).
-unless(p => typeof DefaultLimits[p.limit] !== 'number').
+unless((p) => typeof DefaultLimits[p.limit] !== 'number').
 beginSubcases().
 combine('limitValue', ['default', 'adapter'])).
 
-fn(async t => {
+fn(async (t) => {
   const { limit, limitValue } = t.params;
 
   const gpu = getGPU();
@@ -79,11 +79,11 @@ desc(
 params((u) =>
 u.
 combine('limit', kLimitTypes).
-unless(p => typeof DefaultLimits[p.limit] !== 'number').
+unless((p) => typeof DefaultLimits[p.limit] !== 'number').
 beginSubcases().
 combine('over', [1, 32, 65535])).
 
-fn(async t => {
+fn(async (t) => {
   const { limit, over } = t.params;
 
   const gpu = getGPU();
@@ -113,11 +113,11 @@ desc(
 params((u) =>
 u.
 combine('limit', kLimitTypes).
-unless(p => typeof DefaultLimits[p.limit] !== 'number').
+unless((p) => typeof DefaultLimits[p.limit] !== 'number').
 beginSubcases().
 combine('under', [1, 32, 65535])).
 
-fn(async t => {
+fn(async (t) => {
   const { limit, under } = t.params;
 
   const gpu = getGPU();

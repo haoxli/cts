@@ -1,15 +1,15 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert } from '../../common/util/util.js';import { kBit } from '../shader/execution/builtin/builtin.js';
-import { f32, f32Bits } from './conversion.js';
+**/import { assert } from '../../common/util/util.js';import { kBit } from './constants.js';
+import { f32, f32Bits, i32 } from './conversion.js';
 
 /**
-                                                 * A multiple of 8 guaranteed to be way too large to allocate (just under 8 pebibytes).
-                                                 * This is a "safe" integer (ULP <= 1.0) very close to MAX_SAFE_INTEGER.
-                                                 *
-                                                 * Note: allocations of this size are likely to exceed limitations other than just the system's
-                                                 * physical memory, so test cases are also needed to try to trigger "true" OOM.
-                                                 */
+ * A multiple of 8 guaranteed to be way too large to allocate (just under 8 pebibytes).
+ * This is a "safe" integer (ULP <= 1.0) very close to MAX_SAFE_INTEGER.
+ *
+ * Note: allocations of this size are likely to exceed limitations other than just the system's
+ * physical memory, so test cases are also needed to try to trigger "true" OOM.
+ */
 export const kMaxSafeMultipleOf8 = Number.MAX_SAFE_INTEGER - 7;
 
 /** Round `n` up to the next multiple of `alignment` (inclusive). */
@@ -34,9 +34,12 @@ export function clamp(n, { min, max }) {
 }
 
 /**
-   * @returns the Units of Last Place difference between the numbers a and b.
-   * If either `a` or `b` are not finite numbers, then diffULP() returns Infinity.
-   */
+ * @returns the (absolute) Units of Last Place difference between the float32 numbers a and b, taken
+ * as JS doubles. If either `a` or `b` are not finite numbers, then diffULP() returns Infinity.
+ *
+ * Subnormal numbers are skipped, so 0 is one ULP from the minimum normal number.
+ * Subnormal values are rounded to 0.
+ */
 export function diffULP(a, b) {
   if (!Number.isFinite(a) || !Number.isFinite(b)) {
     return Infinity;
@@ -67,33 +70,33 @@ export function diffULP(a, b) {
 }
 
 /**
-   * @returns 0 if |val| is a subnormal f32 number, otherwise returns |val|
-   */
+ * @returns 0 if |val| is a subnormal f32 number, otherwise returns |val|
+ */
 function flushSubnormalNumber(val) {
   const u32_val = new Uint32Array(new Float32Array([val]).buffer)[0];
   return (u32_val & 0x7f800000) === 0 ? 0 : val;
 }
 
 /**
-   * @returns 0 if |val| is a bit field for a subnormal f32 number, otherwise
-   * returns |val|
-   * |val| is assumed to be a u32 value representing a f32
-   */
+ * @returns 0 if |val| is a bit field for a subnormal f32 number, otherwise
+ * returns |val|
+ * |val| is assumed to be a u32 value representing a f32
+ */
 function flushSubnormalBits(val) {
   return (val & 0x7f800000) === 0 ? 0 : val;
 }
 
 /**
-   * @returns 0 if |val| is a subnormal f32 number, otherwise returns |val|
-   */
+ * @returns 0 if |val| is a subnormal f32 number, otherwise returns |val|
+ */
 function flushSubnormalScalar(val) {
   return isSubnormalScalar(val) ? f32(0) : val;
 }
 
 /**
-   * @returns true if |val| is a subnormal f32 number, otherwise returns false
-   * 0 is considered a non-subnormal number by this function.
-   */
+ * @returns true if |val| is a subnormal f32 number, otherwise returns false
+ * 0 is considered a non-subnormal number by this function.
+ */
 export function isSubnormalScalar(val) {
   if (val.type.kind !== 'f32') {
     return false;
@@ -108,15 +111,15 @@ export function isSubnormalScalar(val) {
 }
 
 /**
-   * @returns the next single precision floating point value after |val|,
-   * towards +inf if |dir| is true, otherwise towards -inf.
-   * If |flush| is true, all subnormal values will be flushed to 0,
-   * before processing.
-   * If |flush| is false, the next subnormal will be calculated when appropriate,
-   * and for -/+0 the nextAfter will be the closest subnormal in the correct
-   * direction.
-   * |val| must be expressible as a f32.
-   */
+ * @returns the next single precision floating point value after |val|,
+ * towards +inf if |dir| is true, otherwise towards -inf.
+ * If |flush| is true, all subnormal values will be flushed to 0,
+ * before processing.
+ * If |flush| is false, the next subnormal will be calculated when appropriate,
+ * and for -/+0 the nextAfter will be the closest subnormal in the correct
+ * direction.
+ * |val| must be expressible as a f32.
+ */
 export function nextAfter(val, dir = true, flush) {
   if (Number.isNaN(val)) {
     return f32Bits(kBit.f32.nan.positive.s);
@@ -167,18 +170,18 @@ export function nextAfter(val, dir = true, flush) {
 }
 
 /**
-   * @returns if a test value is correctly rounded to an target value. Only
-   * defined for |test_values| being a float32. target values may be any number.
-   *
-   * Correctly rounded means that if the target value is precisely expressible
-   * as a float32, then |test_value| === |target|.
-   * Otherwise |test_value| needs to be either the closest expressible number
-   * greater or less than |target|.
-   *
-   * By default internally tests with both subnormals being flushed to 0 and not
-   * being flushed, but |accept_to_zero| and |accept_no_flush| can be used to
-   * control that behaviour. At least one accept flag must be true.
-   */
+ * @returns if a test value is correctly rounded to an target value. Only
+ * defined for |test_values| being a float32. target values may be any number.
+ *
+ * Correctly rounded means that if the target value is precisely expressible
+ * as a float32, then |test_value| === |target|.
+ * Otherwise |test_value| needs to be either the closest expressible number
+ * greater or less than |target|.
+ *
+ * By default internally tests with both subnormals being flushed to 0 and not
+ * being flushed, but |accept_to_zero| and |accept_no_flush| can be used to
+ * control that behaviour. At least one accept flag must be true.
+ */
 export function correctlyRounded(
 test_value,
 target,
@@ -242,13 +245,13 @@ function correctlyRoundedImpl(test_value, target, flush) {
 }
 
 /**
-   * Calculates the linear interpolation between two values of a given fractional.
-   *
-   * If |t| is 0, |a| is returned, if |t| is 1, |b| is returned, otherwise
-   * interpolation/extrapolation equivalent to a + t(b - a) is performed.
-   *
-   * Numerical stable version is adapted from http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0811r2.html
-   */
+ * Calculates the linear interpolation between two values of a given fractional.
+ *
+ * If |t| is 0, |a| is returned, if |t| is 1, |b| is returned, otherwise
+ * interpolation/extrapolation equivalent to a + t(b - a) is performed.
+ *
+ * Numerical stable version is adapted from http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0811r2.html
+ */
 export function lerp(a, b, t) {
   if (!Number.isFinite(a) || !Number.isFinite(b)) {
     return Number.NaN;
@@ -266,45 +269,71 @@ export function lerp(a, b, t) {
   return t > 1.0 === b > a ? Math.max(b, x) : Math.min(b, x);
 }
 
-/** Unwrap Scalar params into numbers and check preconditions */
-function unwrapRangeParams(min, max, num_steps) {
-  assert(min.type.kind === 'f32', '|min| needs to be a f32');
-  assert(max.type.kind === 'f32', '|max| needs to be a f32');
-  assert(num_steps.type.kind === 'u32', '|num_steps| needs to be a u32');
+/** @returns a linear increasing range of numbers. */
+export function linearRange(a, b, num_steps) {
+  assert(num_steps > 0, '|num_steps| must be greater than 0');
 
-  const f32_min = min.value;
-  const f32_max = max.value;
-  const u32_num_steps = num_steps.value;
-
-  assert(f32_max >= f32_min, '|max| must be greater than |min|');
-  assert(u32_num_steps > 0, '|num_steps| must be greater than 0');
-
-  return { f32_min, f32_max, u32_num_steps };
+  return Array.from(Array(num_steps).keys()).map((i) => lerp(a, b, i / (num_steps - 1)));
 }
 
-/** @returns a linear increasing range of numbers. */
-export function linearRange(min, max, num_steps) {
-  const { f32_min, f32_max, u32_num_steps } = unwrapRangeParams(min, max, num_steps);
+/**
+ * @returns a non-linear increasing range of numbers, with a bias towards the beginning.
+ *
+ * Generates a linear range on [0,1] with |num_steps|, then squares all the values to make the curve be quadratic,
+ * thus biasing towards 0, but remaining on the [0, 1] range.
+ * This biased range is then scaled to the desired range using lerp.
+ * Different curves could be generated by changing c, where greater values of c will bias more towards 0.
+ * */
+export function biasedRange(a, b, num_steps) {
+  const c = 2;
+  assert(num_steps > 0, '|num_steps| must be greater than 0');
 
-  return Array.from(Array(u32_num_steps).keys()).map((i) =>
-  lerp(f32_min, f32_max, i / (u32_num_steps - 1)));
+  return Array.from(Array(num_steps).keys()).map((i) =>
+  lerp(a, b, Math.pow(lerp(0, 1, i / (num_steps - 1)), c)));
 
 }
 
 /**
-   * @returns a non-linear increasing range of numbers, with a bias towards min.
-   *
-   * Generates a linear range on [0,1] with |num_steps|, then squares all the values to make the curve be quadratic,
-   * thus biasing towards 0, but remaining on the [0, 1] range.
-   * This biased range is then scaled to the desired range using lerp.
-   * Different curves could be generated by changing c, where greater values of c will bias more towards 0.
-   * */
-export function biasedRange(min, max, num_steps) {
-  const c = 2;
-  const { f32_min, f32_max, u32_num_steps } = unwrapRangeParams(min, max, num_steps);
+ * @returns the result matrix in Array<Array<number>> type.
+ *
+ * Matrix multiplication. A is m x n and B is n x p. Returns
+ * m x p result.
+ */
+// A is m x n. B is n x p. product is m x p.
+export function multiplyMatrices(
+A,
+B)
+{
+  assert(A.length > 0 && B.length > 0 && B[0].length > 0 && A[0].length === B.length);
+  const product = new Array(A.length);
+  for (let i = 0; i < product.length; ++i) {
+    product[i] = new Array(B[0].length).fill(0);
+  }
 
-  return Array.from(Array(u32_num_steps).keys()).map((i) =>
-  lerp(f32_min, f32_max, Math.pow(lerp(0, 1, i / (u32_num_steps - 1)), c)));
+  for (let m = 0; m < A.length; ++m) {
+    for (let p = 0; p < B[0].length; ++p) {
+      for (let n = 0; n < B.length; ++n) {
+        product[m][p] += A[m][n] * B[n][p];
+      }
+    }
+  }
 
+  return product;
+}
+
+/** Sign-extend the `bits`-bit number `n` to a 32-bit signed integer. */
+export function signExtend(n, bits) {
+  const shift = 32 - bits;
+  return n << shift >> shift;
+}
+
+/** @returns the closest 32-bit floating point value to the input */
+export function quantizeToF32(num) {
+  return f32(num).value;
+}
+
+/** @returns the closest 32-bit signed integer value to the input */
+export function quantizeToI32(num) {
+  return i32(num).value;
 }
 //# sourceMappingURL=math.js.map

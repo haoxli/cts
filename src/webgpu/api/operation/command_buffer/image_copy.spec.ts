@@ -17,7 +17,7 @@ export const description = `writeTexture + copyBufferToTexture + copyTextureToBu
  as [number, number, number] instead of GPUExtent3DDict.
 
 * copy_various_mip_levels: test that copying various mip levels works for all formats. Also covers special code paths:
-  - the physical size of the subresouce is not equal to the logical size
+  - the physical size of the subresource is not equal to the logical size
   - bufferSize - offset < bytesPerImage * copyExtent.depthOrArrayLayers and copyExtent needs to be clamped
 
 * copy_with_no_image_or_slice_padding_and_undefined_values: test that when copying a single row we can set any bytesPerRow value and when copying a single\
@@ -747,12 +747,12 @@ class ImageCopyTest extends GPUTest {
     const expectedData = new Uint8Array(outputBufferSize);
     for (let z = 0; z < copySize[2]; ++z) {
       const baseExpectedOffset = offset + z * bytesPerRow * rowsPerImage;
-      const baseInitialiDataOffset = z * copySize[0] * copySize[1];
+      const baseInitialDataOffset = z * copySize[0] * copySize[1];
       for (let y = 0; y < copySize[1]; ++y) {
         memcpy(
           {
             src: initialData,
-            start: baseInitialiDataOffset + y * copySize[0],
+            start: baseInitialDataOffset + y * copySize[0],
             length: copySize[0],
           },
           { dst: expectedData, start: baseExpectedOffset + y * bytesPerRow }
@@ -905,26 +905,33 @@ class ImageCopyTest extends GPUTest {
       ++stencilTextureLayer
     ) {
       const encoder = this.device.createCommandEncoder();
+      const depthStencilAttachment: GPURenderPassDepthStencilAttachment = {
+        view: stencilTexture.createView({
+          baseMipLevel: stencilTextureMipLevel,
+          mipLevelCount: 1,
+          baseArrayLayer: stencilTextureLayer,
+          arrayLayerCount: 1,
+        }),
+      };
+      if (kTextureFormatInfo[stencilTextureFormat].depth) {
+        depthStencilAttachment.depthClearValue = 0;
+        depthStencilAttachment.depthLoadOp = 'clear';
+        depthStencilAttachment.depthStoreOp = 'store';
+      }
+      if (kTextureFormatInfo[stencilTextureFormat].stencil) {
+        depthStencilAttachment.stencilLoadOp = 'load';
+        depthStencilAttachment.stencilStoreOp = 'store';
+      }
       const renderPass = encoder.beginRenderPass({
         colorAttachments: [
           {
             view: outputTexture.createView(),
-            loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+            clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+            loadOp: 'clear',
             storeOp: 'store',
           },
         ],
-        depthStencilAttachment: {
-          view: stencilTexture.createView({
-            baseMipLevel: stencilTextureMipLevel,
-            mipLevelCount: 1,
-            baseArrayLayer: stencilTextureLayer,
-            arrayLayerCount: 1,
-          }),
-          stencilLoadValue: 'load',
-          stencilStoreOp: 'store',
-          depthLoadValue: 0,
-          depthStoreOp: 'store',
-        },
+        depthStencilAttachment,
       });
 
       for (let stencilBitIndex = 0; stencilBitIndex < stencilBitCount; ++stencilBitIndex) {
@@ -938,7 +945,7 @@ class ImageCopyTest extends GPUTest {
         renderPass.setBindGroup(0, bindGroup, [stencilBitIndex * kMinDynamicBufferOffsetAlignment]);
         renderPass.draw(6);
       }
-      renderPass.endPass();
+      renderPass.end();
 
       // Check outputTexture by copying the content of outputTexture into outputStagingBuffer and
       // checking all the data in outputStagingBuffer.
@@ -1045,20 +1052,26 @@ class ImageCopyTest extends GPUTest {
 
     const encoder = this.device.createCommandEncoder();
     for (let z = 0; z < copySize[2]; ++z) {
+      const depthStencilAttachment: GPURenderPassDepthStencilAttachment = {
+        view: depthTexture.createView({
+          baseArrayLayer: z,
+          arrayLayerCount: 1,
+          baseMipLevel: copyMipLevel,
+          mipLevelCount: 1,
+        }),
+      };
+      if (kTextureFormatInfo[depthFormat].depth) {
+        depthStencilAttachment.depthClearValue = 0.0;
+        depthStencilAttachment.depthLoadOp = 'clear';
+        depthStencilAttachment.depthStoreOp = 'store';
+      }
+      if (kTextureFormatInfo[depthFormat].stencil) {
+        depthStencilAttachment.stencilLoadOp = 'load';
+        depthStencilAttachment.stencilStoreOp = 'store';
+      }
       const renderPass = encoder.beginRenderPass({
         colorAttachments: [],
-        depthStencilAttachment: {
-          view: depthTexture.createView({
-            baseArrayLayer: z,
-            arrayLayerCount: 1,
-            baseMipLevel: copyMipLevel,
-            mipLevelCount: 1,
-          }),
-          depthLoadValue: 0.0,
-          depthStoreOp: 'store',
-          stencilLoadValue: 'load',
-          stencilStoreOp: 'store',
-        },
+        depthStencilAttachment,
       });
       renderPass.setPipeline(renderPipeline);
 
@@ -1078,7 +1091,7 @@ class ImageCopyTest extends GPUTest {
       });
       renderPass.setBindGroup(0, bindGroup);
       renderPass.draw(6);
-      renderPass.endPass();
+      renderPass.end();
     }
 
     this.queue.submit([encoder.finish()]);
@@ -1156,12 +1169,12 @@ class ImageCopyTest extends GPUTest {
     const expectedData = new Uint8Array(destinationBufferSize);
     for (let z = 0; z < copySize[2]; ++z) {
       const baseExpectedOffset = z * bytesPerRow * rowsPerImage + offset;
-      const baseInitialiDataOffset = z * copySize[0] * copySize[1];
+      const baseInitialDataOffset = z * copySize[0] * copySize[1];
       for (let y = 0; y < copySize[1]; ++y) {
         memcpy(
           {
             src: initialData,
-            start: baseInitialiDataOffset + y * copySize[0],
+            start: baseInitialDataOffset + y * copySize[0],
             length: copySize[0],
           },
           { dst: expectedData, start: baseExpectedOffset + y * bytesPerRow }

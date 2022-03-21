@@ -29,6 +29,7 @@ setBaseResourcePath('../out/resources');
 
 const worker = optionEnabled('worker') ? new TestWorker(debug) : undefined;
 
+const autoCloseOnPass = document.getElementById('autoCloseOnPass');
 const resultsVis = document.getElementById('resultsVis');
 
 
@@ -87,7 +88,7 @@ function makeTreeNodeHTML(tree, parentLevel) {
     subtree = makeCaseHTML(tree);
   }
 
-  const generateMyHTML = parentElement => {
+  const generateMyHTML = (parentElement) => {
     const div = $('<div>').appendTo(parentElement)[0];
     return subtree.generateSubtreeHTML(div);
   };
@@ -139,11 +140,11 @@ function makeCaseHTML(t) {
     return result;
   };
 
-  const generateSubtreeHTML = div => {
+  const generateSubtreeHTML = (div) => {
     div.classList.add('testcase');
 
     const caselogs = $('<div>').addClass('testcaselogs').hide();
-    const [casehead, setChecked] = makeTreeNodeHeaderHTML(t, runSubtree, 2, checked => {
+    const [casehead, setChecked] = makeTreeNodeHeaderHTML(t, runSubtree, 2, (checked) => {
       checked ? caselogs.show() : caselogs.hide();
     });
     const casetime = $('<div>').addClass('testcasetime').html('ms').appendTo(casehead);
@@ -206,13 +207,13 @@ function makeSubtreeHTML(n, parentLevel) {
     return subtreeResult;
   };
 
-  const generateMyHTML = div => {
+  const generateMyHTML = (div) => {
     const subtreeHTML = $('<div>').addClass('subtreechildren');
     const generateSubtree = memoize(() => generateSubtreeHTML(subtreeHTML[0]));
 
     // Hide subtree - it's not generated yet.
     subtreeHTML.hide();
-    const [header, setChecked] = makeTreeNodeHeaderHTML(n, runMySubtree, parentLevel, checked => {
+    const [header, setChecked] = makeTreeNodeHeaderHTML(n, runMySubtree, parentLevel, (checked) => {
       if (checked) {
         // Make sure the subtree is generated and then show it.
         generateSubtree();
@@ -240,6 +241,9 @@ function makeSubtreeHTML(n, parentLevel) {
         status += 'fail';
       }
       div.setAttribute('data-status', status);
+      if (autoCloseOnPass.checked && status === 'pass') {
+        div.firstElementChild.removeAttribute('open');
+      }
     };
 
     updateRenderedResult();
@@ -258,7 +262,7 @@ function makeSubtreeChildrenHTML(
 children,
 parentLevel)
 {
-  const childFns = Array.from(children, subtree => makeTreeNodeHTML(subtree, parentLevel));
+  const childFns = Array.from(children, (subtree) => makeTreeNodeHTML(subtree, parentLevel));
 
   const runMySubtree = async () => {
     const results = [];
@@ -267,7 +271,7 @@ parentLevel)
     }
     return mergeSubtreeResults(...results);
   };
-  const generateMyHTML = div => {
+  const generateMyHTML = (div) => {
     const setChildrenChecked = Array.from(childFns, ({ generateSubtreeHTML }) =>
     generateSubtreeHTML(div));
 
@@ -396,7 +400,7 @@ let lastQueryLevelToExpand = 2;
     ['debug', debug ? '1' : '0']]).
     toString() +
     '&' +
-    qs.map(q => 'q=' + q).join('&');
+    qs.map((q) => 'q=' + q).join('&');
     window.history.replaceState(null, '', url);
   }
 

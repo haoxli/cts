@@ -1,6 +1,6 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ export const description = `copyTexturetoTexture operation tests`;
+ **/ export const description = `copyTextureToTexture operation tests`;
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert, memcpy } from '../../../../common/util/util.js';
 import {
@@ -249,7 +249,7 @@ class F extends GPUTest {
       }
     }
 
-    // Verify the content of the whole subresouce of dstTexture at dstCopyLevel (in dstBuffer) is expected.
+    // Verify the content of the whole subresource of dstTexture at dstCopyLevel (in dstBuffer) is expected.
     this.expectGPUBufferValuesEqual(dstBuffer, expectedUint8DataWithPadding);
   }
 
@@ -447,9 +447,10 @@ class F extends GPUTest {
             mipLevelCount: 1,
           }),
 
-          depthLoadValue: 0.0,
+          depthClearValue: 0.0,
+          depthLoadOp: 'clear',
           depthStoreOp: 'store',
-          stencilLoadValue: 'load',
+          stencilLoadOp: 'load',
           stencilStoreOp: 'store',
         },
       });
@@ -457,7 +458,7 @@ class F extends GPUTest {
       renderPass.setBindGroup(0, bindGroup, [srcCopyLayer * kMinDynamicBufferOffsetAlignment]);
       renderPass.setPipeline(renderPipeline);
       renderPass.draw(6);
-      renderPass.endPass();
+      renderPass.end();
     }
     this.queue.submit([encoder.finish()]);
   }
@@ -470,7 +471,7 @@ class F extends GPUTest {
     copySize
   ) {
     // Prepare a renderPipeline with depthCompareFunction == 'equal' and depthWriteEnabled == false
-    // for the comparations of the depth attachment.
+    // for the comparison of the depth attachment.
     const bindGroupLayout = this.GetBindGroupLayoutForT2TCopyWithDepthTests();
     const renderPipeline = this.GetRenderPipelineForT2TCopyWithDepthTests(bindGroupLayout, true, {
       format: depthFormat,
@@ -498,7 +499,8 @@ class F extends GPUTest {
               arrayLayerCount: 1,
             }),
 
-            loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+            clearValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+            loadOp: 'clear',
             storeOp: 'store',
           },
         ],
@@ -511,9 +513,9 @@ class F extends GPUTest {
             mipLevelCount: 1,
           }),
 
-          depthLoadValue: 'load',
+          depthLoadOp: 'load',
           depthStoreOp: 'store',
-          stencilLoadValue: 'load',
+          stencilLoadOp: 'load',
           stencilStoreOp: 'store',
         },
       });
@@ -521,7 +523,7 @@ class F extends GPUTest {
       renderPass.setBindGroup(0, bindGroup, [dstCopyLayer * kMinDynamicBufferOffsetAlignment]);
       renderPass.setPipeline(renderPipeline);
       renderPass.draw(6);
-      renderPass.endPass();
+      renderPass.end();
     }
     this.queue.submit([encoder.finish()]);
 
@@ -1122,7 +1124,7 @@ g.test('copy_depth_stencil')
   For all the texture formats with depth aspect:
   - Initialize the depth aspect of the source texture with a draw call
   - Copy the depth aspect from the source texture into the destination texture
-  - Validate the content in the destination texture with the depth comparation function 'equal'
+  - Validate the content in the destination texture with the depth comparison function 'equal'
   `
   )
   .params(u =>
@@ -1316,7 +1318,8 @@ g.test('copy_multisampled_color')
       colorAttachments: [
         {
           view: sourceTexture.createView(),
-          loadValue: [1.0, 0.0, 0.0, 1.0],
+          clearValue: [1.0, 0.0, 0.0, 1.0],
+          loadOp: 'clear',
           storeOp: 'store',
         },
       ],
@@ -1324,7 +1327,7 @@ g.test('copy_multisampled_color')
 
     renderPassForInit.setPipeline(renderPipelineForInit);
     renderPassForInit.draw(3);
-    renderPassForInit.endPass();
+    renderPassForInit.end();
     t.queue.submit([initEncoder.finish()]);
 
     // Do the texture-to-texture copy
@@ -1418,7 +1421,8 @@ g.test('copy_multisampled_color')
       colorAttachments: [
         {
           view: expectedOutputTexture.createView(),
-          loadValue: [1.0, 0.0, 0.0, 1.0],
+          clearValue: [1.0, 0.0, 0.0, 1.0],
+          loadOp: 'clear',
           storeOp: 'store',
         },
       ],
@@ -1427,7 +1431,7 @@ g.test('copy_multisampled_color')
     renderPassForValidation.setPipeline(renderPipelineForValidation);
     renderPassForValidation.setBindGroup(0, bindGroup);
     renderPassForValidation.draw(6);
-    renderPassForValidation.endPass();
+    renderPassForValidation.end();
     t.queue.submit([validationEncoder.finish()]);
 
     t.expectSingleColor(expectedOutputTexture, 'rgba8unorm', {
@@ -1443,7 +1447,7 @@ g.test('copy_multisampled_depth')
 
   - Initialize the source texture with a triangle in a render pass.
   - Copy from the source texture into the destination texture with CopyTextureToTexture().
-  - Validate the content in the destination texture with the depth comparation function 'equal'.
+  - Validate the content in the destination texture with the depth comparison function 'equal'.
   - Note that in current WebGPU SPEC the mipmap level count and array layer count of a multisampled
     texture can only be 1.
   `
@@ -1505,16 +1509,15 @@ g.test('copy_multisampled_depth')
       colorAttachments: [],
       depthStencilAttachment: {
         view: sourceTexture.createView(),
-        depthLoadValue: 0.0,
+        depthClearValue: 0.0,
+        depthLoadOp: 'clear',
         depthStoreOp: 'store',
-        stencilLoadValue: 0,
-        stencilStoreOp: 'store',
       },
     });
 
     renderPassForInit.setPipeline(renderPipelineForInit);
     renderPassForInit.draw(6);
-    renderPassForInit.endPass();
+    renderPassForInit.end();
     t.queue.submit([encoderForInit.finish()]);
 
     // Do the texture-to-texture copy
@@ -1580,7 +1583,8 @@ g.test('copy_multisampled_depth')
       colorAttachments: [
         {
           view: multisampledColorTexture.createView(),
-          loadValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+          clearValue: { r: 1.0, g: 0.0, b: 0.0, a: 1.0 },
+          loadOp: 'clear',
           storeOp: 'discard',
           resolveTarget: colorTextureAsResolveTarget.createView(),
         },
@@ -1588,16 +1592,14 @@ g.test('copy_multisampled_depth')
 
       depthStencilAttachment: {
         view: destinationTexture.createView(),
-        depthLoadValue: 'load',
+        depthLoadOp: 'load',
         depthStoreOp: 'store',
-        stencilLoadValue: 0,
-        stencilStoreOp: 'store',
       },
     });
 
     renderPassForVerify.setPipeline(renderPipelineForVerify);
     renderPassForVerify.draw(6);
-    renderPassForVerify.endPass();
+    renderPassForVerify.end();
     t.queue.submit([encoderForVerify.finish()]);
 
     t.expectSingleColor(colorTextureAsResolveTarget, kColorFormat, {

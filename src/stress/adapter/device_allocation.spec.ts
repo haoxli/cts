@@ -80,7 +80,7 @@ class DeviceAllocationTests extends Fixture {
           DefaultLimits.maxComputeWorkgroupSizeX,
           DefaultLimits.maxComputeWorkgroupSizeY
         );
-        pass.endPass();
+        pass.end();
         commands.push(encoder.finish());
       }
     }
@@ -170,7 +170,7 @@ class DeviceAllocationTests extends Fixture {
           colorAttachments: [
             {
               view: texture.createView(),
-              loadValue: 'load',
+              loadOp: 'load',
               storeOp: 'store',
             },
           ],
@@ -178,7 +178,7 @@ class DeviceAllocationTests extends Fixture {
         pass.setPipeline(pipeline);
         pass.setBindGroup(0, bindgroup);
         pass.draw(kSize * kSize);
-        pass.endPass();
+        pass.end();
         commands.push(encoder.finish());
       }
     }
@@ -223,7 +223,7 @@ g.test('coexisting')
     const adapter = await getGPU().requestAdapter(kAdapterTypeOptions[adapterType]);
     assert(adapter !== null, 'Failed to get adapter.');
 
-    // Based on Vulkan comformance test requirement to be able to create multiple devices.
+    // Based on Vulkan conformance test requirement to be able to create multiple devices.
     const kNumDevices = 5;
 
     const devices = [];
@@ -284,7 +284,7 @@ implicitly keep the device in scope.`
         t.expect((await adapter.requestDevice()) !== null, 'unexpected null device');
       })();
       if (i % 10 === 0) {
-        // We need to occassionally wait for GC to clear out stale devices.
+        // We need to occasionally wait for GC to clear out stale devices.
         await attemptGarbageCollection();
       }
     }

@@ -835,6 +835,14 @@ export const listing = [
       "api",
       "validation",
       "encoding",
+      "createRenderBundleEncoder"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
       "encoder_state"
     ]
   },
@@ -967,7 +975,7 @@ export const listing = [
       "validation",
       "queue"
     ],
-    "readme": "Tests for validation that occurs inside queued operations\n(submit, writeBuffer, writeTexture, copyImageBitmapToTexture).\n\nBufferMapStatesToTest = {\n  mapped -> unmapped,\n  mapped at creation -> unmapped,\n  mapping pending -> unmapped,\n  pending -> mapped (await map),\n  unmapped -> pending (noawait map),\n  created mapped-at-creation,\n}\n\nNote writeTexture is tested in image_copy."
+    "readme": "Tests for validation that occurs inside queued operations\n(submit, writeBuffer, writeTexture, copyExternalImageToTexture).\n\nBufferMapStatesToTest = {\n  mapped -> unmapped,\n  mapped at creation -> unmapped,\n  mapping pending -> unmapped,\n  pending -> mapped (await map),\n  unmapped -> pending (noawait map),\n  created mapped-at-creation,\n}\n\nNote writeTexture is tested in image_copy."
   },
   {
     "file": [
@@ -1002,15 +1010,6 @@ export const listing = [
       "queue",
       "destroyed",
       "query_set"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "queue",
-      "destroyed",
-      "texture"
     ]
   },
   {
@@ -1155,6 +1154,26 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "binary",
+      "bitwise"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "binary",
+      "f32_arithmetic"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "builtin",
       "abs"
     ]
@@ -1163,6 +1182,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "all"
     ]
@@ -1171,6 +1192,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "any"
     ]
@@ -1179,6 +1202,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "atan"
     ]
@@ -1187,6 +1212,18 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
+      "builtin",
+      "atan2"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "builtin",
       "ceil"
     ]
@@ -1195,6 +1232,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "clamp"
     ]
@@ -1203,6 +1242,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "cos"
     ]
@@ -1211,6 +1252,68 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
+      "builtin",
+      "countLeadingZeros"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "countOneBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "countTrailingZeros"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "extractBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "firstLeadingBit"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "firstTrailingBit"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "builtin",
       "float_built_functions"
     ]
@@ -1219,6 +1322,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "floor"
     ]
@@ -1227,6 +1332,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "fract"
     ]
@@ -1235,14 +1342,18 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
-      "integer_built_in_functions"
+      "insertBits"
     ]
   },
   {
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "inversesqrt"
     ]
@@ -1251,6 +1362,38 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
+      "builtin",
+      "ldexp"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "log"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "log2"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "builtin",
       "logical_built_in_functions"
     ]
@@ -1259,6 +1402,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "max"
     ]
@@ -1267,6 +1412,8 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
       "builtin",
       "min"
     ]
@@ -1275,6 +1422,18 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
+      "builtin",
+      "reverseBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "builtin",
       "select"
     ]
@@ -1283,8 +1442,29 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "expression",
+      "call",
+      "builtin",
+      "sin"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
       "builtin",
       "value_testing_built_in_functions"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
+      "f32_arithmetic"
     ]
   },
   {
@@ -1535,6 +1715,13 @@ export const listing = [
       "web_platform",
       "reftests"
     ],
-    "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO(#915): Test all possible output texture formats (currently only needs rgba16float).\nTODO(#916): Test all possible ways to write into those formats (currently only testing B2T copy).\nTODO(#917): Test compositingAlphaMode options\nTODO(#918): Test all possible color spaces (once we have more than 1)\n\nTODO(#921): Why is there sometimes a difference of 1 (e.g. 3f vs 40) in canvas_size_different_with_back_buffer_size?\nAnd why does chromium's image_diff show diffs on other pixels that don't seem to have diffs?"
+    "readme": "Reference tests (reftests) for WebGPU canvas presentation.\n\nThese render some contents to a canvas using WebGPU, and WPT compares the rendering result with\nthe \"reference\" versions (in `ref/`) which render with 2D canvas.\n\nThis tests things like:\n- The canvas has the correct orientation.\n- The canvas renders with the correct transfer function.\n- The canvas blends and interpolates in the correct color encoding.\n\nTODO(#915): canvas_complex: test rgba8unorm and rgba16float\nTODO(#916): canvas_complex: Test all ways to write into textures (currently only testing copy methods).\nTODO(#918): Test all possible color spaces (once we have more than 1)\n\nTODO(#921): Why is there sometimes a difference of 1 (e.g. 3f vs 40) in canvas_size_different_with_back_buffer_size?\nAnd why does chromium's image_diff show diffs on other pixels that don't seem to have diffs?"
+  },
+  {
+    "file": [
+      "web_platform",
+      "worker",
+      "worker"
+    ]
   }
 ];

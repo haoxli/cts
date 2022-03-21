@@ -80,10 +80,12 @@ async function initCanvasContent(t, format, canvasType) {
 
   const clearOnePixel = (origin, color) => {
     const pass = encoder.beginRenderPass({
-      colorAttachments: [{ view: tempTextureView, loadValue: color, storeOp: 'store' }],
+      colorAttachments: [
+        { view: tempTextureView, clearValue: color, loadOp: 'clear', storeOp: 'store' },
+      ],
     });
 
-    pass.endPass();
+    pass.end();
     encoder.copyTextureToTexture(
       { texture: tempTexture },
       { texture: canvasTexture, origin },
@@ -146,10 +148,10 @@ g.test('onscreenCanvas,snapshot')
         break;
       }
       case 'toBlob': {
-        const blobFromCanvs = new Promise(resolve => {
+        const blobFromCanvas = new Promise(resolve => {
           canvas.toBlob(blob => resolve(blob));
         });
-        const blob = await blobFromCanvs;
+        const blob = await blobFromCanvas;
         const url = URL.createObjectURL(blob);
         const img = new Image(canvas.width, canvas.height);
         img.src = url;

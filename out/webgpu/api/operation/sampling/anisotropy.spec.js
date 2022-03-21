@@ -8,7 +8,7 @@ Note that anisotropic filtering is never guaranteed to occur, but we might be ab
 things. If there are no guarantees we can issue warnings instead of failures. Ideas:
   - No *more* than the provided maxAnisotropy samples are used, by testing how many unique
     sample values come out of the sample operation.
-  - Check anisotropy is done in the correct direciton (by having a 2D gradient and checking we get
+  - Check anisotropy is done in the correct direction (by having a 2D gradient and checking we get
     more of the color in the correct direction).
 `;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert } from '../../../../common/util/util.js';
@@ -143,14 +143,15 @@ class SamplerAnisotropicFilteringSlantedPlaneTest extends GPUTest {
       {
         view: colorAttachmentView,
         storeOp: 'store',
-        loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 } }] });
+        clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+        loadOp: 'clear' }] });
 
 
 
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(6);
-    pass.endPass();
+    pass.end();
     this.device.queue.submit([encoder.finish()]);
 
     return colorAttachment;
@@ -169,7 +170,7 @@ desc(
     same as the supported upper limit say 16.
     A similar webgl demo is at https://jsfiddle.net/yqnbez24`).
 
-fn(async t => {
+fn(async (t) => {
   // init texture with only a top level mipmap
   const textureSize = 32;
   const texture = t.device.createTexture({
@@ -281,7 +282,7 @@ paramsSimple([
   _generateWarningOnly: true }]).
 
 
-fn(async t => {
+fn(async (t) => {
   const texture = t.createTexture2DWithMipmaps(colors);
 
   const textureView = texture.createView();

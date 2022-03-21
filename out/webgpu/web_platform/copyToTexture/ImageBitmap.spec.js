@@ -1,7 +1,7 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `
-copyImageBitmapToTexture from ImageBitmaps created from various sources.
+copyExternalImageToTexture from ImageBitmaps created from various sources.
 
 TODO: Test ImageBitmap generated from all possible ImageBitmapSource, relevant ImageBitmapOptions
     (https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#images-2)
@@ -17,7 +17,7 @@ import {
 kTextureFormatInfo,
 kValidTextureFormatsForCopyE2T } from
 '../../capability_info.js';
-import { CopyToTextureUtils, isFp16Format } from '../../util/copy_to_texture.js';
+import { CopyToTextureUtils } from '../../util/copy_to_texture.js';
 import { kTexelRepresentationInfo } from '../../util/texture/texel_data.js';var
 
 Color;
@@ -156,7 +156,7 @@ beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     width,
     height,
@@ -227,7 +227,7 @@ fn(async t => {
   { width: imageBitmap.width, height: imageBitmap.height, depthOrArrayLayers: 1 },
   dstBytesPerPixel,
   expectedPixels,
-  isFp16Format(dstColorFormat));
+  dstColorFormat);
 
 });
 
@@ -272,7 +272,7 @@ beginSubcases().
 combine('width', [1, 2, 4, 15, 255, 256]).
 combine('height', [1, 2, 4, 15, 255, 256])).
 
-fn(async t => {
+fn(async (t) => {
   const {
     width,
     height,
@@ -319,6 +319,8 @@ fn(async t => {
   // Use putImageData to prevent color space conversion.
   imageCanvasContext.putImageData(imageData, 0, 0);
 
+  // MAINTENANCE_TODO: Workaround for @types/offscreencanvas missing an overload of
+  // `createImageBitmap` that takes `ImageBitmapOptions`.
   const imageBitmap = await createImageBitmap(imageCanvas, {
     premultiplyAlpha: 'premultiply',
     imageOrientation: orientation });
@@ -368,7 +370,7 @@ fn(async t => {
   { width: imageBitmap.width, height: imageBitmap.height, depthOrArrayLayers: 1 },
   dstBytesPerPixel,
   expectedPixels,
-  isFp16Format(dstColorFormat));
+  dstColorFormat);
 
 });
 //# sourceMappingURL=ImageBitmap.spec.js.map

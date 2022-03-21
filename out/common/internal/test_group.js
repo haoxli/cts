@@ -404,7 +404,7 @@ class RunCaseSpecific {
   selfQuery,
   expectations)
   {
-    const getExpectedStatus = selfQueryWithSubParams => {
+    const getExpectedStatus = (selfQueryWithSubParams) => {
       let didSeeFail = false;
       for (const exp of expectations) {
         const ordering = compareQueries(exp.query, selfQueryWithSubParams);
@@ -413,7 +413,7 @@ class RunCaseSpecific {
         }
 
         switch (exp.expectation) {
-          // Skip takes precendence. If there is any expectation indicating a skip,
+          // Skip takes precedence. If there is any expectation indicating a skip,
           // signal it immediately.
           case 'skip':
             return 'skip';

@@ -14,7 +14,7 @@ import {
 import { CommandBufferMaker } from './util/command_buffer_maker.js';
 import { DevicePool, TestOOMedShouldAttemptGC } from './util/device_pool.js';
 import { align, roundDown } from './util/math.js';
-import { getTextureCopyLayout } from './util/texture/layout.js';
+import { getTextureCopyLayout, getTextureSubCopyLayout } from './util/texture/layout.js';
 import { kTexelRepresentationInfo } from './util/texture/texel_data.js';
 
 const devicePool = new DevicePool();
@@ -112,46 +112,50 @@ export class GPUTest extends Fixture {
     await super.finalize();
 
     if (this.provider) {
-      let threw;
+      let threw = false;
+      let thrownValue;
       {
         const provider = this.provider;
         this.provider = undefined;
         try {
           await devicePool.release(provider);
         } catch (ex) {
-          threw = ex;
+          threw = true;
+          thrownValue = ex;
         }
       }
       // The GPUDevice and GPUQueue should now have no outstanding references.
 
       if (threw) {
-        if (threw instanceof TestOOMedShouldAttemptGC) {
+        if (thrownValue instanceof TestOOMedShouldAttemptGC) {
           // Try to clean up, in case there are stray GPU resources in need of collection.
           await attemptGarbageCollection();
         }
-        throw threw;
+        throw thrownValue;
       }
     }
 
     if (this.mismatchedProvider) {
       // MAINTENANCE_TODO(kainino0x): Deduplicate this with code in GPUTest.finalize
-      let threw;
+      let threw = false;
+      let thrownValue;
       {
         const provider = this.mismatchedProvider;
         this.mismatchedProvider = undefined;
         try {
           await mismatchedDevicePool.release(provider);
         } catch (ex) {
-          threw = ex;
+          threw = true;
+          thrownValue = ex;
         }
       }
 
       if (threw) {
-        if (threw instanceof TestOOMedShouldAttemptGC) {
+        if (thrownValue instanceof TestOOMedShouldAttemptGC) {
           // Try to clean up, in case there are stray GPU resources in need of collection.
           await attemptGarbageCollection();
         }
-        throw threw;
+        throw thrownValue;
       }
     }
   }
@@ -454,7 +458,7 @@ export class GPUTest extends Fixture {
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.dispatch(numRows);
-    pass.endPass();
+    pass.end();
     this.device.queue.submit([commandEncoder.finish()]);
 
     const expectedResults = new Array(numRows).fill(1);
@@ -503,13 +507,7 @@ export class GPUTest extends Fixture {
 
   /** Return a GPUBuffer that data are going to be written into. */
   readSinglePixelFrom2DTexture(src, format, { x, y }, { slice = 0, layout }) {
-    const { byteLength, bytesPerRow, rowsPerImage, mipSize } = getTextureCopyLayout(
-      format,
-      '2d',
-      [1, 1, 1],
-      layout
-    );
-
+    const { byteLength, bytesPerRow, rowsPerImage } = getTextureSubCopyLayout(format, [1, 1]);
     const buffer = this.device.createBuffer({
       size: byteLength,
       usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
@@ -521,7 +519,7 @@ export class GPUTest extends Fixture {
     commandEncoder.copyTextureToBuffer(
       { texture: src, mipLevel: layout?.mipLevel, origin: { x, y, z: slice } },
       { buffer, bytesPerRow, rowsPerImage },
-      mipSize
+      [1, 1]
     );
 
     this.queue.submit([commandEncoder.finish()]);
@@ -532,8 +530,8 @@ export class GPUTest extends Fixture {
   /**
    * Expect a single pixel of a 2D texture to have a particular byte representation.
    *
-   * MAINENANCE_TODO: Add check for values of depth/stencil, probably through sampling of shader
-   * MAINENANCE_TODO: Can refactor this and expectSingleColor to use a similar base expect
+   * MAINTENANCE_TODO: Add check for values of depth/stencil, probably through sampling of shader
+   * MAINTENANCE_TODO: Can refactor this and expectSingleColor to use a similar base expect
    */
   expectSinglePixelIn2DTexture(
     src,
@@ -806,7 +804,7 @@ export class GPUTest extends Fixture {
         const encoder = commandEncoder.beginComputePass();
 
         return new CommandBufferMaker(this, encoder, shouldSucceed => {
-          encoder.endPass();
+          encoder.end();
           return this.expectGPUError('validation', () => commandEncoder.finish(), !shouldSucceed);
         });
       }
@@ -821,30 +819,47 @@ export class GPUTest extends Fixture {
             })
           ).createView();
 
+        let depthStencilAttachment = undefined;
+        if (fullAttachmentInfo.depthStencilFormat !== undefined) {
+          depthStencilAttachment = {
+            view: makeAttachmentView(fullAttachmentInfo.depthStencilFormat),
+            depthReadOnly: fullAttachmentInfo.depthReadOnly,
+            stencilReadOnly: fullAttachmentInfo.stencilReadOnly,
+          };
+
+          if (
+            kTextureFormatInfo[fullAttachmentInfo.depthStencilFormat].depth &&
+            !fullAttachmentInfo.depthReadOnly
+          ) {
+            depthStencilAttachment.depthClearValue = 0;
+            depthStencilAttachment.depthLoadOp = 'clear';
+            depthStencilAttachment.depthStoreOp = 'discard';
+          }
+          if (
+            kTextureFormatInfo[fullAttachmentInfo.depthStencilFormat].stencil &&
+            !fullAttachmentInfo.stencilReadOnly
+          ) {
+            depthStencilAttachment.stencilClearValue = 1;
+            depthStencilAttachment.stencilLoadOp = 'clear';
+            depthStencilAttachment.stencilStoreOp = 'discard';
+          }
+        }
         const passDesc = {
           colorAttachments: Array.from(fullAttachmentInfo.colorFormats, format => ({
             view: makeAttachmentView(format),
-            loadValue: [0, 0, 0, 0],
+            clearValue: [0, 0, 0, 0],
+            loadOp: 'clear',
             storeOp: 'store',
           })),
 
-          depthStencilAttachment:
-            fullAttachmentInfo.depthStencilFormat !== undefined
-              ? {
-                  view: makeAttachmentView(fullAttachmentInfo.depthStencilFormat),
-                  depthLoadValue: 0,
-                  depthStoreOp: 'discard',
-                  stencilLoadValue: 1,
-                  stencilStoreOp: 'discard',
-                }
-              : undefined,
+          depthStencilAttachment,
           occlusionQuerySet,
         };
 
         const commandEncoder = this.device.createCommandEncoder();
         const encoder = commandEncoder.beginRenderPass(passDesc);
         return new CommandBufferMaker(this, encoder, shouldSucceed => {
-          encoder.endPass();
+          encoder.end();
           return this.expectGPUError('validation', () => commandEncoder.finish(), !shouldSucceed);
         });
       }
