@@ -801,6 +801,17 @@ export class GPUTest extends Fixture {
   }
 
   /**
+   * Expects that the device should be lost for a particular reason at the teardown of the test.
+   */
+  expectDeviceLost(reason) {
+    assert(
+    this.provider !== undefined,
+    'No provider available right now; did you "await" selectDeviceOrSkipTestCase?');
+
+    this.provider.expectDeviceLost(reason);
+  }
+
+  /**
    * Create a GPUBuffer with the specified contents and usage.
    *
    * MAINTENANCE_TODO: Several call sites would be simplified if this took ArrayBuffer as well.
@@ -907,30 +918,27 @@ export class GPUTest extends Fixture {
       case 'non-pass':{
           const encoder = this.device.createCommandEncoder();
 
-          return new CommandBufferMaker(this, encoder, (shouldSucceed) =>
-          this.expectGPUError('validation', () => encoder.finish(), !shouldSucceed));
-
+          return new CommandBufferMaker(this, encoder, () => {
+            return encoder.finish();
+          });
         }
       case 'render bundle':{
           const device = this.device;
           const rbEncoder = device.createRenderBundleEncoder(fullAttachmentInfo);
           const pass = this.createEncoder('render pass', { attachmentInfo });
 
-          return new CommandBufferMaker(this, rbEncoder, (shouldSucceed) => {
-            // If !shouldSucceed, the resulting bundle should be invalid.
-            const rb = this.expectGPUError('validation', () => rbEncoder.finish(), !shouldSucceed);
-            pass.encoder.executeBundles([rb]);
-            // Then, the pass should also be invalid if the bundle was invalid.
-            return pass.validateFinish(shouldSucceed);
+          return new CommandBufferMaker(this, rbEncoder, () => {
+            pass.encoder.executeBundles([rbEncoder.finish()]);
+            return pass.finish();
           });
         }
       case 'compute pass':{
           const commandEncoder = this.device.createCommandEncoder();
           const encoder = commandEncoder.beginComputePass();
 
-          return new CommandBufferMaker(this, encoder, (shouldSucceed) => {
+          return new CommandBufferMaker(this, encoder, () => {
             encoder.end();
-            return this.expectGPUError('validation', () => commandEncoder.finish(), !shouldSucceed);
+            return commandEncoder.finish();
           });
         }
       case 'render pass':{
@@ -981,9 +989,9 @@ export class GPUTest extends Fixture {
 
           const commandEncoder = this.device.createCommandEncoder();
           const encoder = commandEncoder.beginRenderPass(passDesc);
-          return new CommandBufferMaker(this, encoder, (shouldSucceed) => {
+          return new CommandBufferMaker(this, encoder, () => {
             encoder.end();
-            return this.expectGPUError('validation', () => commandEncoder.finish(), !shouldSucceed);
+            return commandEncoder.finish();
           });
         }}
 

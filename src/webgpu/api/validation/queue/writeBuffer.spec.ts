@@ -7,6 +7,7 @@ Note: buffer map state is tested in ./buffer_mapped.spec.ts.
 
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import {
+  kTypedArrayBufferViewConstructors,
   TypedArrayBufferView,
   TypedArrayBufferViewConstructor,
 } from '../../../../common/util/util.js';
@@ -117,21 +118,9 @@ Also verifies that the specified data range:
       t.shouldThrow('OperationError', () => queue.writeBuffer(buffer, 0, arraySm, undefined, 12));
     }
 
-    const arrayTypes = [
-      Uint8Array,
-      Uint8ClampedArray,
-      Int8Array,
-      Uint16Array,
-      Int16Array,
-      Uint32Array,
-      Int32Array,
-      Float32Array,
-      Float64Array,
-    ];
-
     runTest(Uint8Array, true);
 
-    for (const arrayType of arrayTypes) {
+    for (const arrayType of kTypedArrayBufferViewConstructors) {
       runTest(arrayType, false);
     }
   });
@@ -162,4 +151,24 @@ Tests calling writeBuffer with the buffer missed COPY_DST usage.
 g.test('buffer,device_mismatch')
   .desc('Tests writeBuffer cannot be called with a buffer created from another device')
   .paramsSubcasesOnly(u => u.combine('mismatched', [true, false]))
-  .unimplemented();
+  .fn(async t => {
+    const { mismatched } = t.params;
+
+    if (mismatched) {
+      await t.selectMismatchedDeviceOrSkipTestCase(undefined);
+    }
+
+    const device = mismatched ? t.mismatchedDevice : t.device;
+
+    const buffer = device.createBuffer({
+      size: 16,
+      usage: GPUBufferUsage.COPY_DST,
+    });
+    t.trackForCleanup(buffer);
+
+    const data = new Uint8Array(16);
+
+    t.expectValidationError(() => {
+      t.device.queue.writeBuffer(buffer, 0, data, 0, data.length);
+    }, mismatched);
+  });
