@@ -111,6 +111,11 @@ export function isSubnormalScalar(val) {
   return (u32_val & 0x7f800000) === 0;
 }
 
+/** Utility to pass TS numbers into |isSubnormalNumber| */
+export function isSubnormalNumber(val) {
+  return isSubnormalScalar(f32(val));
+}
+
 /**
  * @returns the next single precision floating point value after |val|,
  * towards +inf if |dir| is true, otherwise towards -inf.
@@ -333,4 +338,12 @@ export function quantizeToF32(num) {
 /** @returns the closest 32-bit signed integer value to the input */
 export function quantizeToI32(num) {
   return i32(num).value;
+}
+
+/** @returns whether the number is an integer and a power of two */
+export function isPowerOfTwo(n) {
+  if (!Number.isInteger(n)) {
+    return false;
+  }
+  return n !== 0 && (n & (n - 1)) === 0;
 }

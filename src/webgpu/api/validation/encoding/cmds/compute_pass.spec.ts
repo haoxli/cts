@@ -5,7 +5,7 @@ Does **not** test usage scopes (resource_usages/) or programmable pass stuff (pr
 `;
 
 import { makeTestGroup } from '../../../../../common/framework/test_group.js';
-import { DefaultLimits } from '../../../../constants.js';
+import { kLimitInfo } from '../../../../capability_info.js';
 import { kResourceStates, ResourceState } from '../../../../gpu_test.js';
 import { ValidationTest } from '../../validation_test.js';
 
@@ -88,7 +88,7 @@ g.test('pipeline,device_mismatch')
     validateFinish(!mismatched);
   });
 
-const kMaxDispatch = DefaultLimits.maxComputeWorkgroupsPerDimension;
+const kMaxDispatch = kLimitInfo.maxComputeWorkgroupsPerDimension.default;
 g.test('dispatch_sizes')
   .desc(
     `Test 'direct' and 'indirect' dispatch with various sizes.
@@ -134,7 +134,7 @@ g.test('dispatch_sizes')
   });
 
 const kBufferData = new Uint32Array(6).fill(1);
-g.test('indirect_dispatch_buffer')
+g.test('indirect_dispatch_buffer_state')
   .desc(
     `
 Test dispatchIndirect validation by submitting various dispatches with a no-op pipeline and an
