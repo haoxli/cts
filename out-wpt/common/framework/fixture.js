@@ -9,6 +9,36 @@ export { TestCaseRecorder } from '../internal/logging/test_case_recorder.js';
 
 /** The fully-general type for params passed to a test function invocation. */
 
+export class SubcaseBatchState {
+  constructor(params) {
+    this._params = params;
+  }
+
+  /**
+   * Returns the case parameters for this test fixture shared state. Subcase params
+   * are not included.
+   */
+  get params() {
+    return this._params;
+  }
+
+  /**
+   * Runs before the `.before()` function.
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
+   */
+  async init() {}
+  /**
+   * Runs between the `.before()` function and the subcases.
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
+   */
+  async postInit() {}
+  /**
+   * Runs after all subcases finish.
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
+   */
+  async finalize() {}
+}
+
 /**
  * A Fixture is a class used to instantiate each test sub/case at run time.
  * A new instance of the Fixture is created for every single test subcase
@@ -25,8 +55,13 @@ export class Fixture {
   numOutstandingAsyncExpectations = 0;
   objectsToCleanUp = [];
 
+  static MakeSharedState(params) {
+    return new SubcaseBatchState(params);
+  }
+
   /** @internal */
-  constructor(rec, params) {
+  constructor(sharedState, rec, params) {
+    this._sharedState = sharedState;
     this.rec = rec;
     this._params = params;
   }
@@ -38,10 +73,20 @@ export class Fixture {
     return this._params;
   }
 
-  // This has to be a member function instead of an async `createFixture` function, because
-  // we need to be able to ergonomically override it in subclasses.
+  /**
+   * Gets the test fixture's shared state. This object is shared between subcases
+   * within the same testcase.
+   */
+  get sharedState() {
+    return this._sharedState;
+  }
+
   /**
    * Override this to do additional pre-test-function work in a derived fixture.
+   * This has to be a member function instead of an async `createFixture` function, because
+   * we need to be able to ergonomically override it in subclasses.
+   *
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
    */
   async init() {}
 
@@ -49,6 +94,8 @@ export class Fixture {
    * Override this to do additional post-test-function work in a derived fixture.
    *
    * Called even if init was unsuccessful.
+   *
+   * @internal MAINTENANCE_TODO: Make this not visible to test code?
    */
   async finalize() {
     assert(
@@ -77,16 +124,6 @@ export class Fixture {
         o.close();
       }
     }
-  }
-
-  /** @internal */
-  doInit() {
-    return this.init();
-  }
-
-  /** @internal */
-  doFinalize() {
-    return this.finalize();
   }
 
   /**
@@ -153,7 +190,6 @@ export class Fixture {
   eventualAsyncExpectation(fn) {
     const promise = fn(new Error());
     this.eventualExpectations.push(promise);
-    return promise;
   }
 
   expectErrorValue(expectedError, ex, niceStack) {
@@ -237,19 +273,32 @@ export class Fixture {
     return cond;
   }
 
-  /** If the argument is an `Error`, fail (or warn). If it's `undefined`, no-op. */
+  /**
+   * If the argument is an `Error`, fail (or warn). If it's `undefined`, no-op.
+   * If the argument is an array, apply the above behavior on each of elements.
+   */
   expectOK(error, { mode = 'fail', niceStack } = {}) {
-    if (error instanceof Error) {
-      if (niceStack) {
-        error.stack = niceStack.stack;
+    const handleError = error => {
+      if (error instanceof Error) {
+        if (niceStack) {
+          error.stack = niceStack.stack;
+        }
+        if (mode === 'fail') {
+          this.rec.expectationFailed(error);
+        } else if (mode === 'warn') {
+          this.rec.warn(error);
+        } else {
+          unreachable();
+        }
       }
-      if (mode === 'fail') {
-        this.rec.expectationFailed(error);
-      } else if (mode === 'warn') {
-        this.rec.warn(error);
-      } else {
-        unreachable();
+    };
+
+    if (Array.isArray(error)) {
+      for (const e of error) {
+        handleError(e);
       }
+    } else {
+      handleError(error);
     }
   }
 

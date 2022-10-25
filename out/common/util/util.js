@@ -1,6 +1,8 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { Logger } from '../internal/logging/logger.js';import { keysOf } from './data_tables.js';
+**/import { Float16Array } from '../../external/petamoriken/float16/float16.js';import { globalTestConfig } from '../framework/test_config.js';import { Logger } from '../internal/logging/logger.js';
+
+import { keysOf } from './data_tables.js';
 import { timeout } from './timeout.js';
 
 /**
@@ -105,6 +107,9 @@ export function rejectOnTimeout(ms, msg) {
  * and otherwise passes the result through.
  */
 export function raceWithRejectOnTimeout(p, ms, msg) {
+  if (globalTestConfig.noRaceWithRejectOnTimeout) {
+    return p;
+  }
   // Setup a promise that will reject after `ms` milliseconds. We cancel this timeout when
   // `p` is finalized, so the JavaScript VM doesn't hang around waiting for the timer to
   // complete, once the test runner has finished executing the tests.
@@ -115,6 +120,38 @@ export function raceWithRejectOnTimeout(p, ms, msg) {
     p = p.finally(() => clearTimeout(handle));
   });
   return Promise.race([p, timeoutPromise]);
+}
+
+/**
+ * Takes a promise `p` and returns a new one which rejects if `p` resolves or rejects,
+ * and otherwise resolves after the specified time.
+ */
+export function assertNotSettledWithinTime(
+p,
+ms,
+msg)
+{
+  // Rejects regardless of whether p resolves or rejects.
+  const rejectWhenSettled = p.then(() => Promise.reject(new Error(msg)));
+  // Resolves after `ms` milliseconds.
+  const timeoutPromise = new Promise((resolve) => {
+    const handle = timeout(() => {
+      resolve(undefined);
+    }, ms);
+    p.finally(() => clearTimeout(handle));
+  });
+  return Promise.race([rejectWhenSettled, timeoutPromise]);
+}
+
+/**
+ * Returns a `Promise.reject()`, but also registers a dummy `.catch()` handler so it doesn't count
+ * as an uncaught promise rejection in the runtime.
+ */
+export function rejectWithoutUncaught(err) {
+  const p = Promise.reject(err);
+  // Suppress uncaught promise rejection.
+  p.catch(() => {});
+  return p;
 }
 
 /**
@@ -165,6 +202,17 @@ export function* iterRange(n, fn) {
   }
 }
 
+/** Creates a (reusable) iterable object that maps `f` over `xs`, lazily. */
+export function mapLazy(xs, f) {
+  return {
+    *[Symbol.iterator]() {
+      for (const x of xs) {
+        yield f(x);
+      }
+    } };
+
+}
+
 const TypedArrayBufferViewInstances = [
 new Uint8Array(),
 new Uint8ClampedArray(),
@@ -173,6 +221,7 @@ new Uint32Array(),
 new Int8Array(),
 new Int16Array(),
 new Int32Array(),
+new Float16Array(),
 new Float32Array(),
 new Float64Array()];
 
@@ -221,10 +270,18 @@ buf,
 {
   if (buf instanceof ArrayBuffer) {
     return new Uint8Array(buf, start, length);
-  } else {
-    const sub = buf.subarray(start, length !== undefined ? start + length : undefined);
-    return new Uint8Array(sub.buffer, sub.byteOffset, sub.byteLength);
+  } else if (buf instanceof Uint8Array || buf instanceof Uint8ClampedArray) {
+    // Don't wrap in new views if we don't need to.
+    if (start === 0 && (length === undefined || length === buf.byteLength)) {
+      return buf;
+    }
   }
+  const byteOffset = buf.byteOffset + start * buf.BYTES_PER_ELEMENT;
+  const byteLength =
+  length !== undefined ?
+  length * buf.BYTES_PER_ELEMENT :
+  buf.byteLength - (byteOffset - buf.byteOffset);
+  return new Uint8Array(buf.buffer, byteOffset, byteLength);
 }
 
 /**

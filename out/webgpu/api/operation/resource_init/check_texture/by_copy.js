@@ -18,7 +18,7 @@ subresourceRange) =>
       size: [t.textureWidth, t.textureHeight, t.textureDepth],
       dimension: params.dimension,
       slice: layer,
-      layout: { mipLevel },
+      layout: { mipLevel, aspect: params.aspect },
       exp: t.stateToTexelComponents[state] });
 
   }
@@ -47,6 +47,7 @@ subresourceRange) =>
       format: params.format,
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC });
 
+    t.trackForCleanup(dst);
 
     const commandEncoder = t.device.createCommandEncoder();
     commandEncoder.copyTextureToTexture(
@@ -58,7 +59,8 @@ subresourceRange) =>
 
     t.expectSingleColor(dst, format, {
       size: [width, height, depth],
-      exp: t.stateToTexelComponents[state] });
+      exp: t.stateToTexelComponents[state],
+      layout: { mipLevel: 0, aspect: params.aspect } });
 
   }
 };

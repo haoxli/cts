@@ -1,6 +1,10 @@
 /**
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ import { mergeParams } from '../internal/params_utils.js'; // ================================================================
+ **/ import { mergeParams } from '../internal/params_utils.js';
+import { stringifyPublicParams } from '../internal/query/stringify_params.js';
+import { assert, mapLazy } from '../util/util.js';
+
+// ================================================================
 // "Public" ParamsBuilder API / Documentation
 // ================================================================
 
@@ -48,39 +52,48 @@ export class CaseParamsBuilder extends ParamsBuilderBase {
     return this.cases();
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   expandWithParams(expander) {
     const newGenerator = expanderGenerator(this.cases, expander);
     return new CaseParamsBuilder(() => newGenerator({}));
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   expand(key, expander) {
     return this.expandWithParams(function* (p) {
       for (const value of expander(p)) {
-        // TypeScript doesn't know here that NewPKey is always a single literal string type.
         yield { [key]: value };
       }
     });
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   combineWithParams(newParams) {
+    assertNotGenerator(newParams);
+    const seenValues = new Set();
+    for (const params of newParams) {
+      const paramsStr = stringifyPublicParams(params);
+      assert(!seenValues.has(paramsStr), `Duplicate entry in combine[WithParams]: ${paramsStr}`);
+      seenValues.add(paramsStr);
+    }
+
     return this.expandWithParams(() => newParams);
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   combine(key, values) {
-    return this.expand(key, () => values);
+    assertNotGenerator(values);
+    const mapped = mapLazy(values, v => ({ [key]: v }));
+    return this.combineWithParams(mapped);
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   filter(pred) {
     const newGenerator = filterGenerator(this.cases, pred);
     return new CaseParamsBuilder(() => newGenerator({}));
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   unless(pred) {
     return this.filter(x => !pred(x));
   }
@@ -131,12 +144,12 @@ export class SubcaseParamsBuilder extends ParamsBuilderBase {
     }
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   expandWithParams(expander) {
     return new SubcaseParamsBuilder(this.cases, expanderGenerator(this.subcases, expander));
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   expand(key, expander) {
     return this.expandWithParams(function* (p) {
       for (const value of expander(p)) {
@@ -146,22 +159,24 @@ export class SubcaseParamsBuilder extends ParamsBuilderBase {
     });
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   combineWithParams(newParams) {
+    assertNotGenerator(newParams);
     return this.expandWithParams(() => newParams);
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   combine(key, values) {
+    assertNotGenerator(values);
     return this.expand(key, () => values);
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   filter(pred) {
     return new SubcaseParamsBuilder(this.cases, filterGenerator(this.subcases, pred));
   }
 
-  /** @inheritdoc */
+  /** @inheritDoc */
   unless(pred) {
     return this.filter(x => !pred(x));
   }
@@ -185,4 +200,14 @@ function filterGenerator(baseGenerator, pred) {
       }
     }
   };
+}
+
+/** Assert an object is not a Generator (a thing returned from a generator function). */
+function assertNotGenerator(x) {
+  if ('constructor' in x) {
+    assert(
+      x.constructor !== (function* () {})().constructor,
+      'Argument must not be a generator, as generators are not reusable'
+    );
+  }
 }

@@ -56,6 +56,18 @@ export const kAllBufferUsageBits = kBufferUsages.reduce(
   0
 );
 
+// Errors
+
+/** Per-GPUErrorFilter info. */
+export const kErrorScopeFilterInfo = {
+  'out-of-memory': {},
+  validation: {},
+  internal: {},
+};
+
+/** List of all GPUTextureAspect values. */
+export const kErrorScopeFilters = keysOf(kErrorScopeFilterInfo);
+
 // Textures
 
 // Definitions for use locally. To access the table entries, use `kTextureFormatInfo`.
@@ -145,11 +157,11 @@ const kTexFmtInfoHeader = [
 ];
 const kSizedDepthStencilFormatInfo = makeTable(
   kTexFmtInfoHeader,
-  [true, true, false, false, , , false, false, false, , , 1, 1, , undefined],
+  [true, true, false, false, , , false, , , , , 1, 1, , undefined],
   {
-    depth32float: [, , , , true, false, , , , 'depth', 4],
-    depth16unorm: [, , , , true, false, , , , 'depth', 2],
-    stencil8: [, , , , false, true, , , , 'uint', 1],
+    depth32float: [, , , , true, false, , true, false, 'depth', 4],
+    depth16unorm: [, , , , true, false, , true, true, 'depth', 2],
+    stencil8: [, , , , false, true, , true, true, 'uint', 1],
   }
 );
 
@@ -161,7 +173,6 @@ const kUnsizedDepthStencilFormatInfo = makeTable(
     depth24plus: [, , , , true, false, , , , 'depth'],
     'depth24plus-stencil8': [, , , , true, true, , , , 'depth'],
     // MAINTENANCE_TODO: These should really be sized formats; see below MAINTENANCE_TODO about multi-aspect formats.
-    'depth24unorm-stencil8': [, , , , true, true, , , , 'depth', , , , 'depth24unorm-stencil8'],
     'depth32float-stencil8': [, , , , true, true, , , , 'depth', , , , 'depth32float-stencil8'],
   }
 );
@@ -970,11 +981,14 @@ export const kRenderableColorTextureFormats = kRegularTextureFormats.filter(
 // The formats of GPUTextureFormat for canvas context.
 export const kCanvasTextureFormats = ['bgra8unorm', 'rgba8unorm', 'rgba16float'];
 
+// The alpha mode for canvas context.
+export const kCanvasAlphaModes = ['opaque', 'premultiplied'];
+
 /** Per-GPUTextureFormat info. */
 // Exists just for documentation. Otherwise could be inferred by `makeTable`.
 // MAINTENANCE_TODO: Refactor this to separate per-aspect data for multi-aspect formats. In particular:
 // - bytesPerBlock only makes sense on a per-aspect basis. But this table can't express that.
-//   So we put depth24unorm-stencil8 and depth32float-stencil8 to be unsized formats for now.
+//   So we put depth32float-stencil8 to be an unsized format for now.
 
 /** Per-GPUTextureFormat info. */
 export const kTextureFormatInfo = kAllTextureFormatInfo;
@@ -1075,12 +1089,6 @@ const kDepthStencilFormatCapabilityInBufferTextureCopy = {
     texelAspectSize: { 'depth-only': 4, 'stencil-only': -1 },
   },
 
-  'depth24unorm-stencil8': {
-    CopyB2T: ['stencil-only'],
-    CopyT2B: ['stencil-only'],
-    texelAspectSize: { 'depth-only': -1, 'stencil-only': 1 },
-  },
-
   'depth32float-stencil8': {
     CopyB2T: ['stencil-only'],
     CopyT2B: ['depth-only', 'stencil-only'],
@@ -1124,12 +1132,6 @@ export const kDepthStencilFormatResolvedAspect = {
     'stencil-only': undefined,
   },
 
-  'depth24unorm-stencil8': {
-    all: 'depth24unorm-stencil8',
-    'depth-only': 'depth24plus', // Should this be depth24unorm? See https://github.com/gpuweb/gpuweb/issues/2732
-    'stencil-only': 'stencil8',
-  },
-
   'depth32float-stencil8': {
     all: 'depth32float-stencil8',
     'depth-only': 'depth32float',
@@ -1142,6 +1144,25 @@ export const kDepthStencilFormatResolvedAspect = {
     'stencil-only': 'stencil8',
   },
 };
+
+/**
+ * @returns the GPUTextureFormat corresponding to the @param aspect of @param format.
+ * This allows choosing the correct format for depth-stencil aspects when creating pipelines that
+ * will have to match the resolved format of views, or to get per-aspect information like the
+ * `blockByteSize`.
+ *
+ * Many helpers use an `undefined` `aspect` to means `'all'` so this is also the default for this
+ * function.
+ */
+export function resolvePerAspectFormat(format, aspect) {
+  if (aspect === 'all' || aspect === undefined) {
+    return format;
+  }
+  assert(kTextureFormatInfo[format].depth || kTextureFormatInfo[format].stencil);
+  const resolved = kDepthStencilFormatResolvedAspect[format][aspect ?? 'all'];
+  assert(resolved !== undefined);
+  return resolved;
+}
 
 /**
  * Gets all copyable aspects for copies between texture and buffer for specified depth/stencil format and copy type, by spec.
@@ -1592,6 +1613,20 @@ export const kBlendOperations = [
   'max',
 ];
 
+// Primitive topologies
+export const kPrimitiveTopology = [
+  'point-list',
+  'line-list',
+  'line-strip',
+  'triangle-list',
+  'triangle-strip',
+];
+
+assertTypeTrue();
+
+export const kIndexFormat = ['uint16', 'uint32'];
+assertTypeTrue();
+
 // Pipeline limits
 
 /** Maximum number of color attachments to a render pass, by spec. */
@@ -1637,7 +1672,7 @@ export const kLimitInfo = makeTable(
     maxVertexBufferArrayStride: [, 2048],
     maxInterStageShaderComponents: [, 60],
 
-    maxComputeWorkgroupStorageSize: [, 16352],
+    maxComputeWorkgroupStorageSize: [, 16384],
     maxComputeInvocationsPerWorkgroup: [, 256],
     maxComputeWorkgroupSizeX: [, 256],
     maxComputeWorkgroupSizeY: [, 256],
@@ -1648,3 +1683,39 @@ export const kLimitInfo = makeTable(
 
 /** List of all entries of GPUSupportedLimits. */
 export const kLimits = keysOf(kLimitInfo);
+
+/** Per-GPUFeatureName info. */
+export const kFeatureNameInfo = {
+  'depth-clip-control': {},
+  'depth32float-stencil8': {},
+  'texture-compression-bc': {},
+  'texture-compression-etc2': {},
+  'texture-compression-astc': {},
+  'timestamp-query': {},
+  'indirect-first-instance': {},
+  'shader-f16': {},
+  'bgra8unorm-storage': {},
+  'rg11b10ufloat-renderable': {},
+};
+
+/** List of all GPUFeatureName values. */
+export const kFeatureNames = keysOf(kFeatureNameInfo);
+
+/**
+ * Check if two formats are view format compatible.
+ *
+ * This function may need to be generalized to use `baseFormat` from `kTextureFormatInfo`.
+ */
+export function viewCompatible(a, b) {
+  return a === b || a + '-srgb' === b || b + '-srgb' === a;
+}
+
+export function getFeaturesForFormats(formats) {
+  return Array.from(new Set(formats.map(f => (f ? kTextureFormatInfo[f].feature : undefined))));
+}
+
+export function filterFormatsByFeature(feature, formats) {
+  return formats.filter(f => f === undefined || kTextureFormatInfo[f].feature === feature);
+}
+
+export const kFeaturesForFormats = getFeaturesForFormats(kTextureFormats);

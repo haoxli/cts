@@ -47,6 +47,7 @@ export const checkContentsBySampling = (t, params, texture, state, subresourceRa
         ? 'i32(GlobalInvocationID.x)'
         : unreachable();
     const computePipeline = t.device.createComputePipeline({
+      layout: 'auto',
       compute: {
         entryPoint: 'main',
         module: t.device.createShaderModule({
@@ -63,7 +64,7 @@ export const checkContentsBySampling = (t, params, texture, state, subresourceRa
             };
             @group(0) @binding(3) var<storage, read_write> result : Result;
 
-            @stage(compute) @workgroup_size(1)
+            @compute @workgroup_size(1)
             fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
               let flatIndex : u32 = ${componentCount}u * (
                 ${width}u * ${height}u * GlobalInvocationID.z +
@@ -113,6 +114,7 @@ export const checkContentsBySampling = (t, params, texture, state, subresourceRa
             resource: texture.createView({
               baseArrayLayer: layer,
               arrayLayerCount: 1,
+              dimension: params.dimension,
             }),
           },
 
@@ -129,7 +131,7 @@ export const checkContentsBySampling = (t, params, texture, state, subresourceRa
       const pass = commandEncoder.beginComputePass();
       pass.setPipeline(computePipeline);
       pass.setBindGroup(0, bindGroup);
-      pass.dispatch(width, height, depth);
+      pass.dispatchWorkgroups(width, height, depth);
       pass.end();
       t.queue.submit([commandEncoder.finish()]);
       ubo.destroy();

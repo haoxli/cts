@@ -10,10 +10,12 @@ kCompressedTextureFormats,
 kDepthStencilFormats,
 kTextureUsages,
 textureDimensionAndFormatCompatible,
-kTextureDimensions } from
+kTextureDimensions,
+kFeaturesForFormats,
+filterFormatsByFeature } from
 '../../../../capability_info.js';
 import { kResourceStates } from '../../../../gpu_test.js';
-import { align } from '../../../../util/math.js';
+import { align, lcm } from '../../../../util/math.js';
 import { ValidationTest } from '../../validation_test.js';
 
 class F extends ValidationTest {
@@ -117,26 +119,25 @@ paramsSubcasesOnly([
 { srcMismatched: true, dstMismatched: false },
 { srcMismatched: false, dstMismatched: true }]).
 
+beforeAllSubcases((t) => {
+  t.selectMismatchedDeviceOrSkipTestCase(undefined);
+}).
 fn(async (t) => {
   const { srcMismatched, dstMismatched } = t.params;
-  const mismatched = srcMismatched || dstMismatched;
 
-  if (mismatched) {
-    await t.selectMismatchedDeviceOrSkipTestCase(undefined);
-  }
-
-  const device = mismatched ? t.mismatchedDevice : t.device;
   const size = { width: 4, height: 4, depthOrArrayLayers: 1 };
   const format = 'rgba8unorm';
 
-  const srcTexture = device.createTexture({
+  const srcTextureDevice = srcMismatched ? t.mismatchedDevice : t.device;
+  const srcTexture = srcTextureDevice.createTexture({
     size,
     format,
     usage: GPUTextureUsage.COPY_SRC });
 
   t.trackForCleanup(srcTexture);
 
-  const dstTexture = device.createTexture({
+  const dstTextureDevice = dstMismatched ? t.mismatchedDevice : t.device;
+  const dstTexture = dstTextureDevice.createTexture({
     size,
     format,
     usage: GPUTextureUsage.COPY_DST });
@@ -147,7 +148,7 @@ fn(async (t) => {
   { texture: srcTexture },
   { texture: dstTexture },
   { width: 1, height: 1, depthOrArrayLayers: 1 },
-  mismatched ? 'FinishError' : 'Success');
+  srcMismatched || dstMismatched ? 'FinishError' : 'Success');
 
 });
 
@@ -261,13 +262,13 @@ fn(async (t) => {
   const srcTexture = t.device.createTexture({
     size: { width: 4, height: 4, depthOrArrayLayers: 1 },
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.COPY_SRC,
+    usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
     sampleCount: srcSampleCount });
 
   const dstTexture = t.device.createTexture({
     size: { width: 4, height: 4, depthOrArrayLayers: 1 },
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.COPY_DST,
+    usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     sampleCount: dstSampleCount });
 
 
@@ -318,13 +319,13 @@ fn(async (t) => {
   const srcTexture = t.device.createTexture({
     size: { width: kWidth, height: kHeight, depthOrArrayLayers: 1 },
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.COPY_SRC,
+    usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
     sampleCount: 4 });
 
   const dstTexture = t.device.createTexture({
     size: { width: kWidth, height: kHeight, depthOrArrayLayers: 1 },
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.COPY_DST,
+    usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     sampleCount: 4 });
 
 
@@ -345,27 +346,41 @@ Test the formats of textures in copyTextureToTexture must be copy-compatible.
 - for all destination texture formats
 `).
 
-paramsSubcasesOnly((u) =>
-u //
-.combine('srcFormat', kTextureFormats).
-combine('dstFormat', kTextureFormats)).
+params((u) =>
+u.
+combine('srcFormatFeature', kFeaturesForFormats).
+combine('dstFormatFeature', kFeaturesForFormats).
+beginSubcases().
+expand('srcFormat', ({ srcFormatFeature }) =>
+filterFormatsByFeature(srcFormatFeature, kTextureFormats)).
 
+expand('dstFormat', ({ dstFormatFeature }) =>
+filterFormatsByFeature(dstFormatFeature, kTextureFormats))).
+
+
+beforeAllSubcases((t) => {
+  const { srcFormatFeature, dstFormatFeature } = t.params;
+  t.selectDeviceOrSkipTestCase([srcFormatFeature, dstFormatFeature]);
+}).
 fn(async (t) => {
   const { srcFormat, dstFormat } = t.params;
   const srcFormatInfo = kTextureFormatInfo[srcFormat];
   const dstFormatInfo = kTextureFormatInfo[dstFormat];
-  await t.selectDeviceOrSkipTestCase([srcFormatInfo.feature, dstFormatInfo.feature]);
 
-  const kTextureSize = { width: 16, height: 16, depthOrArrayLayers: 1 };
+  const textureSize = {
+    width: lcm(srcFormatInfo.blockWidth, dstFormatInfo.blockWidth),
+    height: lcm(srcFormatInfo.blockHeight, dstFormatInfo.blockHeight),
+    depthOrArrayLayers: 1 };
+
 
   const srcTexture = t.device.createTexture({
-    size: kTextureSize,
+    size: textureSize,
     format: srcFormat,
     usage: GPUTextureUsage.COPY_SRC });
 
 
   const dstTexture = t.device.createTexture({
-    size: kTextureSize,
+    size: textureSize,
     format: dstFormat,
     usage: GPUTextureUsage.COPY_DST });
 
@@ -378,7 +393,7 @@ fn(async (t) => {
   t.TestCopyTextureToTexture(
   { texture: srcTexture },
   { texture: dstTexture },
-  kTextureSize,
+  textureSize,
   isSuccess ? 'Success' : 'FinishError');
 
 });
@@ -419,6 +434,10 @@ combine('dstTextureSize', [
 combine('srcCopyLevel', [1, 2]).
 combine('dstCopyLevel', [0, 1])).
 
+beforeAllSubcases((t) => {
+  const { format } = t.params;
+  t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
+}).
 fn(async (t) => {
   const {
     format,
@@ -428,8 +447,6 @@ fn(async (t) => {
     srcCopyLevel,
     dstCopyLevel } =
   t.params;
-  await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
-
   const kMipLevelCount = 3;
 
   const srcTexture = t.device.createTexture({
@@ -679,9 +696,12 @@ beginSubcases().
 combine('sourceAspect', ['all', 'depth-only', 'stencil-only']).
 combine('destinationAspect', ['all', 'depth-only', 'stencil-only'])).
 
+beforeAllSubcases((t) => {
+  const { format } = t.params;
+  t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
+}).
 fn(async (t) => {
   const { format, sourceAspect, destinationAspect } = t.params;
-  await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
 
   const kTextureSize = { width: 16, height: 8, depthOrArrayLayers: 1 };
 
@@ -703,7 +723,6 @@ fn(async (t) => {
     // kUnsizedDepthStencilFormats
     depth24plus: ['all', 'depth-only'],
     'depth24plus-stencil8': ['all'],
-    'depth24unorm-stencil8': ['all'],
     'depth32float-stencil8': ['all'],
 
     // kSizedDepthStencilFormats
@@ -756,9 +775,12 @@ combine('copyBoxOffsets', [
 combine('srcCopyLevel', [0, 1, 2]).
 combine('dstCopyLevel', [0, 1, 2])).
 
+beforeAllSubcases((t) => {
+  const { format } = t.params;
+  t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
+}).
 fn(async (t) => {
   const { format, dimension, copyBoxOffsets, srcCopyLevel, dstCopyLevel } = t.params;
-  await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[format].feature);
   const { blockWidth, blockHeight } = kTextureFormatInfo[format];
 
   const kTextureSize = {

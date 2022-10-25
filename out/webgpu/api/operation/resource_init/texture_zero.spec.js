@@ -184,8 +184,8 @@ export class TextureZeroInitTest extends GPUTest {
 
 
 
-  constructor(rec, params) {
-    super(rec, params);
+  constructor(sharedState, rec, params) {
+    super(sharedState, rec, params);
     this.p = params;
 
     const stateToTexelComponents = (state) => {
@@ -298,8 +298,10 @@ export class TextureZeroInitTest extends GPUTest {
   subresourceRange)
   {
     const commandEncoder = this.device.createCommandEncoder();
+    commandEncoder.pushDebugGroup('initializeWithStoreOp');
+
     for (const viewDescriptor of this.generateTextureViewDescriptorsForRendering(
-    this.p.aspect,
+    'all',
     subresourceRange))
     {
       if (kTextureFormatInfo[this.p.format].color) {
@@ -337,6 +339,8 @@ export class TextureZeroInitTest extends GPUTest {
         end();
       }
     }
+
+    commandEncoder.popDebugGroup();
     this.queue.submit([commandEncoder.finish()]);
   }
 
@@ -407,11 +411,9 @@ export class TextureZeroInitTest extends GPUTest {
 
   discardTexture(texture, subresourceRange) {
     const commandEncoder = this.device.createCommandEncoder();
+    commandEncoder.pushDebugGroup('discardTexture');
 
-    for (const desc of this.generateTextureViewDescriptorsForRendering(
-    this.p.aspect,
-    subresourceRange))
-    {
+    for (const desc of this.generateTextureViewDescriptorsForRendering('all', subresourceRange)) {
       if (kTextureFormatInfo[this.p.format].color) {
         commandEncoder.
         beginRenderPass({
@@ -444,6 +446,8 @@ export class TextureZeroInitTest extends GPUTest {
         end();
       }
     }
+
+    commandEncoder.popDebugGroup();
     this.queue.submit([commandEncoder.finish()]);
   }}
 
@@ -570,9 +574,10 @@ export const g = makeTestGroup(TextureZeroInitTest);
 
 g.test('uninitialized_texture_is_zero').
 params(kTestParams).
+beforeAllSubcases((t) => {
+  t.selectDeviceOrSkipTestCase(kTextureFormatInfo[t.params.format].feature);
+}).
 fn(async (t) => {
-  await t.selectDeviceOrSkipTestCase(kTextureFormatInfo[t.params.format].feature);
-
   const usage = getRequiredTextureUsage(
   t.params.format,
   t.params.sampleCount,
@@ -588,6 +593,7 @@ fn(async (t) => {
     mipLevelCount: t.params.mipLevelCount,
     sampleCount: t.params.sampleCount });
 
+  t.trackForCleanup(texture);
 
   if (t.params.canaryOnCreation) {
     // Initialize some subresources with canary values

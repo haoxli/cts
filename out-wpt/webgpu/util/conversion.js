@@ -2,11 +2,24 @@
  * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
  **/ import { Colors } from '../../common/util/colors.js';
 import { assert } from '../../common/util/util.js';
-import { clamp } from './math.js';
+import { Float16Array } from '../../external/petamoriken/float16/float16.js';
+
+import { kBit } from './constants.js';
+import {
+  cartesianProduct,
+  clamp,
+  correctlyRoundedF16,
+  isFiniteF16,
+  isSubnormalNumberF16,
+  isSubnormalNumberF32,
+} from './math.js';
 
 /**
  * Encodes a JS `number` into a "normalized" (unorm/snorm) integer representation with `bits` bits.
  * Input must be between -1 and 1 if signed, or 0 and 1 if unsigned.
+ *
+ * MAINTENANCE_TODO: See if performance of texel_data improves if this function is pre-specialized
+ * for a particular `bits`/`signed`.
  */
 export function floatAsNormalizedInteger(float, bits, signed) {
   if (signed) {
@@ -113,9 +126,16 @@ export const kFloat32Format = { signed: 1, exponentBits: 8, mantissaBits: 23, bi
 /** FloatFormat defining IEEE754 16-bit float. */
 export const kFloat16Format = { signed: 1, exponentBits: 5, mantissaBits: 10, bias: 15 };
 
+/** Once-allocated ArrayBuffer/views  to avoid overhead of allocation when converting between numeric formats */
 const workingData = new ArrayBuffer(4);
 const workingDataU32 = new Uint32Array(workingData);
+const workingDataU16 = new Uint16Array(workingData);
+const workingDataU8 = new Uint8Array(workingData);
 const workingDataF32 = new Float32Array(workingData);
+const workingDataF16 = new Float16Array(workingData);
+const workingDataI16 = new Int16Array(workingData);
+const workingDataI8 = new Int8Array(workingData);
+
 /** Bitcast u32 (represented as integer Number) to f32 (represented as floating-point Number). */
 export function float32BitsToNumber(bits) {
   workingDataU32[0] = bits;
@@ -238,6 +258,168 @@ export function packRGB9E5UFloat(r, g, b) {
 }
 
 /**
+ * Quantizes two f32s to f16 and then packs them in a u32
+ *
+ * This should implement the same behaviour as the builtin `pack2x16float` from
+ * WGSL.
+ *
+ * Caller is responsible to ensuring inputs are f32s
+ *
+ * @param x first f32 to be packed
+ * @param y second f32 to be packed
+ * @returns an array of possible results for pack2x16float. Elements are either
+ *          a number or undefined.
+ *          undefined indicates that any value is valid, since the input went
+ *          out of bounds.
+ */
+export function pack2x16float(x, y) {
+  // Generates all possible valid u16 bit fields for a given f32 to f16 conversion.
+  // Assumes FTZ for both the f32 and f16 value is allowed.
+  const generateU16s = n => {
+    let contains_subnormals = isSubnormalNumberF32(n);
+    const n_f16s = correctlyRoundedF16(n);
+    contains_subnormals ||= n_f16s.some(isSubnormalNumberF16);
+
+    const n_u16s = n_f16s.map(f16 => {
+      workingDataF16[0] = f16;
+      return workingDataU16[0];
+    });
+
+    const contains_poszero = n_u16s.some(u => u === kBit.f16.positive.zero);
+    const contains_negzero = n_u16s.some(u => u === kBit.f16.negative.zero);
+    if (!contains_negzero && (contains_poszero || contains_subnormals)) {
+      n_u16s.push(kBit.f16.negative.zero);
+    }
+
+    if (!contains_poszero && (contains_negzero || contains_subnormals)) {
+      n_u16s.push(kBit.f16.positive.zero);
+    }
+
+    return n_u16s;
+  };
+
+  if (!isFiniteF16(x) || !isFiniteF16(y)) {
+    // This indicates any value is valid, so it isn't worth bothering
+    // calculating the more restrictive possibilities.
+    return [undefined];
+  }
+
+  const results = new Array();
+  for (const p of cartesianProduct(generateU16s(x), generateU16s(y))) {
+    assert(p.length === 2, 'cartesianProduct of 2 arrays returned an entry with not 2 elements');
+    workingDataU16[0] = p[0];
+    workingDataU16[1] = p[1];
+    results.push(workingDataU32[0]);
+  }
+
+  return results;
+}
+
+/**
+ * Converts two normalized f32s to i16s and then packs them in a u32
+ *
+ * This should implement the same behaviour as the builtin `pack2x16snorm` from
+ * WGSL.
+ *
+ * Caller is responsible to ensuring inputs are normalized f32s
+ *
+ * @param x first f32 to be packed
+ * @param y second f32 to be packed
+ * @returns a number that is expected result of pack2x16snorm.
+ */
+export function pack2x16snorm(x, y) {
+  // Converts f32 to i16 via the pack2x16snorm formula.
+  // FTZ is not explicitly handled, because all subnormals will produce a value
+  // between 0 and 1, but significantly away from the edges, so floor goes to 0.
+  const generateI16 = n => {
+    return Math.floor(0.5 + 32767 * Math.min(1, Math.max(-1, n)));
+  };
+
+  workingDataI16[0] = generateI16(x);
+  workingDataI16[1] = generateI16(y);
+
+  return workingDataU32[0];
+}
+
+/**
+ * Converts two normalized f32s to u16s and then packs them in a u32
+ *
+ * This should implement the same behaviour as the builtin `pack2x16unorm` from
+ * WGSL.
+ *
+ * Caller is responsible to ensuring inputs are normalized f32s
+ *
+ * @param x first f32 to be packed
+ * @param y second f32 to be packed
+ * @returns an number that is expected result of pack2x16unorm.
+ */
+export function pack2x16unorm(x, y) {
+  // Converts f32 to u16 via the pack2x16unorm formula.
+  // FTZ is not explicitly handled, because all subnormals will produce a value
+  // between 0.5 and much less than 1, so floor goes to 0.
+  const generateU16 = n => {
+    return Math.floor(0.5 + 65535 * Math.min(1, Math.max(0, n)));
+  };
+
+  workingDataU16[0] = generateU16(x);
+  workingDataU16[1] = generateU16(y);
+
+  return workingDataU32[0];
+}
+
+/**
+ * Converts four normalized f32s to i8s and then packs them in a u32
+ *
+ * This should implement the same behaviour as the builtin `pack4x8snorm` from
+ * WGSL.
+ *
+ * Caller is responsible to ensuring inputs are normalized f32s
+ *
+ * @param vals four f32s to be packed
+ * @returns a number that is expected result of pack4x8usorm.
+ */
+export function pack4x8snorm(...vals) {
+  // Converts f32 to u8 via the pack4x8snorm formula.
+  // FTZ is not explicitly handled, because all subnormals will produce a value
+  // between 0 and 1, so floor goes to 0.
+  const generateI8 = n => {
+    return Math.floor(0.5 + 127 * Math.min(1, Math.max(-1, n)));
+  };
+
+  for (const idx in vals) {
+    workingDataI8[idx] = generateI8(vals[idx]);
+  }
+
+  return workingDataU32[0];
+}
+
+/**
+ * Converts four normalized f32s to u8s and then packs them in a u32
+ *
+ * This should implement the same behaviour as the builtin `pack4x8unorm` from
+ * WGSL.
+ *
+ * Caller is responsible to ensuring inputs are normalized f32s
+ *
+ * @param vals four f32s to be packed
+ * @returns a number that is expected result of pack4x8unorm.
+ */
+export function pack4x8unorm(...vals) {
+  // Converts f32 to u8 via the pack4x8unorm formula.
+  // FTZ is not explicitly handled, because all subnormals will produce a value
+  // between 0.5 and much less than 1, so floor goes to 0.
+  const generateU8 = n => {
+    return Math.floor(0.5 + 255 * Math.min(1, Math.max(0, n)));
+  };
+
+  for (const idx in vals) {
+    workingDataU8[idx] = generateU8(vals[idx]);
+  }
+
+  return workingDataU32[0];
+}
+
+/**
  * Asserts that a number is within the representable (inclusive) of the integer type with the
  * specified number of bits and signedness.
  *
@@ -301,6 +483,30 @@ export function uint32ToInt32(u32) {
   u32Arr[0] = u32;
   const i32Arr = new Int32Array(u32Arr.buffer);
   return i32Arr[0];
+}
+
+/** Converts a 16-bit float value to a 16-bit unsigned integer value */
+export function float16ToUint16(f16) {
+  const f16Arr = new Float16Array(1);
+  f16Arr[0] = f16;
+  const u16Arr = new Uint16Array(f16Arr.buffer);
+  return u16Arr[0];
+}
+
+/** Converts a 16-bit unsigned integer value to a 16-bit float value */
+export function uint16ToFloat16(u16) {
+  const u16Arr = new Uint16Array(1);
+  u16Arr[0] = u16;
+  const f16Arr = new Float16Array(u16Arr.buffer);
+  return f16Arr[0];
+}
+
+/** Converts a 16-bit float value to a 16-bit signed integer value */
+export function float16ToInt16(f16) {
+  const f16Arr = new Float16Array(1);
+  f16Arr[0] = f16;
+  const i16Arr = new Int16Array(f16Arr.buffer);
+  return i16Arr[0];
 }
 
 /** A type of number representable by Scalar. */
@@ -374,6 +580,10 @@ export const TypeU32 = new ScalarType('u32', 4, (buf, offset) =>
   u32(new Uint32Array(buf.buffer, offset)[0])
 );
 
+export const TypeF64 = new ScalarType('f64', 8, (buf, offset) =>
+  f32(new Float64Array(buf.buffer, offset)[0])
+);
+
 export const TypeF32 = new ScalarType('f32', 4, (buf, offset) =>
   f32(new Float32Array(buf.buffer, offset)[0])
 );
@@ -405,6 +615,8 @@ export const TypeBool = new ScalarType('bool', 4, (buf, offset) =>
 /** @returns the ScalarType from the ScalarKind */
 export function scalarType(kind) {
   switch (kind) {
+    case 'f64':
+      return TypeF64;
     case 'f32':
       return TypeF32;
     case 'f16':
@@ -473,25 +685,89 @@ export class Scalar {
     }
   }
 
+  /**
+   * @returns the WGSL representation of this scalar value
+   */
+  wgsl() {
+    const withPoint = x => {
+      const str = `${x}`;
+      return str.indexOf('.') > 0 || str.indexOf('e') > 0 ? str : `${str}.0`;
+    };
+    if (isFinite(this.value)) {
+      switch (this.type.kind) {
+        case 'f32':
+          return `${withPoint(this.value)}f`;
+        case 'f16':
+          return `${withPoint(this.value)}h`;
+        case 'u32':
+          return `${this.value}u`;
+        case 'i32':
+          return `i32(${this.value})`;
+        case 'bool':
+          return `${this.value}`;
+      }
+    } else if (this.value === Number.POSITIVE_INFINITY) {
+      switch (this.type.kind) {
+        case 'f32':
+          return `(1.f/0.f)`;
+        case 'f16':
+          return `(1.h/0.h)`;
+      }
+    } else if (this.value === Number.NEGATIVE_INFINITY) {
+      switch (this.type.kind) {
+        case 'f32':
+          return `(-1.f/0.f)`;
+        case 'f16':
+          return `(-1.h/0.h)`;
+      }
+    }
+    throw new Error(
+      `scalar of value ${this.value} and type ${this.type} has no WGSL representation`
+    );
+  }
+
   toString() {
     if (this.type.kind === 'bool') {
       return Colors.bold(this.value.toString());
     }
     switch (this.value) {
-      case 0:
       case Infinity:
       case -Infinity:
         return Colors.bold(this.value.toString());
-      default:
-        return Colors.bold(this.value.toString()) + ' (0x' + this.value.toString(16) + ')';
+      default: {
+        // Uint8Array.map returns a Uint8Array, so cannot use .map directly
+        const hex = Array.from(this.bits)
+          .reverse()
+          .map(x => x.toString(16).padStart(2, '0'))
+          .join('');
+        const n = this.value;
+        if (n !== null && isFloatValue(this)) {
+          let str = this.value.toString();
+          str = str.indexOf('.') > 0 || str.indexOf('e') > 0 ? str : `${str}.0`;
+          return isSubnormalNumberF32(n.valueOf())
+            ? `${Colors.bold(str)} (0x${hex} subnormal)`
+            : `${Colors.bold(str)} (0x${hex})`;
+        }
+        return `${Colors.bold(this.value.toString())} (0x${hex})`;
+      }
     }
   }
 }
 
+/** Create an f64 from a numeric value, a JS `number`. */
+export function f64(value) {
+  const arr = new Float64Array([value]);
+  return new Scalar(TypeF64, arr[0], arr);
+}
 /** Create an f32 from a numeric value, a JS `number`. */
 export function f32(value) {
   const arr = new Float32Array([value]);
   return new Scalar(TypeF32, arr[0], arr);
+}
+/** Create an f16 from a numeric value, a JS `number`. */
+export function f16(value) {
+  const arr = new Float16Array([value]);
+  return new Scalar(TypeF16, arr[0], arr);
 }
 /** Create an f32 from a bit representation, a uint32 represented as a JS `number`. */
 export function f32Bits(bits) {
@@ -501,7 +777,7 @@ export function f32Bits(bits) {
 /** Create an f16 from a bit representation, a uint16 represented as a JS `number`. */
 export function f16Bits(bits) {
   const arr = new Uint16Array([bits]);
-  return new Scalar(TypeF16, float16BitsToFloat32(bits), arr);
+  return new Scalar(TypeF16, new Float16Array(arr.buffer)[0], arr);
 }
 
 /** Create an i32 from a numeric value, a JS `number`. */
@@ -616,6 +892,14 @@ export class Vector {
     }
   }
 
+  /**
+   * @returns the WGSL representation of this vector value
+   */
+  wgsl() {
+    const els = this.elements.map(v => v.wgsl()).join(', ');
+    return `vec${this.type.width}(${els})`;
+  }
+
   toString() {
     return `${this.type}(${this.elements.map(e => e.toString()).join(', ')})`;
   }
@@ -657,3 +941,12 @@ export function vec4(x, y, z, w) {
 }
 
 /** Value is a Scalar or Vector value. */
+
+/** @returns if the Value is a float scalar type */
+export function isFloatValue(v) {
+  if (v instanceof Scalar) {
+    const s = v;
+    return s.type.kind === 'f64' || s.type.kind === 'f32' || s.type.kind === 'f16';
+  }
+  return false;
+}

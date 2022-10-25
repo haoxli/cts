@@ -23,6 +23,10 @@ g.test('depth_write_disabled').
 desc(`Tests render results with depth write disabled`).
 unimplemented();
 
+// Use a depth value that's not exactly 0.5 because it is exactly between two depth16unorm value and
+// can get rounded either way (and a different way between shaders and clearDepthValue).
+const kMiddleDepthValue = 0.5001;
+
 g.test('depth_compare_func').
 desc(
 `Tests each depth compare function works properly. Clears the depth attachment to various values, and renders a point at depth 0.5 with various depthCompare modes.`).
@@ -35,34 +39,48 @@ kDepthStencilFormats.filter((format) => kTextureFormatInfo[format].depth)).
 
 combineWithParams([
 { depthCompare: 'never', depthClearValue: 1.0, _expected: backgroundColor },
-{ depthCompare: 'never', depthClearValue: 0.5, _expected: backgroundColor },
+{ depthCompare: 'never', depthClearValue: kMiddleDepthValue, _expected: backgroundColor },
 { depthCompare: 'never', depthClearValue: 0.0, _expected: backgroundColor },
 { depthCompare: 'less', depthClearValue: 1.0, _expected: triangleColor },
-{ depthCompare: 'less', depthClearValue: 0.5, _expected: backgroundColor },
+{ depthCompare: 'less', depthClearValue: kMiddleDepthValue, _expected: backgroundColor },
 { depthCompare: 'less', depthClearValue: 0.0, _expected: backgroundColor },
 { depthCompare: 'less-equal', depthClearValue: 1.0, _expected: triangleColor },
-{ depthCompare: 'less-equal', depthClearValue: 0.5, _expected: triangleColor },
+{
+  depthCompare: 'less-equal',
+  depthClearValue: kMiddleDepthValue,
+  _expected: triangleColor },
+
 { depthCompare: 'less-equal', depthClearValue: 0.0, _expected: backgroundColor },
 { depthCompare: 'equal', depthClearValue: 1.0, _expected: backgroundColor },
-{ depthCompare: 'equal', depthClearValue: 0.5, _expected: triangleColor },
+{ depthCompare: 'equal', depthClearValue: kMiddleDepthValue, _expected: triangleColor },
 { depthCompare: 'equal', depthClearValue: 0.0, _expected: backgroundColor },
 { depthCompare: 'not-equal', depthClearValue: 1.0, _expected: triangleColor },
-{ depthCompare: 'not-equal', depthClearValue: 0.5, _expected: backgroundColor },
+{
+  depthCompare: 'not-equal',
+  depthClearValue: kMiddleDepthValue,
+  _expected: backgroundColor },
+
 { depthCompare: 'not-equal', depthClearValue: 0.0, _expected: triangleColor },
 { depthCompare: 'greater-equal', depthClearValue: 1.0, _expected: backgroundColor },
-{ depthCompare: 'greater-equal', depthClearValue: 0.5, _expected: triangleColor },
+{
+  depthCompare: 'greater-equal',
+  depthClearValue: kMiddleDepthValue,
+  _expected: triangleColor },
+
 { depthCompare: 'greater-equal', depthClearValue: 0.0, _expected: triangleColor },
 { depthCompare: 'greater', depthClearValue: 1.0, _expected: backgroundColor },
-{ depthCompare: 'greater', depthClearValue: 0.5, _expected: backgroundColor },
+{ depthCompare: 'greater', depthClearValue: kMiddleDepthValue, _expected: backgroundColor },
 { depthCompare: 'greater', depthClearValue: 0.0, _expected: triangleColor },
 { depthCompare: 'always', depthClearValue: 1.0, _expected: triangleColor },
-{ depthCompare: 'always', depthClearValue: 0.5, _expected: triangleColor },
+{ depthCompare: 'always', depthClearValue: kMiddleDepthValue, _expected: triangleColor },
 { depthCompare: 'always', depthClearValue: 0.0, _expected: triangleColor }])).
 
 
+beforeAllSubcases((t) => {
+  t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format);
+}).
 fn(async (t) => {
   const { depthCompare, depthClearValue, _expected, format } = t.params;
-  await t.selectDeviceForTextureFormatOrSkipTestCase(format);
 
   const colorAttachmentFormat = 'rgba8unorm';
   const colorAttachment = t.device.createTexture({
@@ -80,12 +98,13 @@ fn(async (t) => {
   const depthTextureView = depthTexture.createView();
 
   const pipelineDescriptor = {
+    layout: 'auto',
     vertex: {
       module: t.device.createShaderModule({
         code: `
-            @stage(vertex) fn main(
+            @vertex fn main(
               @builtin(vertex_index) VertexIndex : u32) -> @builtin(position) vec4<f32> {
-              return vec4<f32>(0.5, 0.5, 0.5, 1.0);
+              return vec4<f32>(0.5, 0.5, ${kMiddleDepthValue}, 1.0);
             }
             ` }),
 
@@ -94,7 +113,7 @@ fn(async (t) => {
     fragment: {
       module: t.device.createShaderModule({
         code: `
-            @stage(fragment) fn main() -> @location(0) vec4<f32> {
+            @fragment fn main() -> @location(0) vec4<f32> {
               return vec4<f32>(1.0, 1.0, 1.0, 1.0);
             }
             ` }),
@@ -172,6 +191,7 @@ fn(async (t) => {
   const depthTextureView = depthTexture.createView();
 
   const pipelineDescriptor = {
+    layout: 'auto',
     vertex: {
       module: t.device.createShaderModule({
         code: `
@@ -180,7 +200,7 @@ fn(async (t) => {
               @location(0) color : vec4<f32>,
             };
 
-            @stage(vertex) fn main(
+            @vertex fn main(
               @builtin(vertex_index) VertexIndex : u32,
               @builtin(instance_index) InstanceIndex : u32) -> Output {
               // TODO: remove workaround for Tint unary array access broke
@@ -209,7 +229,7 @@ fn(async (t) => {
     fragment: {
       module: t.device.createShaderModule({
         code: `
-            @stage(fragment) fn main(
+            @fragment fn main(
               @location(0) color : vec4<f32>
               ) -> @location(0) vec4<f32> {
               return color;
