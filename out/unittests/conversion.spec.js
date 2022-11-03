@@ -286,7 +286,7 @@ fn((test) => {
   // Using strings of the outputs, so they can be easily sorted, since order of the results doesn't matter.
   test.expect(
   objectEquals(got_str.sort(), expect_str.sort()),
-  `pack2x16float(${inputs}) returned [${got_str}]. Expected [${expect}]`);
+  `pack2x16float(${inputs}) returned [${got_str}]. Expected [${expect_str}]`);
 
 });
 
@@ -316,7 +316,7 @@ fn((test) => {
   const got = pack2x16snorm(inputs[0], inputs[1]);
   const expect = test.params.result;
 
-  test.expect(got === expect, `pack2x16snorm(${inputs}) returned ${got}. Expected [${expect}]`);
+  test.expect(got === expect, `pack2x16snorm(${inputs}) returned ${got}. Expected ${expect}`);
 });
 
 g.test('pack2x16unorm').
@@ -324,6 +324,7 @@ paramsSimple([
 // Normals
 { inputs: [0, 0], result: 0x00000000 },
 { inputs: [1, 0], result: 0x0000ffff },
+{ inputs: [0, 1], result: 0xffff0000 },
 { inputs: [1, 1], result: 0xffffffff },
 { inputs: [-1, -1], result: 0x00000000 },
 { inputs: [0.1, 0.1], result: 0x199a199a },
@@ -339,7 +340,7 @@ fn((test) => {
   const got = pack2x16unorm(inputs[0], inputs[1]);
   const expect = test.params.result;
 
-  test.expect(got === expect, `pack2x16unorm(${inputs}) returned ${got}. Expected [${expect}]`);
+  test.expect(got === expect, `pack2x16unorm(${inputs}) returned ${got}. Expected ${expect}`);
 });
 
 g.test('pack4x8snorm').
@@ -376,10 +377,7 @@ fn((test) => {
   const got = pack4x8snorm(inputs[0], inputs[1], inputs[2], inputs[3]);
   const expect = test.params.result;
 
-  test.expect(
-  got === expect,
-  `pack4x8snorm(${inputs}) returned ${u32(got)}. Expected [${expect}]`);
-
+  test.expect(got === expect, `pack4x8snorm(${inputs}) returned ${u32(got)}. Expected ${expect}`);
 });
 
 g.test('pack4x8unorm').
@@ -406,6 +404,6 @@ fn((test) => {
   const got = pack4x8unorm(inputs[0], inputs[1], inputs[2], inputs[3]);
   const expect = test.params.result;
 
-  test.expect(got === expect, `pack4x8unorm(${inputs}) returned ${got}. Expected [${expect}]`);
+  test.expect(got === expect, `pack4x8unorm(${inputs}) returned ${got}. Expected ${expect}`);
 });
 //# sourceMappingURL=conversion.spec.js.map

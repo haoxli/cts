@@ -65,7 +65,12 @@ tanInterval,
 tanhInterval,
 toF32Vector,
 truncInterval,
-ulpInterval } from
+ulpInterval,
+unpack2x16floatInterval,
+unpack2x16snormInterval,
+unpack2x16unormInterval,
+unpack4x8snormInterval,
+unpack4x8unormInterval } from
 '../webgpu/util/f32_interval.js';
 import { hexToF32, hexToF64, oneULP } from '../webgpu/util/math.js';
 
@@ -1290,13 +1295,13 @@ paramsSubcasesOnly(
 { input: -1, expected: [-1] },
 { input: -0.1, expected: [hexToF32(0xbdcce000), hexToF32(0xbdccc000)] }, // ~-0.1
 { input: kValue.f16.negative.max, expected: [kValue.f16.negative.max] },
-{ input: kValue.f16.subnormal.negative.min, expected: [kValue.f16.subnormal.negative.min] },
-{ input: kValue.f16.subnormal.negative.max, expected: [kValue.f16.subnormal.negative.max] },
+{ input: kValue.f16.subnormal.negative.min, expected: [kValue.f16.subnormal.negative.min, 0] },
+{ input: kValue.f16.subnormal.negative.max, expected: [kValue.f16.subnormal.negative.max, 0] },
 { input: kValue.f32.subnormal.negative.max, expected: [kValue.f16.subnormal.negative.max, 0] },
 { input: 0, expected: [0] },
 { input: kValue.f32.subnormal.positive.min, expected: [0, kValue.f16.subnormal.positive.min] },
-{ input: kValue.f16.subnormal.positive.min, expected: [kValue.f16.subnormal.positive.min] },
-{ input: kValue.f16.subnormal.positive.max, expected: [kValue.f16.subnormal.positive.max] },
+{ input: kValue.f16.subnormal.positive.min, expected: [0, kValue.f16.subnormal.positive.min] },
+{ input: kValue.f16.subnormal.positive.max, expected: [0, kValue.f16.subnormal.positive.max] },
 { input: kValue.f16.positive.min, expected: [kValue.f16.positive.min] },
 { input: 0.1, expected: [hexToF32(0x3dccc000), hexToF32(0x3dcce000)] }, // ~0.1
 { input: 1, expected: [1] },
@@ -2629,6 +2634,207 @@ fn((t) => {
   `smoothStepInterval(${low}, ${high}, ${x}) returned ${got}. Expected ${expected}`);
 
 });
+
+
+
+
+
+
+// Scope for unpack* tests so that they can have constants for magic numbers
+// that don't pollute the global namespace or have unwieldy long names.
+{
+  const kZeroBounds = [hexToF32(0x81200000), hexToF32(0x01200000)];
+  const kOneBoundsSnorm = [
+  hexToF64(0x3fefffff, 0xa0000000),
+  hexToF64(0x3ff00000, 0x40000000)];
+
+  const kOneBoundsUnorm = [
+  hexToF64(0x3fefffff, 0xb0000000),
+  hexToF64(0x3ff00000, 0x28000000)];
+
+  const kNegOneBoundsSnorm = [
+  hexToF64(0xbff00000, 0x00000000),
+  hexToF64(0xbfefffff, 0xa0000000)];
+
+
+  const kHalfBounds2x16snorm = [
+  hexToF64(0x3fe0001f, 0xa0000000),
+  hexToF64(0x3fe00020, 0x80000000)];
+  // ~0.5..., due to lack of precision in i16
+  const kNegHalfBounds2x16snorm = [
+  hexToF64(0xbfdfffc0, 0x60000000),
+  hexToF64(0xbfdfffbf, 0x80000000)];
+  // ~-0.5..., due to lack of precision in i16
+
+  g.test('unpack2x16snormInterval').
+  paramsSubcasesOnly(
+
+  [
+  // Some of these are hard coded, since the error intervals are difficult to express in a closed human readable
+  // form due to the inherited nature of the errors.
+  { input: 0x00000000, expected: [kZeroBounds, kZeroBounds] },
+  { input: 0x00007fff, expected: [kOneBoundsSnorm, kZeroBounds] },
+  { input: 0x7fff0000, expected: [kZeroBounds, kOneBoundsSnorm] },
+  { input: 0x7fff7fff, expected: [kOneBoundsSnorm, kOneBoundsSnorm] },
+  { input: 0x80018001, expected: [kNegOneBoundsSnorm, kNegOneBoundsSnorm] },
+  { input: 0x40004000, expected: [kHalfBounds2x16snorm, kHalfBounds2x16snorm] },
+  { input: 0xc001c001, expected: [kNegHalfBounds2x16snorm, kNegHalfBounds2x16snorm] }]).
+
+
+  fn((t) => {
+    const expected = toF32Vector(t.params.expected);
+
+    const got = unpack2x16snormInterval(t.params.input);
+
+    t.expect(
+    objectEquals(expected, got),
+    `unpack2x16snormInterval(${t.params.input}) returned [${got}]. Expected [${expected}]`);
+
+  });
+
+  g.test('unpack2x16floatInterval').
+  paramsSubcasesOnly(
+
+  [
+  // Some of these are hard coded, since the error intervals are difficult to express in a closed human readable
+  // form due to the inherited nature of the errors.
+  // f16 normals
+  { input: 0x00000000, expected: [[0], [0]] },
+  { input: 0x80000000, expected: [[0], [0]] },
+  { input: 0x00008000, expected: [[0], [0]] },
+  { input: 0x80008000, expected: [[0], [0]] },
+  { input: 0x00003c00, expected: [[1], [0]] },
+  { input: 0x3c000000, expected: [[0], [1]] },
+  { input: 0x3c003c00, expected: [[1], [1]] },
+  { input: 0xbc00bc00, expected: [[-1], [-1]] },
+  { input: 0x49004900, expected: [[10], [10]] },
+  { input: 0xc900c900, expected: [[-10], [-10]] },
+
+  // f16 subnormals
+  { input: 0x000003ff, expected: [[0, kValue.f16.subnormal.positive.max], [0]] },
+  { input: 0x000083ff, expected: [[kValue.f16.subnormal.negative.min, 0], [0]] },
+
+  // f16 out of bounds
+  { input: 0x7c000000, expected: [kAny, kAny] },
+  { input: 0xffff0000, expected: [kAny, kAny] }]).
+
+
+  fn((t) => {
+    const expected = toF32Vector(t.params.expected);
+
+    const got = unpack2x16floatInterval(t.params.input);
+
+    t.expect(
+    objectEquals(expected, got),
+    `unpack2x16floatInterval(${t.params.input}) returned [${got}]. Expected [${expected}]`);
+
+  });
+
+  const kHalfBounds2x16unorm = [
+  hexToF64(0x3fe0000f, 0xb0000000),
+  hexToF64(0x3fe00010, 0x70000000)];
+  // ~0.5..., due to lack of precision in u16
+
+  g.test('unpack2x16unormInterval').
+  paramsSubcasesOnly(
+
+  [
+  // Some of these are hard coded, since the error intervals are difficult to express in a closed human readable
+  // form due to the inherited nature of the errors.
+  { input: 0x00000000, expected: [kZeroBounds, kZeroBounds] },
+  { input: 0x0000ffff, expected: [kOneBoundsUnorm, kZeroBounds] },
+  { input: 0xffff0000, expected: [kZeroBounds, kOneBoundsUnorm] },
+  { input: 0xffffffff, expected: [kOneBoundsUnorm, kOneBoundsUnorm] },
+  { input: 0x80008000, expected: [kHalfBounds2x16unorm, kHalfBounds2x16unorm] }]).
+
+
+  fn((t) => {
+    const expected = toF32Vector(t.params.expected);
+
+    const got = unpack2x16unormInterval(t.params.input);
+
+    t.expect(
+    objectEquals(expected, got),
+    `unpack2x16unormInterval(${t.params.input}) returned [${got}]. Expected [${expected}]`);
+
+  });
+
+  const kHalfBounds4x8snorm = [
+  hexToF64(0x3fe02040, 0x20000000),
+  hexToF64(0x3fe02041, 0x00000000)];
+  // ~0.50196..., due to lack of precision in i8
+  const kNegHalfBounds4x8snorm = [
+  hexToF64(0xbfdfbf7f, 0x60000000),
+  hexToF64(0xbfdfbf7e, 0x80000000)];
+  // ~-0.49606..., due to lack of precision in i8
+
+  g.test('unpack4x8snormInterval').
+  paramsSubcasesOnly(
+
+  [
+  // Some of these are hard coded, since the error intervals are difficult to express in a closed human readable
+  // form due to the inherited nature of the errors.
+  { input: 0x00000000, expected: [kZeroBounds, kZeroBounds, kZeroBounds, kZeroBounds] },
+  { input: 0x0000007f, expected: [kOneBoundsSnorm, kZeroBounds, kZeroBounds, kZeroBounds] },
+  { input: 0x00007f00, expected: [kZeroBounds, kOneBoundsSnorm, kZeroBounds, kZeroBounds] },
+  { input: 0x007f0000, expected: [kZeroBounds, kZeroBounds, kOneBoundsSnorm, kZeroBounds] },
+  { input: 0x7f000000, expected: [kZeroBounds, kZeroBounds, kZeroBounds, kOneBoundsSnorm] },
+  { input: 0x00007f7f, expected: [kOneBoundsSnorm, kOneBoundsSnorm, kZeroBounds, kZeroBounds] },
+  { input: 0x7f7f0000, expected: [kZeroBounds, kZeroBounds, kOneBoundsSnorm, kOneBoundsSnorm] },
+  { input: 0x7f007f00, expected: [kZeroBounds, kOneBoundsSnorm, kZeroBounds, kOneBoundsSnorm] },
+  { input: 0x007f007f, expected: [kOneBoundsSnorm, kZeroBounds, kOneBoundsSnorm, kZeroBounds] },
+  { input: 0x7f7f7f7f, expected: [kOneBoundsSnorm, kOneBoundsSnorm, kOneBoundsSnorm, kOneBoundsSnorm] },
+  { input: 0x81818181, expected: [kNegOneBoundsSnorm, kNegOneBoundsSnorm, kNegOneBoundsSnorm, kNegOneBoundsSnorm] },
+  { input: 0x40404040, expected: [kHalfBounds4x8snorm, kHalfBounds4x8snorm, kHalfBounds4x8snorm, kHalfBounds4x8snorm] },
+  { input: 0xc1c1c1c1, expected: [kNegHalfBounds4x8snorm, kNegHalfBounds4x8snorm, kNegHalfBounds4x8snorm, kNegHalfBounds4x8snorm] }]).
+
+
+  fn((t) => {
+    const expected = toF32Vector(t.params.expected);
+
+    const got = unpack4x8snormInterval(t.params.input);
+
+    t.expect(
+    objectEquals(expected, got),
+    `unpack4x8snormInterval(${t.params.input}) returned [${got}]. Expected [${expected}]`);
+
+  });
+
+  const kHalfBounds4x8unorm = [
+  hexToF64(0x3fe0100f, 0xb0000000),
+  hexToF64(0x3fe01010, 0x70000000)];
+  // ~0.50196..., due to lack of precision in u8
+
+  g.test('unpack4x8unormInterval').
+  paramsSubcasesOnly(
+
+  [
+  // Some of these are hard coded, since the error intervals are difficult to express in a closed human readable
+  // form due to the inherited nature of the errors.
+  { input: 0x00000000, expected: [kZeroBounds, kZeroBounds, kZeroBounds, kZeroBounds] },
+  { input: 0x000000ff, expected: [kOneBoundsUnorm, kZeroBounds, kZeroBounds, kZeroBounds] },
+  { input: 0x0000ff00, expected: [kZeroBounds, kOneBoundsUnorm, kZeroBounds, kZeroBounds] },
+  { input: 0x00ff0000, expected: [kZeroBounds, kZeroBounds, kOneBoundsUnorm, kZeroBounds] },
+  { input: 0xff000000, expected: [kZeroBounds, kZeroBounds, kZeroBounds, kOneBoundsUnorm] },
+  { input: 0x0000ffff, expected: [kOneBoundsUnorm, kOneBoundsUnorm, kZeroBounds, kZeroBounds] },
+  { input: 0xffff0000, expected: [kZeroBounds, kZeroBounds, kOneBoundsUnorm, kOneBoundsUnorm] },
+  { input: 0xff00ff00, expected: [kZeroBounds, kOneBoundsUnorm, kZeroBounds, kOneBoundsUnorm] },
+  { input: 0x00ff00ff, expected: [kOneBoundsUnorm, kZeroBounds, kOneBoundsUnorm, kZeroBounds] },
+  { input: 0xffffffff, expected: [kOneBoundsUnorm, kOneBoundsUnorm, kOneBoundsUnorm, kOneBoundsUnorm] },
+  { input: 0x80808080, expected: [kHalfBounds4x8unorm, kHalfBounds4x8unorm, kHalfBounds4x8unorm, kHalfBounds4x8unorm] }]).
+
+
+  fn((t) => {
+    const expected = toF32Vector(t.params.expected);
+
+    const got = unpack4x8unormInterval(t.params.input);
+
+    t.expect(
+    objectEquals(expected, got),
+    `unpack4x8unormInterval(${t.params.input}) returned [${got}]. Expected [${expected}]`);
+
+  });
+}
 
 
 

@@ -18,6 +18,7 @@ TODO:
 - ?
 `;
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
+import { objectEquals } from '../../../../common/util/util.js';
 import { ValidationTest } from '../validation_test.js';
 
 class F extends ValidationTest {
@@ -47,25 +48,29 @@ export const g = makeTestGroup(F);
 g.test('pass_end_invalid_order')
   .desc(
     `
-  Test that beginning a  {compute,render} pass before ending the previous {compute,render} pass
+  Test that beginning a {compute,render} pass before ending the previous {compute,render} pass
   causes an error.
 
-  TODO: Need to add a control case to be sure a validation error happens because of ending order.
+  TODO: Update this test according to https://github.com/gpuweb/gpuweb/issues/2464
   `
   )
-  .paramsSubcasesOnly(u =>
+  .params(u =>
     u
       .combine('pass0Type', ['compute', 'render'])
       .combine('pass1Type', ['compute', 'render'])
+      .beginSubcases()
+      .combine('firstPassEnd', [true, false])
       .combine('endPasses', [[], [0], [1], [0, 1], [1, 0]])
   )
   .fn(async t => {
-    const { pass0Type, pass1Type, endPasses } = t.params;
+    const { pass0Type, pass1Type, firstPassEnd, endPasses } = t.params;
 
     const encoder = t.device.createCommandEncoder();
 
     const firstPass =
       pass0Type === 'compute' ? encoder.beginComputePass() : t.beginRenderPass(encoder);
+
+    if (firstPassEnd) firstPass.end();
 
     // Begin a second pass before ending the previous pass.
     const secondPass =
@@ -76,9 +81,12 @@ g.test('pass_end_invalid_order')
       passes[index].end();
     }
 
+    // If {endPasses} is '[1]' and {firstPass} ends, it's a control case.
+    const valid = firstPassEnd && objectEquals(endPasses, [1]);
+
     t.expectValidationError(() => {
       encoder.finish();
-    }, true);
+    }, !valid);
   });
 
 g.test('call_after_successful_finish')
@@ -115,4 +123,51 @@ g.test('call_after_successful_finish')
       }, IsEncoderFinished);
       encoder.finish();
     }
+  });
+
+g.test('pass_end_none')
+  .desc(
+    `
+  Test that ending a {compute,render} pass without ending the passes generates a validation error.
+  `
+  )
+  .paramsSubcasesOnly(u => u.combine('passType', ['compute', 'render']).combine('endCount', [0, 1]))
+  .fn(async t => {
+    const { passType, endCount } = t.params;
+
+    const encoder = t.device.createCommandEncoder();
+
+    const pass = passType === 'compute' ? encoder.beginComputePass() : t.beginRenderPass(encoder);
+
+    for (let i = 0; i < endCount; ++i) {
+      pass.end();
+    }
+
+    t.expectValidationError(() => {
+      encoder.finish();
+    }, endCount === 0);
+  });
+
+g.test('pass_end_twice')
+  .desc('Test that ending a {compute,render} pass twice generates a validation error.')
+  .paramsSubcasesOnly(u =>
+    u //
+      .combine('passType', ['compute', 'render'])
+      .combine('endTwice', [false, true])
+  )
+  .fn(async t => {
+    const { passType, endTwice } = t.params;
+
+    const encoder = t.device.createCommandEncoder();
+
+    const pass = passType === 'compute' ? encoder.beginComputePass() : t.beginRenderPass(encoder);
+
+    pass.end();
+    if (endTwice) {
+      t.expectValidationError(() => {
+        pass.end();
+      });
+    }
+
+    encoder.finish();
   });
