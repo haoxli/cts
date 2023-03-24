@@ -59,7 +59,7 @@ g.test('indirect_buffer,device_mismatch')
   .beforeAllSubcases(t => {
     t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
-  .fn(async t => {
+  .fn(t => {
     const { encoderType, indexed, mismatched } = t.params;
 
     const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
@@ -68,7 +68,6 @@ g.test('indirect_buffer,device_mismatch')
       size: 256,
       usage: GPUBufferUsage.INDIRECT,
     });
-
     t.trackForCleanup(indirectBuffer);
 
     const { encoder, validateFinish } = t.createEncoder(encoderType);

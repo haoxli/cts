@@ -206,13 +206,13 @@ g.test('render_pass_and_bundle,color_count')
   .fn(t => {
     const { passCount, bundleCount } = t.params;
     const bundleEncoder = t.device.createRenderBundleEncoder({
-      colorFormats: range(bundleCount, () => 'rgba8unorm'),
+      colorFormats: range(bundleCount, () => 'rgba8uint'),
     });
     const bundle = bundleEncoder.finish();
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder('non-pass');
     const pass = encoder.beginRenderPass({
-      colorAttachments: range(passCount, () => t.createColorAttachment('rgba8unorm')),
+      colorAttachments: range(passCount, () => t.createColorAttachment('rgba8uint')),
     });
     pass.executeBundles([bundle]);
     pass.end();
@@ -240,7 +240,7 @@ g.test('render_pass_and_bundle,color_sparse')
   )
   .fn(t => {
     const { passAttachments, bundleAttachments } = t.params;
-    const colorFormats = bundleAttachments.map(i => (i ? 'rgba8unorm' : null));
+    const colorFormats = bundleAttachments.map(i => (i ? 'rgba8uint' : null));
     const bundleEncoder = t.device.createRenderBundleEncoder({
       colorFormats,
     });
@@ -248,7 +248,7 @@ g.test('render_pass_and_bundle,color_sparse')
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder('non-pass');
     const colorAttachments = passAttachments.map(i =>
-      t.createColorAttachment(i ? 'rgba8unorm' : null)
+      t.createColorAttachment(i ? 'rgba8uint' : null)
     );
     const pass = encoder.beginRenderPass({
       colorAttachments,
@@ -279,7 +279,7 @@ g.test('render_pass_and_bundle,depth_format')
     const { passFeature, bundleFeature } = t.params;
     t.selectDeviceOrSkipTestCase([passFeature, bundleFeature]);
   })
-  .fn(async t => {
+  .fn(t => {
     const { passFormat, bundleFormat } = t.params;
 
     const bundleEncoder = t.device.createRenderBundleEncoder({
@@ -388,11 +388,11 @@ count.
   .fn(t => {
     const { encoderType, encoderCount, pipelineCount } = t.params;
     const pipeline = t.createRenderPipeline(
-      range(pipelineCount, () => ({ format: 'rgba8unorm', writeMask: 0 }))
+      range(pipelineCount, () => ({ format: 'rgba8uint', writeMask: 0 }))
     );
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType, {
-      attachmentInfo: { colorFormats: range(encoderCount, () => 'rgba8unorm') },
+      attachmentInfo: { colorFormats: range(encoderCount, () => 'rgba8uint') },
     });
     encoder.setPipeline(pipeline);
     validateFinishAndSubmit(encoderCount === pipelineCount, true);
@@ -422,11 +422,11 @@ Test that each of color attachments in render passes or bundles match that of th
     const { encoderType, encoderAttachments, pipelineAttachments } = t.params;
 
     const colorTargets = pipelineAttachments.map(i =>
-      i ? ({ format: 'rgba8unorm', writeMask: 0 } as GPUColorTargetState) : null
+      i ? ({ format: 'rgba8uint', writeMask: 0 } as GPUColorTargetState) : null
     );
     const pipeline = t.createRenderPipeline(colorTargets);
 
-    const colorFormats = encoderAttachments.map(i => (i ? 'rgba8unorm' : null));
+    const colorFormats = encoderAttachments.map(i => (i ? 'rgba8uint' : null));
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType, {
       attachmentInfo: { colorFormats },
     });
@@ -460,12 +460,14 @@ Test that the depth attachment format in render passes or bundles match the pipe
     const { encoderFormatFeature, pipelineFormatFeature } = t.params;
     t.selectDeviceOrSkipTestCase([encoderFormatFeature, pipelineFormatFeature]);
   })
-  .fn(async t => {
+  .fn(t => {
     const { encoderType, encoderFormat, pipelineFormat } = t.params;
 
     const pipeline = t.createRenderPipeline(
       [{ format: 'rgba8unorm', writeMask: 0 }],
-      pipelineFormat !== undefined ? { format: pipelineFormat } : undefined
+      pipelineFormat !== undefined
+        ? { format: pipelineFormat, depthCompare: 'always', depthWriteEnabled: false }
+        : undefined
     );
 
     const { encoder, validateFinishAndSubmit } = t.createEncoder(encoderType, {
@@ -531,7 +533,7 @@ Test that the depth stencil read only state in render passes or bundles is compa
   .beforeAllSubcases(t => {
     t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format);
   })
-  .fn(async t => {
+  .fn(t => {
     const {
       encoderType,
       format,
@@ -551,6 +553,7 @@ Test that the depth stencil read only state in render passes or bundles is compa
         : {
             format,
             depthWriteEnabled,
+            depthCompare: 'always',
             stencilWriteMask,
             stencilFront,
             stencilBack,
@@ -627,7 +630,9 @@ Test that the sample count in render passes or bundles match the pipeline sample
 
     const pipeline = t.createRenderPipeline(
       colorFormats.map(format => ({ format, writeMask: 0 })),
-      depthStencilFormat ? { format: depthStencilFormat } : undefined,
+      depthStencilFormat
+        ? { format: depthStencilFormat, depthWriteEnabled: false, depthCompare: 'always' }
+        : undefined,
       pipelineSampleCount
     );
 

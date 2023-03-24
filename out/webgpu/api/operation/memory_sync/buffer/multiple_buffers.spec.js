@@ -4,7 +4,7 @@
 Memory Synchronization Tests for multiple buffers: read before write, read after write, and write after write.
 
 - Create multiple src buffers and initialize it to 0, wait on the fence to ensure the data is initialized.
-Write Op: write a value (say 1) into the src buffer via render pass, copmute pass, copy, write buffer, etc.
+Write Op: write a value (say 1) into the src buffer via render pass, compute pass, copy, write buffer, etc.
 Read Op: read the value from the src buffer and write it to dst buffer via render pass (vertex, index, indirect input, uniform, storage), compute pass, copy etc.
 Wait on another fence, then call expectContents to verify the dst buffer value.
   - x= write op: {storage buffer in {compute, render, render-via-bundle}, t2b copy dst, b2b copy dst, writeBuffer}
@@ -57,8 +57,8 @@ expandWithParams(function* ({ _context }) {
           readOp,
           readContext: _context[0],
           writeOp,
-          writeContext: _context[1] };
-
+          writeContext: _context[1]
+        };
       }
     }
   }
@@ -122,8 +122,8 @@ expandWithParams(function* ({ _context }) {
           readOp,
           readContext: _context[0],
           writeOp,
-          writeContext: _context[1] };
-
+          writeContext: _context[1]
+        };
       }
     }
   }
@@ -187,8 +187,8 @@ expandWithParams(function* ({ _context }) {
       if (checkOpsValidForContext([firstWriteOp, secondWriteOp], _context)) {
         yield {
           writeOps: [firstWriteOp, secondWriteOp],
-          contexts: _context };
-
+          contexts: _context
+        };
       }
     }
   }
@@ -258,8 +258,8 @@ fn(async (t) => {
     for (let i = 0; i < 2; ++i) {
       const renderEncoder = useBundle[i] ?
       t.device.createRenderBundleEncoder({
-        colorFormats: ['rgba8unorm'] }) :
-
+        colorFormats: ['rgba8unorm']
+      }) :
       passEncoder;
       const pipeline = t.createStorageWriteRenderPipeline(2 * b + i + 1);
       const bindGroup = t.createBindGroup(pipeline, buffer);
@@ -291,8 +291,8 @@ fn(async (t) => {
   const encoder = t.device.createCommandEncoder();
   const passEncoder = t.beginSimpleRenderPass(encoder);
   const renderEncoder = t.device.createRenderBundleEncoder({
-    colorFormats: ['rgba8unorm'] });
-
+    colorFormats: ['rgba8unorm']
+  });
 
   const kBufferCount = 4;
   const buffers = [];

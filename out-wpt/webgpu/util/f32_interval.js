@@ -3,16 +3,21 @@
  **/ import { assert, unreachable } from '../../common/util/util.js';
 import { Float16Array } from '../../external/petamoriken/float16/float16.js';
 import { kValue } from './constants.js';
+import { f32, reinterpretF32AsU32, reinterpretU32AsF32 } from './conversion.js';
 import {
+  calculatePermutations,
   cartesianProduct,
   correctlyRoundedF16,
   correctlyRoundedF32,
+  flatten2DArray,
   flushSubnormalNumberF32,
   isFiniteF16,
   isFiniteF32,
   isSubnormalNumberF16,
   isSubnormalNumberF32,
-  oneULP,
+  map2DArray,
+  oneULPF32,
+  unflatten2DArray,
 } from './math.js';
 
 /**
@@ -25,6 +30,8 @@ import {
 /** Represents a closed interval in the f32 range */
 export class F32Interval {
   /** Constructor
+   *
+   * `toF32Interval` is the preferred way to create F32Intervals
    *
    * @param bounds either a pair of numbers indicating the beginning then the
    *               end of the interval, or a single element array indicating the
@@ -56,6 +63,15 @@ export class F32Interval {
     return this.begin <= i.begin && this.end >= i.end;
   }
 
+  /** @returns if any values in the interval may be flushed to zero, this
+   *           includes any subnormals and zero itself.
+   */
+  containsZeroOrSubnormals() {
+    return !(
+      this.end < kValue.f32.subnormal.negative.min || this.begin > kValue.f32.subnormal.positive.max
+    );
+  }
+
   /** @returns if this interval contains a single point */
   isPoint() {
     return this.begin === this.end;
@@ -80,7 +96,7 @@ export class F32Interval {
 
   /** @returns a string representation for logging purposes */
   toString() {
-    return `[${this.bounds()}]`;
+    return `[${this.bounds().map(f32)}]`;
   }
 
   /** @returns a singleton for interval of all possible values
@@ -95,8 +111,27 @@ export class F32Interval {
   }
 }
 
+/**
+ * SerializedF32Interval holds the serialized form of a F32Interval.
+ * This form can be safely encoded to JSON.
+ */
+
+/** serializeF32Interval() converts a F32Interval to a SerializedF32Interval */
+export function serializeF32Interval(i) {
+  return i === F32Interval.any()
+    ? 'any'
+    : { begin: reinterpretF32AsU32(i.begin), end: reinterpretF32AsU32(i.end) };
+}
+
+/** serializeF32Interval() converts a SerializedF32Interval to a F32Interval */
+export function deserializeF32Interval(data) {
+  return data === 'any'
+    ? F32Interval.any()
+    : toF32Interval([reinterpretU32AsF32(data.begin), reinterpretU32AsF32(data.end)]);
+}
+
 /** @returns an interval containing the point or the original interval */
-function toF32Interval(n) {
+export function toF32Interval(n) {
   if (n instanceof F32Interval) {
     return n;
   }
@@ -109,18 +144,20 @@ function toF32Interval(n) {
 }
 
 /** F32Interval of [-π, π] */
-const kNegPiToPiInterval = new F32Interval(
+const kNegPiToPiInterval = toF32Interval([
   kValue.f32.negative.pi.whole,
-  kValue.f32.positive.pi.whole
-);
+  kValue.f32.positive.pi.whole,
+]);
 
 /** F32Interval of values greater than 0 and less than or equal to f32 max */
-const kGreaterThanZeroInterval = new F32Interval(
+const kGreaterThanZeroInterval = toF32Interval([
   kValue.f32.subnormal.positive.min,
-  kValue.f32.positive.max
-);
+  kValue.f32.positive.max,
+]);
 
-/** Representation of a vec2/3/4 of floating point intervals as an array of F32Intervals */
+/**
+ * Representation of a vec2/3/4 of floating point intervals as an array of F32Intervals.
+ * */
 
 /** Coerce F32Interval[] to F32Vector if possible */
 function isF32Vector(v) {
@@ -143,27 +180,179 @@ export function toF32Vector(v) {
   unreachable(`Cannot convert [${v}] to F32Vector`);
 }
 
+/** F32Vector with all zero elements */
+const kZeroVector = {
+  2: toF32Vector([0, 0]),
+  3: toF32Vector([0, 0, 0]),
+  4: toF32Vector([0, 0, 0, 0]),
+};
+
+/** F32Vector with all F32Interval.any() elements */
+const kAnyVector = {
+  2: toF32Vector([F32Interval.any(), F32Interval.any()]),
+  3: toF32Vector([F32Interval.any(), F32Interval.any(), F32Interval.any()]),
+  4: toF32Vector([F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()]),
+};
+
 /**
  * @returns a F32Vector where each element is the span for corresponding
  *          elements at the same index in the input vectors
  */
 function spanF32Vector(...vectors) {
+  assert(isF32Vector(vectors[0]), '');
   const vector_length = vectors[0].length;
   assert(
     vectors.every(e => e.length === vector_length),
     `Vector span is not defined for vectors of differing lengths`
   );
 
-  // The outer map is doing the walk across a single F32Vector to get the indices to use.
-  // The inner map is doing the walk across the of the vector array, collecting the value of each vector at the
-  // index, then spanning them down to a single F32Interval.
-  // The toF32Vector coerces things at the end to be a F32Vector, because the outer .map() will actually return a
-  // F32Interval[]
-  return toF32Vector(
-    vectors[0].map((_, idx) => {
-      return F32Interval.span(...vectors.map(v => v[idx]));
-    })
+  const result = new Array(vector_length);
+
+  for (let i = 0; i < vector_length; i++) {
+    result[i] = F32Interval.span(...vectors.map(v => v[i]));
+  }
+  return toF32Vector(result);
+}
+
+/**
+ * @retuns the vector result of multiplying the given vector by the given scalar
+ */
+function multiplyVectorByScalar(v, c) {
+  return toF32Vector(v.map(x => multiplicationInterval(x, c)));
+}
+
+/**
+ * Short hand for an Array of Arrays that contains a column-major matrix
+ *
+ * This isn't exported outside of this file to avoid colliding with the Matrix
+ * container for going in/out of a shader that the test runner uses.
+ */
+
+/** Coerce F32Interval[] to F32Matrix if possible */
+function isF32Matrix(m) {
+  if (!(m[0][0] instanceof F32Interval)) {
+    return false;
+  }
+  // At this point m guaranteed to be a F32Interval[][] | F32Vector[]
+  // | F32Matrix.
+
+  // Coercing the type since F32Vector[] and F32Matrix are functionally
+  // equivalent to F32Interval[][] for .length and .every, but they are not
+  // generally compatible, since tuples are not equivalent to arrays, so TS
+  // considers c in .every to be unresolvable, even though our usage is safe.
+  m = m;
+
+  if (m.length > 4 || m.length < 2) {
+    return false;
+  }
+
+  const num_rows = m[0].length;
+  if (num_rows > 4 || num_rows < 2) {
+    return false;
+  }
+
+  return m.every(c => c.length === num_rows);
+}
+
+/** @returns an F32Matrix representation of an array fo F32Intervals if possible */
+export function toF32Matrix(m) {
+  if (isF32Matrix(m)) {
+    return m;
+  }
+
+  const result = m.map(c => c.map(toF32Interval));
+
+  if (isF32Matrix(result)) {
+    return result;
+  }
+  unreachable(`Cannot convert ${m} to F32Matrix`);
+}
+
+/** F32Matrix with all F32Interval.any() elements */
+const kAnyF32Matrix = {
+  2: {
+    2: toF32Matrix([
+      [F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any()],
+    ]),
+
+    3: toF32Matrix([
+      [F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any()],
+    ]),
+
+    4: toF32Matrix([
+      [F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()],
+    ]),
+  },
+  3: {
+    2: toF32Matrix([
+      [F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any()],
+    ]),
+
+    3: toF32Matrix([
+      [F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any()],
+    ]),
+
+    4: toF32Matrix([
+      [F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()],
+    ]),
+  },
+  4: {
+    2: toF32Matrix([
+      [F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any()],
+    ]),
+
+    3: toF32Matrix([
+      [F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any()],
+    ]),
+
+    4: toF32Matrix([
+      [F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()],
+      [F32Interval.any(), F32Interval.any(), F32Interval.any(), F32Interval.any()],
+    ]),
+  },
+};
+
+/**
+ * @returns a F32Matrix where each element is the span for corresponding
+ *          elements at the same index in the input matrices
+ */
+function spanF32Matrix(...matrices) {
+  // Coercing the type of matrices, since tuples are not generally compatible
+  // with Arrays, but they are functionally equivalent for the usages in this
+  // function.
+  const ms = matrices;
+  const num_cols = ms[0].length;
+  const num_rows = ms[0][0].length;
+  assert(
+    ms.every(m => m.length === num_cols && m.every(r => r.length === num_rows)),
+    `Matrix span is not defined for Matrices of differing dimensions`
   );
+
+  const result = [...Array(num_cols)].map(_ => [...Array(num_rows)]);
+  for (let i = 0; i < num_cols; i++) {
+    for (let j = 0; j < num_rows; j++) {
+      result[i][j] = F32Interval.span(...ms.map(m => m[i][j]));
+    }
+  }
+
+  return toF32Matrix(result);
 }
 
 /**
@@ -222,11 +411,7 @@ function limitPointToIntervalDomain(domain, impl) {
  *          otherwise it returns the any() interval */
 function limitBinaryToIntervalDomain(domain, impl) {
   return (x, y) => {
-    if (!domain.x.contains(x)) {
-      return F32Interval.any();
-    }
-
-    if (!domain.y.some(d => d.contains(y))) {
+    if (!domain.x.some(d => d.contains(x)) || !domain.y.some(d => d.contains(y))) {
       return F32Interval.any();
     }
 
@@ -455,6 +640,38 @@ function roundAndFlushVectorPairToVector(x, y, op) {
   return spanF32Vector(...interval_vectors);
 }
 
+/** Converts a matrix to a matrix of acceptance intervals using a specific
+ * function
+ *
+ * This handles correctly rounding and flushing inputs as needed.
+ * Duplicate inputs are pruned before invoking op.impl.
+ *
+ * @param m param to flush & round then invoke op.impl on
+ * @param op operation defining the function being run
+ * @returns a matrix of spans for each outputs of op.impl
+ */
+function roundAndFlushMatrixToMatrix(m, op) {
+  const num_cols = m.length;
+  const num_rows = m[0].length;
+  assert(
+    m.every(c => c.every(r => !Number.isNaN(r))),
+    `flush not defined for NaN`
+  );
+
+  const m_flat = flatten2DArray(m);
+  const m_rounded = m_flat.map(correctlyRoundedF32);
+  const m_flushed = m_rounded.map(e => addFlushedIfNeededF32(e));
+  const m_options = cartesianProduct(...m_flushed);
+  const m_inputs = m_options.map(e => unflatten2DArray(e, num_cols, num_rows));
+
+  const interval_matrices = new Set();
+  m_inputs.forEach(inner_m => {
+    interval_matrices.add(op.impl(inner_m));
+  });
+
+  return spanF32Matrix(...interval_matrices);
+}
+
 /** Calculate the acceptance interval for a unary function over an interval
  *
  * If the interval is actually a point, this just decays to
@@ -588,13 +805,12 @@ function runVectorPairToIntervalOp(x, y, op) {
  * given intervals
  *
  * @param x input domain intervals vector
- * @param x input domain intervals vector
  * @param op operation defining the function being run
  * @returns a vector of spans over all of the outputs of op.impl
  */
 function runVectorToVectorOp(x, op) {
   if (x.some(e => !e.isFinite())) {
-    return toF32Vector(x.map(_ => F32Interval.any()));
+    return kAnyVector[x.length];
   }
 
   const x_values = cartesianProduct(...x.map(e => e.bounds()));
@@ -639,7 +855,7 @@ function runPointToIntervalOpComponentWise(x, op) {
  */
 function runVectorPairToVectorOp(x, y, op) {
   if (x.some(e => !e.isFinite()) || y.some(e => !e.isFinite())) {
-    return toF32Vector(x.map(_ => F32Interval.any()));
+    return kAnyVector[x.length];
   }
 
   const x_values = cartesianProduct(...x.map(e => e.bounds()));
@@ -670,16 +886,83 @@ function runVectorPairToVectorOp(x, y, op) {
  * @param op scalar operation to be run component-wise
  * @returns a vector of intervals with the outputs of op.impl
  */
-function runBinaryToIntervalOpComponentWise(x, y, op) {
+function runBinaryToIntervalOpVectorComponentWise(x, y, op) {
   assert(
     x.length === y.length,
-    `runBinaryToIntervalOpComponentWise requires vectors of the same length`
+    `runBinaryToIntervalOpVectorComponentWise requires vectors of the same length`
   );
 
   return toF32Vector(
     x.map((i, idx) => {
       return runBinaryToIntervalOp(i, y[idx], op);
     })
+  );
+}
+
+/** Calculate the matrix of acceptance intervals for a pair of matrix function over
+ * given intervals
+ *
+ * @param x input domain intervals matrix
+ * @param x input domain intervals matrix
+ * @param op operation defining the function being run
+ * @returns a matrix of spans over all of the outputs of op.impl
+ */
+function runMatrixToMatrixOp(m, op) {
+  const num_cols = m.length;
+  const num_rows = m[0].length;
+  if (m.some(c => c.some(r => !r.isFinite()))) {
+    return kAnyF32Matrix[num_cols][num_rows];
+  }
+
+  const m_flat = flatten2DArray(m);
+  const m_values = cartesianProduct(...m_flat.map(e => e.bounds()));
+
+  const outputs = new Set();
+  m_values.forEach(inner_m => {
+    const unflat_m = unflatten2DArray(inner_m, num_cols, num_rows);
+    outputs.add(roundAndFlushMatrixToMatrix(unflat_m, op));
+  });
+
+  const result = spanF32Matrix(...outputs);
+  const result_cols = result.length;
+  const result_rows = result[0].length;
+
+  // F32Matrix has to be coerced to F32Interval[][] to use .every
+  return result.every(c => c.every(r => r.isFinite()))
+    ? result
+    : kAnyF32Matrix[result_cols][result_rows];
+}
+
+/**
+ * Calculate the Matrix of acceptance intervals by running a scalar operation
+ * component-wise over a pair of matrices.
+ *
+ * An example of this is performing matrix addition.
+ *
+ * @param x first input domain intervals matrix
+ * @param y second input domain intervals matrix
+ * @param op scalar operation to be run component-wise
+ * @returns a matrix of intervals with the outputs of op.impl
+ */
+function runBinaryToIntervalOpMatrixComponentWise(x, y, op) {
+  assert(
+    x.length === y.length && x[0].length === y[0].length,
+    `runBinaryToIntervalOpMatrixComponentWise requires matrices of the same dimensions`
+  );
+
+  const cols = x.length;
+  const rows = x[0].length;
+  const flat_x = flatten2DArray(x);
+  const flat_y = flatten2DArray(y);
+
+  return toF32Matrix(
+    unflatten2DArray(
+      flat_x.map((i, idx) => {
+        return runBinaryToIntervalOp(i, flat_y[idx], op);
+      }),
+      cols,
+      rows
+    )
   );
 }
 
@@ -696,6 +979,11 @@ export function correctlyRoundedInterval(n) {
   return runPointToIntervalOp(toF32Interval(n), CorrectlyRoundedIntervalOp);
 }
 
+/** @returns a matrix of correctly rounded intervals for the provided matrix */
+export function correctlyRoundedMatrix(m) {
+  return toF32Matrix(map2DArray(m, correctlyRoundedInterval));
+}
+
 /** @returns a PointToIntervalOp for [n - error_range, n + error_range] */
 function AbsoluteErrorIntervalOp(error_range) {
   const op = {
@@ -707,7 +995,7 @@ function AbsoluteErrorIntervalOp(error_range) {
   if (isFiniteF32(error_range)) {
     op.impl = n => {
       assert(!Number.isNaN(n), `absolute error not defined for NaN`);
-      return new F32Interval(n - error_range, n + error_range);
+      return toF32Interval([n - error_range, n + error_range]);
     };
   }
 
@@ -732,14 +1020,14 @@ function ULPIntervalOp(numULP) {
     op.impl = n => {
       assert(!Number.isNaN(n), `ULP error not defined for NaN`);
 
-      const ulp = oneULP(n);
+      const ulp = oneULPF32(n);
       const begin = n - numULP * ulp;
       const end = n + numULP * ulp;
 
-      return new F32Interval(
+      return toF32Interval([
         Math.min(begin, flushSubnormalNumberF32(begin)),
-        Math.max(end, flushSubnormalNumberF32(end))
-      );
+        Math.max(end, flushSubnormalNumberF32(end)),
+      ]);
     };
   }
 
@@ -765,9 +1053,9 @@ export function absInterval(n) {
 
 const AcosIntervalOp = {
   impl: limitPointToIntervalDomain(toF32Interval([-1.0, 1.0]), n => {
-    // acos(n) = atan2(sqrt(1.0 - n * n), n)
+    // acos(n) = atan2(sqrt(1.0 - n * n), n) or a polynomial approximation with absolute error
     const y = sqrtInterval(subtractionInterval(1, multiplicationInterval(n, n)));
-    return atan2Interval(y, n);
+    return F32Interval.span(atan2Interval(y, n), absoluteErrorInterval(Math.acos(n), 6.77e-5));
   }),
 };
 
@@ -822,11 +1110,20 @@ export function additionInterval(x, y) {
   return runBinaryToIntervalOp(toF32Interval(x), toF32Interval(y), AdditionIntervalOp);
 }
 
+/** Calculate an acceptance interval of x + y, when x and y are matrices */
+export function additionMatrixInterval(x, y) {
+  return runBinaryToIntervalOpMatrixComponentWise(
+    toF32Matrix(x),
+    toF32Matrix(y),
+    AdditionIntervalOp
+  );
+}
+
 const AsinIntervalOp = {
   impl: limitPointToIntervalDomain(toF32Interval([-1.0, 1.0]), n => {
-    // asin(n) = atan2(n, sqrt(1.0 - n * n))
+    // asin(n) = atan2(n, sqrt(1.0 - n * n)) or a polynomial approximation with absolute error
     const x = sqrtInterval(subtractionInterval(1, multiplicationInterval(n, n)));
-    return atan2Interval(n, x);
+    return F32Interval.span(atan2Interval(n, x), absoluteErrorInterval(Math.asin(n), 6.77e-5));
   }),
 };
 
@@ -861,31 +1158,34 @@ export function atanInterval(n) {
 }
 
 const Atan2IntervalOp = {
-  impl: (y, x) => {
-    // y/x is not defined meaningfully here
-    if (x === 0) {
-      return F32Interval.any();
-    }
+  impl: limitBinaryToIntervalDomain(
+    {
+      // For atan2, there params are labelled (y, x), not (x, y), so domain.x is first parameter (y), and domain.y is
+      // the second parameter (x)
+      x: [
+        toF32Interval([kValue.f32.negative.min, kValue.f32.negative.max]),
+        toF32Interval([kValue.f32.positive.min, kValue.f32.positive.max]),
+      ],
+      // first param must be finite and normal
+      y: [toF32Interval([-(2 ** 126), -(2 ** -126)]), toF32Interval([2 ** -126, 2 ** 126])], // inherited from division
+    },
+    (y, x) => {
+      const atan_yx = Math.atan(y / x);
+      // x > 0, atan(y/x)
+      if (x > 0) {
+        return ulpInterval(atan_yx, 4096);
+      }
 
-    // atan2's accuracy is only defined if y is normal
-    if (isSubnormalNumberF32(y)) {
-      return F32Interval.any();
-    }
+      // x < 0, y > 0, atan(y/x) + π
+      if (y > 0) {
+        return ulpInterval(atan_yx + kValue.f32.positive.pi.whole, 4096);
+      }
 
-    const atan_yx = atanInterval(divisionInterval(y, x));
-    // x > 0, atan(y/x)
-    if (x > 0) {
-      return atan_yx;
+      // x < 0, y < 0, atan(y/x) - π
+      return ulpInterval(atan_yx - kValue.f32.positive.pi.whole, 4096);
     }
+  ),
 
-    // x < 0, y > 0, atan(y/x) + π
-    if (y > 0) {
-      return additionInterval(atan_yx, kValue.f32.positive.pi.whole);
-    }
-
-    // x < 0, y < 0, atan(y/x) - π
-    return subtractionInterval(atan_yx, kValue.f32.positive.pi.whole);
-  },
   extrema: (y, x) => {
     // There is discontinuity + undefined behaviour at y/x = 0 that will dominate the accuracy
     if (y.contains(0)) {
@@ -962,7 +1262,7 @@ export function clampMedianInterval(x, y, z) {
 
 const ClampMinMaxIntervalOp = {
   impl: (x, low, high) => {
-    return correctlyRoundedInterval(Math.min(Math.max(x, low), high));
+    return minInterval(maxInterval(x, low), high);
   },
 };
 
@@ -1046,6 +1346,138 @@ export function degreesInterval(n) {
   return runPointToIntervalOp(toF32Interval(n), DegreesIntervalOp);
 }
 
+/**
+ * Calculate the minor of a NxN matrix.
+ *
+ * The ijth minor of a square matrix, is the N-1xN-1 matrix created by removing
+ * the ith column and jth row from the original matrix.
+ */
+function minorNxN(m, col, row) {
+  const dim = m.length;
+  assert(m.length === m[0].length, `minorMatrix is only defined for square matrices`);
+  assert(col >= 0 && col < dim, `col ${col} needs be in [0, # of columns '${dim}')`);
+  assert(row >= 0 && row < dim, `row ${row} needs be in [0, # of rows '${dim}')`);
+
+  const result = [...Array(dim - 1)].map(_ => [...Array(dim - 1)]);
+
+  const col_indices = [...Array(dim).keys()].filter(e => e !== col);
+  const row_indices = [...Array(dim).keys()].filter(e => e !== row);
+
+  col_indices.forEach((c, i) => {
+    row_indices.forEach((r, j) => {
+      result[i][j] = m[c][r];
+    });
+  });
+  return result;
+}
+
+/** Calculate an acceptance interval for determinant(m), where m is a 2x2 matrix */
+function determinant2x2Interval(m) {
+  assert(
+    m.length === m[0].length && m.length === 2,
+    `determinant2x2Interval called on non-2x2 matrix`
+  );
+
+  return subtractionInterval(
+    multiplicationInterval(m[0][0], m[1][1]),
+    multiplicationInterval(m[0][1], m[1][0])
+  );
+}
+
+/** Calculate an acceptance interval for determinant(m), where m is a 3x3 matrix */
+function determinant3x3Interval(m) {
+  assert(
+    m.length === m[0].length && m.length === 3,
+    `determinant3x3Interval called on non-3x3 matrix`
+  );
+
+  // M is a 3x3 matrix
+  // det(M) is A + B + C, where A, B, C are three elements in a row/column times
+  // their own co-factor.
+  // (The co-factor is the determinant of the minor of that position with the
+  // appropriate +/-)
+  // For simplicity sake A, B, C are calculated as the elements of the first
+  // column
+  const A = multiplicationInterval(m[0][0], determinant2x2Interval(minorNxN(m, 0, 0)));
+  const B = multiplicationInterval(-m[0][1], determinant2x2Interval(minorNxN(m, 0, 1)));
+  const C = multiplicationInterval(m[0][2], determinant2x2Interval(minorNxN(m, 0, 2)));
+
+  // Need to calculate permutations, since for fp addition is not associative,
+  // so A + B + C is not guaranteed to equal B + C + A, etc.
+  const permutations = calculatePermutations([A, B, C]);
+  return F32Interval.span(
+    ...permutations.map(p => p.reduce((prev, cur) => additionInterval(prev, cur)))
+  );
+}
+
+/** Calculate an acceptance interval for determinant(m), where m is a 4x4 matrix */
+function determinant4x4Interval(m) {
+  assert(
+    m.length === m[0].length && m.length === 4,
+    `determinant3x3Interval called on non-4x4 matrix`
+  );
+
+  // M is a 4x4 matrix
+  // det(M) is A + B + C + D, where A, B, C, D are four elements in a row/column
+  // times their own co-factor.
+  // (The co-factor is the determinant of the minor of that position with the
+  // appropriate +/-)
+  // For simplicity sake A, B, C, D are calculated as the elements of the
+  // first column
+  const A = multiplicationInterval(m[0][0], determinant3x3Interval(minorNxN(m, 0, 0)));
+  const B = multiplicationInterval(-m[0][1], determinant3x3Interval(minorNxN(m, 0, 1)));
+  const C = multiplicationInterval(m[0][2], determinant3x3Interval(minorNxN(m, 0, 2)));
+  const D = multiplicationInterval(-m[0][3], determinant3x3Interval(minorNxN(m, 0, 3)));
+
+  // Need to calculate permutations, since for fp addition is not associative
+  // so A + B + C + D is not guaranteed to equal B + C + A + D, etc.
+  const permutations = calculatePermutations([A, B, C, D]);
+  return F32Interval.span(
+    ...permutations.map(p => p.reduce((prev, cur) => additionInterval(prev, cur)))
+  );
+}
+
+/**
+ * Calculate an acceptance interval for determinant(x)
+ *
+ * This code calculates 3x3 and 4x4 determinants using the textbook co-factor
+ * method, using the first column for the co-factor selection.
+ *
+ * For matrices composed of integer elements, e, with |e|^4 < 2**21, this
+ * should be fine.
+ *
+ * For e, where e is subnormal or 4*(e^4) might not be precisely expressible as
+ * a f32 values, this approach breaks down, because the rule of all co-factor
+ * definitions of determinant being equal doesn't hold in these cases.
+ *
+ * The general solution for this is to calculate all of the permutations of the
+ * operations in the worked out formula for determinant.
+ * For 3x3 this is tractable, but for 4x4 this works out to ~23! permutations
+ * that need to be calculated.
+ * Thus CTS testing, and the spec definition of accuracy is restricted to the
+ * space that the simple implementation is valid.
+ */
+export function determinantInterval(x) {
+  const dim = x.length;
+  assert(
+    x[0].length === dim && (dim === 2 || dim === 3 || dim === 4),
+    `determinantInterval only defined for 2x2, 3x3 and 4x4 matrices`
+  );
+
+  switch (dim) {
+    case 2:
+      return determinant2x2Interval(x);
+    case 3:
+      return determinant3x3Interval(x);
+    case 4:
+      return determinant4x4Interval(x);
+  }
+
+  unreachable(
+    "determinantInterval called on x, where which has an unexpected dimension of '${dim}'"
+  );
+}
+
 const DistanceIntervalScalarOp = {
   impl: (x, y) => {
     return lengthInterval(subtractionInterval(x, y));
@@ -1055,7 +1487,11 @@ const DistanceIntervalScalarOp = {
 const DistanceIntervalVectorOp = {
   impl: (x, y) => {
     return lengthInterval(
-      runBinaryToIntervalOpComponentWise(toF32Vector(x), toF32Vector(y), SubtractionIntervalOp)
+      runBinaryToIntervalOpVectorComponentWise(
+        toF32Vector(x),
+        toF32Vector(y),
+        SubtractionIntervalOp
+      )
     );
   },
 };
@@ -1080,10 +1516,9 @@ export function distanceInterval(x, y) {
 const DivisionIntervalOp = {
   impl: limitBinaryToIntervalDomain(
     {
-      x: new F32Interval(kValue.f32.negative.min, kValue.f32.positive.max),
-      y: [new F32Interval(-(2 ** 126), -(2 ** -126)), new F32Interval(2 ** -126, 2 ** 126)],
+      x: [toF32Interval([kValue.f32.negative.min, kValue.f32.positive.max])],
+      y: [toF32Interval([-(2 ** 126), -(2 ** -126)]), toF32Interval([2 ** -126, 2 ** 126])],
     },
-
     (x, y) => {
       if (y === 0) {
         return F32Interval.any();
@@ -1109,13 +1544,24 @@ export function divisionInterval(x, y) {
 const DotIntervalOp = {
   impl: (x, y) => {
     // dot(x, y) = sum of x[i] * y[i]
-    const multiplications = runBinaryToIntervalOpComponentWise(
+    const multiplications = runBinaryToIntervalOpVectorComponentWise(
       toF32Vector(x),
       toF32Vector(y),
       MultiplicationIntervalOp
     );
 
-    return multiplications.reduce((previous, current) => additionInterval(previous, current));
+    // vec2 doesn't require permutations, since a + b = b + a for floats
+    if (multiplications.length === 2) {
+      return additionInterval(multiplications[0], multiplications[1]);
+    }
+
+    // The spec does not state the ordering of summation, so all of the permutations are calculated and their results
+    // spanned, since addition of more then two floats is not transitive, i.e. a + b + c is not guaranteed to equal
+    // b + a + c
+    const permutations = calculatePermutations(multiplications);
+    return F32Interval.span(
+      ...permutations.map(p => p.reduce((prev, cur) => additionInterval(prev, cur)))
+    );
   },
 };
 
@@ -1166,10 +1612,23 @@ export function faceForwardIntervals(x, y, z) {
   const negative_x = runPointToIntervalOpComponentWise(x_vec, NegationIntervalOp);
 
   const dot_interval = dotInterval(z, y);
-  const results = new Array();
 
-  // Because the result of dot can be an interval, it might span across 0, thus it is possible that both -x and x are
-  // valid responses.
+  const results = [];
+
+  if (!dot_interval.isFinite()) {
+    // dot calculation went out of bounds
+    // Inserting undefine in the result, so that the test running framework is aware
+    // of this potential OOB.
+    // For const-eval tests, it means that the test case should be skipped,
+    // since the shader will fail to compile.
+    // For non-const-eval the undefined should be stripped out of the possible
+    // results.
+
+    results.push(undefined);
+  }
+
+  // Because the result of dot can be an interval, it might span across 0, thus
+  // it is possible that both -x and x are valid responses.
   if (dot_interval.begin < 0 || dot_interval.end < 0) {
     results.push(positive_x);
   }
@@ -1179,7 +1638,7 @@ export function faceForwardIntervals(x, y, z) {
   }
 
   assert(
-    results.length > 0,
+    results.length > 0 || results.every(r => r === undefined),
     `faceForwardInterval selected neither positive x or negative x for the result, this shouldn't be possible`
   );
 
@@ -1195,6 +1654,22 @@ const FloorIntervalOp = {
 /** Calculate an acceptance interval of floor(x) */
 export function floorInterval(n) {
   return runPointToIntervalOp(toF32Interval(n), FloorIntervalOp);
+}
+
+const FmaIntervalOp = {
+  impl: (x, y, z) => {
+    return additionInterval(multiplicationInterval(x, y), z);
+  },
+};
+
+/** Calculate an acceptance interval for fma(x, y, z) */
+export function fmaInterval(x, y, z) {
+  return runTernaryToIntervalOp(
+    toF32Interval(x),
+    toF32Interval(y),
+    toF32Interval(z),
+    FmaIntervalOp
+  );
 }
 
 const FractIntervalOp = {
@@ -1234,10 +1709,9 @@ const LdexpIntervalOp = {
     // Implementing SPIR-V's more restrictive domain until
     // https://github.com/gpuweb/gpuweb/issues/3134 is resolved
     {
-      x: new F32Interval(kValue.f32.negative.min, kValue.f32.positive.max),
-      y: [new F32Interval(-126, 128)],
+      x: [toF32Interval([kValue.f32.negative.min, kValue.f32.positive.max])],
+      y: [toF32Interval([-126, 128])],
     },
-
     (e1, e2) => {
       // Though the spec says the result of ldexp(e1, e2) = e1 * 2 ^ e2, the
       // accuracy is listed as correctly rounded to the true value, so the
@@ -1310,6 +1784,11 @@ export function log2Interval(x) {
 
 const MaxIntervalOp = {
   impl: (x, y) => {
+    // If both of he inputs are subnormal, then either of the inputs can be returned
+    if (isSubnormalNumberF32(x) && isSubnormalNumberF32(y)) {
+      return correctlyRoundedInterval(F32Interval.span(toF32Interval(x), toF32Interval(y)));
+    }
+
     return correctlyRoundedInterval(Math.max(x, y));
   },
 };
@@ -1321,6 +1800,11 @@ export function maxInterval(x, y) {
 
 const MinIntervalOp = {
   impl: (x, y) => {
+    // If both of he inputs are subnormal, then either of the inputs can be returned
+    if (isSubnormalNumberF32(x) && isSubnormalNumberF32(y)) {
+      return correctlyRoundedInterval(F32Interval.span(toF32Interval(x), toF32Interval(y)));
+    }
+
     return correctlyRoundedInterval(Math.min(x, y));
   },
 };
@@ -1372,6 +1856,13 @@ export function mixPreciseInterval(x, y, z) {
   );
 }
 
+/** Calculate an acceptance interval of modf(x) */
+export function modfInterval(n) {
+  const fract = correctlyRoundedInterval(n % 1.0);
+  const whole = correctlyRoundedInterval(n - (n % 1.0));
+  return { fract, whole };
+}
+
 const MultiplicationInnerOp = {
   impl: (x, y) => {
     return correctlyRoundedInterval(x * y);
@@ -1387,6 +1878,62 @@ const MultiplicationIntervalOp = {
 /** Calculate an acceptance interval of x * y */
 export function multiplicationInterval(x, y) {
   return runBinaryToIntervalOp(toF32Interval(x), toF32Interval(y), MultiplicationIntervalOp);
+}
+
+/** Calculate an acceptance interval of x * y, when x is a matrix and y is a scalar */
+export function multiplicationMatrixScalarInterval(mat, scalar) {
+  const cols = mat.length;
+  const rows = mat[0].length;
+  return toF32Matrix(
+    unflatten2DArray(
+      flatten2DArray(mat).map(e => MultiplicationIntervalOp.impl(e, scalar)),
+      cols,
+      rows
+    )
+  );
+}
+
+/** Calculate an acceptance interval of x * y, when x is a scalar and y is a matrix */
+export function multiplicationScalarMatrixInterval(scalar, mat) {
+  return multiplicationMatrixScalarInterval(mat, scalar);
+}
+
+/** Calculate an acceptance interval of x * y, when x is a matrix and y is a matrix */
+export function multiplicationMatrixMatrixInterval(mat_x, mat_y) {
+  const x_cols = mat_x.length;
+  const x_rows = mat_x[0].length;
+  const y_cols = mat_y.length;
+  const y_rows = mat_y[0].length;
+  assert(x_cols === y_rows, `'mat${x_cols}x${x_rows} * mat${y_cols}x${y_rows}' is not defined`);
+
+  const x_transposed = transposeInterval(mat_x);
+
+  const result = [...Array(y_cols)].map(_ => [...Array(x_rows)]);
+  mat_y.forEach((y, i) => {
+    x_transposed.forEach((x, j) => {
+      result[i][j] = dotInterval(x, y);
+    });
+  });
+
+  return result;
+}
+
+/** Calculate an acceptance interval of x * y, when x is a matrix and y is a vector */
+export function multiplicationMatrixVectorInterval(x, y) {
+  const cols = x.length;
+  const rows = x[0].length;
+  assert(y.length === cols, `'mat${cols}x${rows} * vec${y.length}' is not defined`);
+
+  return transposeInterval(x).map(e => dotInterval(e, y));
+}
+
+/** Calculate an acceptance interval of x * y, when x is a vector and y is a matrix */
+export function multiplicationVectorMatrixInterval(x, y) {
+  const cols = y.length;
+  const rows = y[0].length;
+  assert(x.length === rows, `'vec${x.length} * mat${cols}x${rows}' is not defined`);
+
+  return y.map(e => dotInterval(x, e));
 }
 
 const NegationIntervalOp = {
@@ -1465,11 +2012,12 @@ const ReflectIntervalOp = {
     // x = incident vector
     // y = normal of reflecting surface
     const t = multiplicationInterval(2.0, dotInterval(x, y));
-    const rhs = toF32Vector(y.map(j => multiplicationInterval(t, j)));
-    return runBinaryToIntervalOpComponentWise(toF32Vector(x), rhs, SubtractionIntervalOp);
+    const rhs = multiplyVectorByScalar(y, t);
+    return runBinaryToIntervalOpVectorComponentWise(toF32Vector(x), rhs, SubtractionIntervalOp);
   },
 };
 
+/** Calculate an acceptance interval of reflect(x, y) */
 export function reflectInterval(x, y) {
   assert(
     x.length === y.length,
@@ -1477,6 +2025,52 @@ export function reflectInterval(x, y) {
   );
 
   return runVectorPairToVectorOp(toF32Vector(x), toF32Vector(y), ReflectIntervalOp);
+}
+
+/**
+ * Calculate acceptance interval vectors of reflect(i, s, r)
+ *
+ * refract is a singular function in the sense that it is the only builtin that
+ * takes in (F32Vector, F32Vector, F32) and returns F32Vector and is basically
+ * defined in terms of other functions.
+ *
+ * Instead of implementing all of the framework code to integrate it with its
+ * own operation type/etc, it instead has a bespoke implementation that is a
+ * composition of other builtin functions that use the framework.
+ */
+export function refractInterval(i, s, r) {
+  assert(
+    i.length === s.length,
+    `refract is only defined for vectors with the same number of elements`
+  );
+
+  const r_squared = multiplicationInterval(r, r);
+  const dot = dotInterval(s, i);
+  const dot_squared = multiplicationInterval(dot, dot);
+  const one_minus_dot_squared = subtractionInterval(1, dot_squared);
+  const k = subtractionInterval(1.0, multiplicationInterval(r_squared, one_minus_dot_squared));
+
+  if (!k.isFinite() || k.containsZeroOrSubnormals()) {
+    // There is a discontinuity at k == 0, due to sqrt(k) being calculated, so exiting early
+    return kAnyVector[toF32Vector(i).length];
+  }
+
+  if (k.end < 0.0) {
+    // if k is negative, then the zero vector is the valid response
+    return kZeroVector[toF32Vector(i).length];
+  }
+
+  const dot_times_r = multiplicationInterval(dot, r);
+  const k_sqrt = sqrtInterval(k);
+  const t = additionInterval(dot_times_r, k_sqrt); // t = r * dot(i, s) + sqrt(k)
+
+  const result = runBinaryToIntervalOpVectorComponentWise(
+    multiplyVectorByScalar(i, r),
+    multiplyVectorByScalar(s, t),
+    SubtractionIntervalOp
+  );
+  // (i * r) - (s * t)
+  return result;
 }
 
 const RemainderIntervalOp = {
@@ -1519,9 +2113,9 @@ export function roundInterval(n) {
 /**
  * Calculate an acceptance interval of saturate(n) as clamp(n, 0.0, 1.0)
  *
- * The definition of saturate is such that both possible implementations of
- * clamp will return the same value, so arbitrarily picking the minmax version
- * to use.
+ * The definition of saturate does not specify which version of clamp to use.
+ * Using min-max here, since it has wider acceptance intervals, that include
+ * all of median's.
  */
 export function saturateInterval(n) {
   return runTernaryToIntervalOp(
@@ -1649,6 +2243,15 @@ export function subtractionInterval(x, y) {
   return runBinaryToIntervalOp(toF32Interval(x), toF32Interval(y), SubtractionIntervalOp);
 }
 
+/** Calculate an acceptance interval of x - y, when x and y are matrices */
+export function subtractionMatrixInterval(x, y) {
+  return runBinaryToIntervalOpMatrixComponentWise(
+    toF32Matrix(x),
+    toF32Matrix(y),
+    SubtractionIntervalOp
+  );
+}
+
 const TanIntervalOp = {
   impl: n => {
     return divisionInterval(sinInterval(n), cosInterval(n));
@@ -1669,6 +2272,26 @@ const TanhIntervalOp = {
 /** Calculate an acceptance interval of tanh(x) */
 export function tanhInterval(n) {
   return runPointToIntervalOp(toF32Interval(n), TanhIntervalOp);
+}
+
+const TransposeIntervalOp = {
+  impl: m => {
+    const num_cols = m.length;
+    const num_rows = m[0].length;
+    const result = [...Array(num_rows)].map(_ => [...Array(num_cols)]);
+
+    for (let i = 0; i < num_cols; i++) {
+      for (let j = 0; j < num_rows; j++) {
+        result[j][i] = correctlyRoundedInterval(m[i][j]);
+      }
+    }
+    return toF32Matrix(result);
+  },
+};
+
+/** Calculate an acceptance interval of transpose(m) */
+export function transposeInterval(m) {
+  return runMatrixToMatrixOp(toF32Matrix(m), TransposeIntervalOp);
 }
 
 const TruncIntervalOp = {

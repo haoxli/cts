@@ -8,9 +8,9 @@ Index format tested in api/operation/command_buffer/render/state_tracking.spec.t
 `;
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert } from '../../../../common/util/util.js';
-import { GPUTest } from '../../../gpu_test.js';
+import { GPUTest, TextureTestMixin } from '../../../gpu_test.js';
 
-class DrawTest extends GPUTest {
+class DrawTest extends TextureTestMixin(GPUTest) {
   checkTriangleDraw(opts) {
     // Set fallbacks when parameters are undefined in order to calculate the expected values.
     const defaulted = {
@@ -107,7 +107,6 @@ struct Output {
           },
         ],
       },
-
       fragment: {
         module: fragmentModule,
         entryPoint: 'frag_main',
@@ -277,6 +276,7 @@ struct Output {
     this.expectGPUBufferValuesEqual(resultBuffer, new Uint32Array([didDraw ? 1 : 0]));
 
     const baseVertexCount = defaulted.baseVertex ?? 0;
+    const pixelComparisons = [];
     for (let primitiveId = 0; primitiveId < numX; ++primitiveId) {
       for (let instanceId = 0; instanceId < numY; ++instanceId) {
         let expectedColor = didDraw ? green : transparentBlack;
@@ -294,20 +294,13 @@ struct Output {
           expectedColor = transparentBlack;
         }
 
-        this.expectSinglePixelIn2DTexture(
-          renderTarget,
-          'rgba8unorm',
-          {
-            x: (1 / 3 + primitiveId) * tileSizeX,
-            y: (2 / 3 + instanceId) * tileSizeY,
-          },
-
-          {
-            exp: expectedColor,
-          }
-        );
+        pixelComparisons.push({
+          coord: { x: (1 / 3 + primitiveId) * tileSizeX, y: (2 / 3 + instanceId) * tileSizeY },
+          exp: expectedColor,
+        });
       }
     }
+    this.expectSinglePixelComparisonsAreOkInTexture({ texture: renderTarget }, pixelComparisons);
   }
 }
 
@@ -353,7 +346,7 @@ Params:
       t.selectDeviceOrSkipTestCase('indirect-first-instance');
     }
   })
-  .fn(async t => {
+  .fn(t => {
     t.checkTriangleDraw({
       firstIndex: t.params.first,
       count: t.params.count,
@@ -385,7 +378,7 @@ g.test('default_arguments')
       .combine('first_instance', [undefined, 2])
       .expand('base_vertex', p => (p.mode === 'drawIndexed' ? [undefined, 9] : [undefined]))
   )
-  .fn(async t => {
+  .fn(t => {
     const kVertexCount = 3;
     const kVertexBufferOffset = 32;
     const kIndexBufferOffset = 16;
@@ -483,7 +476,6 @@ g.test('vertex_attributes,basic')
           shaderLocation,
           offset,
         };
-
         attributes.push(attribute);
 
         offset += ExpectedDataConstructor.BYTES_PER_ELEMENT;
@@ -622,11 +614,9 @@ ${accumulateVariableAssignmentsInVertexShader}
 }
           `,
         }),
-
         entryPoint: 'main',
         buffers: bufferLayouts,
       },
-
       fragment: {
         module: t.device.createShaderModule({
           code: `
@@ -654,7 +644,6 @@ ${accumulateVariableAssignmentsInFragmentShader}
 }
           `,
         }),
-
         entryPoint: 'main',
         targets: [
           {
@@ -663,7 +652,6 @@ ${accumulateVariableAssignmentsInFragmentShader}
           },
         ],
       },
-
       primitive: {
         topology: 'point-list',
       },

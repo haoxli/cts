@@ -26,7 +26,6 @@ import {
 } from '../../../../capability_info.js';
 import { CommandBufferMaker, EncoderType } from '../../../../util/command_buffer_maker.js';
 import {
-  canCopyFromCanvasContext,
   createCanvas,
   kAllCanvasTypes,
   kValidCanvasContextIds,
@@ -325,7 +324,7 @@ g.test('createBindGroup')
   .desc(
     `
 Tests creating bind group on destroyed device. Tests valid combinations of:
-  - Various binded resource types
+  - Various bound resource types
   - Various valid binding entries
   - Maximum set of visibility for each binding entry
   `
@@ -901,9 +900,6 @@ Tests copyExternalImageToTexture from canvas on queue on destroyed device.
     u
       .combine('canvasType', kAllCanvasTypes)
       .combine('contextType', kValidCanvasContextIds)
-      .filter(({ contextType }) => {
-        return canCopyFromCanvasContext(contextType);
-      })
       .beginSubcases()
       .combine('awaitLost', [true, false])
   )

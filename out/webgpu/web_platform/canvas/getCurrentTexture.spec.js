@@ -4,25 +4,43 @@
 Tests for GPUCanvasContext.getCurrentTexture.
 `;import { SkipTestCase } from '../../../common/framework/fixture.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
+import { timeout } from '../../../common/util/timeout.js';
 import { assert, unreachable } from '../../../common/util/util.js';
 import { GPUTest } from '../../gpu_test.js';
 import { kAllCanvasTypes, createCanvas } from '../../util/create_elements.js';
 
+const kFormat = 'bgra8unorm';
+
 class GPUContextTest extends GPUTest {
   initCanvasContext(canvasType = 'onscreen') {
     const canvas = createCanvas(this, canvasType, 2, 2);
+    if (canvasType === 'onscreen') {
+      // To make sure onscreen canvas are visible
+      const onscreencanvas = canvas;
+      onscreencanvas.style.position = 'fixed';
+      onscreencanvas.style.top = '0';
+      onscreencanvas.style.left = '0';
+      // Set it to transparent so that if multiple canvas are created, they are still visible.
+      onscreencanvas.style.opacity = '50%';
+      document.body.appendChild(onscreencanvas);
+      this.trackForCleanup({
+        close() {
+          document.body.removeChild(onscreencanvas);
+        }
+      });
+    }
     const ctx = canvas.getContext('webgpu');
     assert(ctx instanceof GPUCanvasContext, 'Failed to get WebGPU context from canvas');
 
     ctx.configure({
       device: this.device,
-      format: 'rgba8unorm',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC });
-
+      format: kFormat,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
+    });
 
     return ctx;
-  }}
-
+  }
+}
 
 export const g = makeTestGroup(GPUContextTest);
 
@@ -35,7 +53,7 @@ params((u) =>
 u //
 .combine('canvasType', kAllCanvasTypes)).
 
-fn(async (t) => {
+fn((t) => {
   const canvas = createCanvas(t, t.params.canvasType, 2, 2);
   const ctx = canvas.getContext('webgpu');
   assert(ctx instanceof GPUCanvasContext, 'Failed to get WebGPU context from canvas');
@@ -48,16 +66,16 @@ fn(async (t) => {
   // Once the context has been configured getCurrentTexture can be called.
   ctx.configure({
     device: t.device,
-    format: 'rgba8unorm' });
-
+    format: kFormat
+  });
 
   let prevTexture = ctx.getCurrentTexture();
 
   // Calling configure again with different values will change the texture returned.
   ctx.configure({
     device: t.device,
-    format: 'bgra8unorm' });
-
+    format: 'bgra8unorm'
+  });
 
   let currentTexture = ctx.getCurrentTexture();
   t.expect(prevTexture !== currentTexture);
@@ -66,8 +84,8 @@ fn(async (t) => {
   // Calling configure again with the same values will still change the texture returned.
   ctx.configure({
     device: t.device,
-    format: 'bgra8unorm' });
-
+    format: 'bgra8unorm'
+  });
 
   currentTexture = ctx.getCurrentTexture();
   t.expect(prevTexture !== currentTexture);
@@ -87,7 +105,7 @@ params((u) =>
 u //
 .combine('canvasType', kAllCanvasTypes)).
 
-fn(async (t) => {
+fn((t) => {
   const ctx = t.initCanvasContext(t.params.canvasType);
   const frameTexture = ctx.getCurrentTexture();
 
@@ -101,10 +119,10 @@ fn(async (t) => {
       view: frameTexture.createView(),
       clearValue: [1.0, 0.0, 0.0, 1.0],
       loadOp: 'clear',
-      storeOp: 'store' }] });
+      storeOp: 'store'
+    }]
 
-
-
+  });
   pass.end();
   t.device.queue.submit([encoder.finish()]);
 
@@ -114,8 +132,8 @@ fn(async (t) => {
   // Ensure that getCurrentTexture does not clear the texture.
   t.expectSingleColor(frameTexture, frameTexture.format, {
     size: [frameTexture.width, frameTexture.height, 1],
-    exp: { R: 1, G: 0, B: 0, A: 1 } });
-
+    exp: { R: 1, G: 0, B: 0, A: 1 }
+  });
 
   frameTexture.destroy();
 
@@ -137,7 +155,7 @@ beforeAllSubcases((t) => {
     throw new SkipTestCase('transferToImageBitmap not supported');
   }
 }).
-fn(async (t) => {
+fn((t) => {
   const { canvasType, clearTexture } = t.params;
 
   return new Promise((resolve) => {
@@ -145,7 +163,7 @@ fn(async (t) => {
     let prevTexture;
     let frameCount = 0;
 
-    async function frameCheck() {
+    function frameCheck() {
       const currentTexture = ctx.getCurrentTexture();
 
       if (prevTexture) {
@@ -155,8 +173,8 @@ fn(async (t) => {
         // Ensure that texture contents are transparent black.
         t.expectSingleColor(currentTexture, currentTexture.format, {
           size: [currentTexture.width, currentTexture.height, 1],
-          exp: { R: 0, G: 0, B: 0, A: 0 } });
-
+          exp: { R: 0, G: 0, B: 0, A: 0 }
+        });
       }
 
       if (clearTexture) {
@@ -168,10 +186,10 @@ fn(async (t) => {
             view: currentTexture.createView(),
             clearValue: [1.0, 0.0, 0.0, 1.0],
             loadOp: 'clear',
-            storeOp: 'store' }] });
+            storeOp: 'store'
+          }]
 
-
-
+        });
         pass.end();
         t.device.queue.submit([encoder.finish()]);
       }
@@ -186,9 +204,7 @@ fn(async (t) => {
             break;
           case 'offscreen':{
               ctx.canvas.transferToImageBitmap();
-              // The beginning of frameCheck runs immediately (in the same task), so this
-              // verifies the state has changed synchronously.
-              void frameCheck();
+              frameCheck();
               break;
             }
           default:
@@ -199,7 +215,10 @@ fn(async (t) => {
       }
     }
 
-    void frameCheck();
+    // Call frameCheck for the first time from requestAnimationFrame
+    // To make sure two frameChecks are run in different frames for onscreen canvas.
+    // offscreen canvas doesn't care.
+    requestAnimationFrame(frameCheck);
   });
 });
 
@@ -209,7 +228,7 @@ params((u) =>
 u //
 .combine('canvasType', kAllCanvasTypes)).
 
-fn(async (t) => {
+fn((t) => {
   const ctx = t.initCanvasContext(t.params.canvasType);
   let prevTexture = ctx.getCurrentTexture();
 
@@ -231,8 +250,8 @@ fn(async (t) => {
   // Ensure that texture contents are transparent black.
   t.expectSingleColor(currentTexture, currentTexture.format, {
     size: [currentTexture.width, currentTexture.height, 1],
-    exp: { R: 0, G: 0, B: 0, A: 0 } });
-
+    exp: { R: 0, G: 0, B: 0, A: 0 }
+  });
 
   // Trigger a resize by changing the height.
   ctx.canvas.height = 4;
@@ -249,8 +268,8 @@ fn(async (t) => {
   // Ensure that texture contents are transparent black.
   t.expectSingleColor(currentTexture, currentTexture.format, {
     size: [currentTexture.width, currentTexture.height, 1],
-    exp: { R: 0, G: 0, B: 0, A: 0 } });
-
+    exp: { R: 0, G: 0, B: 0, A: 0 }
+  });
 
   // Simply setting the canvas width and height values to their current values should not trigger
   // a change in the texture.
@@ -259,5 +278,107 @@ fn(async (t) => {
 
   currentTexture = ctx.getCurrentTexture();
   t.expect(prevTexture === currentTexture);
+});
+
+g.test('expiry').
+desc(
+`
+Test automatic WebGPU canvas texture expiry on all canvas types with the following requirements:
+- getCurrentTexture returns the same texture object until the next task:
+  - after previous frame update the rendering
+  - before current frame update the rendering
+  - in a microtask off the current frame task
+- getCurrentTexture returns a new texture object and the old texture object becomes invalid
+  as soon as possible after HTML update the rendering.
+
+TODO: test more canvas types, and ways to update the rendering
+- if on a different thread, expiry happens when the worker updates its rendering (worker "rPAF") OR transferToImageBitmap is called
+- [draw, transferControlToOffscreen, then canvas is displayed] on either {main thread, or transferred to worker}
+- [draw, canvas is displayed, then transferControlToOffscreen] on either {main thread, or transferred to worker}
+- reftests for the above 2 (what gets displayed when the canvas is displayed)
+- with canvas element added to DOM or not (applies to other canvas tests as well)
+  - canvas is added to DOM after being rendered
+  - canvas is already in DOM but becomes visible after being rendered
+  `).
+
+params((u) =>
+u //
+.combine('canvasType', kAllCanvasTypes).
+combine('prevFrameCallsite', ['runInNewCanvasFrame', 'requestAnimationFrame']).
+combine('getCurrentTextureAgain', [true, false])).
+
+fn((t) => {
+  const { canvasType, prevFrameCallsite, getCurrentTextureAgain } = t.params;
+  const ctx = t.initCanvasContext(t.params.canvasType);
+  // Create a bindGroupLayout to test invalid texture view usage later.
+  const bgl = t.device.createBindGroupLayout({
+    entries: [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.COMPUTE,
+      texture: {}
+    }]
+
+  });
+
+  // The fn is called immediately after previous frame updating the rendering.
+  // Polyfill by calling the callback by setTimeout, in the requestAnimationFrame callback (for onscreen canvas)
+  // or after transferToImageBitmap (for offscreen canvas).
+  function runInNewCanvasFrame(fn) {
+    switch (canvasType) {
+      case 'onscreen':
+        requestAnimationFrame(() => timeout(fn));
+        break;
+      case 'offscreen':
+        // for offscreen canvas, after calling transferToImageBitmap, we are in a new frame immediately
+        ctx.canvas.transferToImageBitmap();
+        fn();
+        break;
+      default:
+        unreachable();}
+
+  }
+
+  function checkGetCurrentTexture() {
+    // Call getCurrentTexture on previous frame.
+    const prevTexture = ctx.getCurrentTexture();
+
+    // Call getCurrentTexture immediately after the frame, the texture object should stay the same.
+    queueMicrotask(() => {
+      if (getCurrentTextureAgain) {
+        t.expect(prevTexture === ctx.getCurrentTexture());
+      }
+
+      // Call getCurrentTexture in a new frame.
+      // It should expire the previous texture object return a new texture object by the next frame by then.
+      // Call runInNewCanvasFrame in the micro task to make sure the new frame run after the getCurrentTexture in the micro task for offscreen canvas.
+      runInNewCanvasFrame(() => {
+        if (getCurrentTextureAgain) {
+          t.expect(prevTexture !== ctx.getCurrentTexture());
+        }
+
+        // Event when prevTexture expired, createView should still succeed anyway.
+        const prevTextureView = prevTexture.createView();
+        // Using the invalid view should fail if it expires.
+        t.expectValidationError(() => {
+          t.device.createBindGroup({
+            layout: bgl,
+            entries: [{ binding: 0, resource: prevTextureView }]
+          });
+        });
+      });
+    });
+  }
+
+  switch (prevFrameCallsite) {
+    case 'runInNewCanvasFrame':
+      runInNewCanvasFrame(checkGetCurrentTexture);
+      break;
+    case 'requestAnimationFrame':
+      requestAnimationFrame(checkGetCurrentTexture);
+      break;
+    default:
+      break;}
+
 });
 //# sourceMappingURL=getCurrentTexture.spec.js.map

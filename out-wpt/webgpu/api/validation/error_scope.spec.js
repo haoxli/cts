@@ -12,8 +12,7 @@ import { Fixture } from '../../../common/framework/fixture.js';
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { getGPU } from '../../../common/util/navigator_gpu.js';
 import { assert, raceWithRejectOnTimeout } from '../../../common/util/util.js';
-import { kErrorScopeFilters } from '../../capability_info.js';
-import { kMaxUnsignedLongLongValue } from '../../constants.js';
+import { kErrorScopeFilters, kGeneratableErrorScopeFilters } from '../../capability_info.js';
 
 class ErrorScopeTests extends Fixture {
   _device = undefined;
@@ -39,19 +38,29 @@ class ErrorScopeTests extends Fixture {
   generateError(filter) {
     switch (filter) {
       case 'out-of-memory':
-        // Generating an out-of-memory error by allocating a massive buffer.
-        this.device.createBuffer({
-          size: kMaxUnsignedLongLongValue, // Unrealistically massive buffer size
-          usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
-        });
+        this.trackForCleanup(
+          this.device.createTexture({
+            // One of the largest formats. With the base limits, the texture will be 256 GiB.
+            format: 'rgba32float',
+            usage: GPUTextureUsage.COPY_DST,
+            size: [
+              this.device.limits.maxTextureDimension2D,
+              this.device.limits.maxTextureDimension2D,
+              this.device.limits.maxTextureArrayLayers,
+            ],
+          })
+        );
 
         break;
       case 'validation':
         // Generating a validation error by passing in an invalid usage when creating a buffer.
-        this.device.createBuffer({
-          size: 1024,
-          usage: 0xffff, // Invalid GPUBufferUsage
-        });
+        this.trackForCleanup(
+          this.device.createBuffer({
+            size: 1024,
+            usage: 0xffff, // Invalid GPUBufferUsage
+          })
+        );
+
         break;
     }
 
@@ -110,7 +119,7 @@ Tests that error scopes catches their expected errors, firing an uncaptured erro
     `
   )
   .params(u =>
-    u.combine('errorType', kErrorScopeFilters).combine('errorFilter', kErrorScopeFilters)
+    u.combine('errorType', kGeneratableErrorScopeFilters).combine('errorFilter', kErrorScopeFilters)
   )
   .fn(async t => {
     const { errorType, errorFilter } = t.params;
@@ -139,7 +148,7 @@ g.test('empty')
 Tests that popping an empty error scope stack should reject.
     `
   )
-  .fn(async t => {
+  .fn(t => {
     const promise = t.device.popErrorScope();
     t.shouldReject('OperationError', promise);
   });
@@ -154,7 +163,9 @@ Tests that an error bubbles to the correct parent scope.
     `
   )
   .params(u =>
-    u.combine('errorFilter', kErrorScopeFilters).combine('stackDepth', [1, 10, 100, 1000])
+    u
+      .combine('errorFilter', kGeneratableErrorScopeFilters)
+      .combine('stackDepth', [1, 10, 100, 1000])
   )
   .fn(async t => {
     const { errorFilter, stackDepth } = t.params;
@@ -192,7 +203,9 @@ Tests that an error does not bubbles to parent scopes when local scope matches.
     `
   )
   .params(u =>
-    u.combine('errorFilter', kErrorScopeFilters).combine('stackDepth', [1, 10, 100, 1000, 100000])
+    u
+      .combine('errorFilter', kGeneratableErrorScopeFilters)
+      .combine('stackDepth', [1, 10, 100, 1000, 100000])
   )
   .fn(async t => {
     const { errorFilter, stackDepth } = t.params;
@@ -239,7 +252,7 @@ Tests that sibling error scopes need to be balanced.
     }
 
     {
-      // Trying to pop an additional non-exisiting scope should reject.
+      // Trying to pop an additional non-existing scope should reject.
       const promise = t.device.popErrorScope();
       t.shouldReject('OperationError', promise);
     }
@@ -275,7 +288,7 @@ Tests that nested error scopes need to be balanced.
     t.expect(errors.every(e => e === null));
 
     {
-      // Trying to pop an additional non-exisiting scope should reject.
+      // Trying to pop an additional non-existing scope should reject.
       const promise = t.device.popErrorScope();
       t.shouldReject('OperationError', promise);
     }

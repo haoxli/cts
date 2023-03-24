@@ -70,7 +70,7 @@ g.test('pipeline,device_mismatch')
   .beforeAllSubcases(t => {
     t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
-  .fn(async t => {
+  .fn(t => {
     const { mismatched } = t.params;
     const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
@@ -80,7 +80,6 @@ g.test('pipeline,device_mismatch')
         module: sourceDevice.createShaderModule({
           code: '@compute @workgroup_size(1) fn main() {}',
         }),
-
         entryPoint: 'main',
       },
     });
@@ -189,7 +188,7 @@ g.test('indirect_dispatch_buffer,device_mismatch')
   .beforeAllSubcases(t => {
     t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
-  .fn(async t => {
+  .fn(t => {
     const { mismatched } = t.params;
 
     const pipeline = t.createNoOpComputePipeline();
@@ -200,7 +199,6 @@ g.test('indirect_dispatch_buffer,device_mismatch')
       size: 16,
       usage: GPUBufferUsage.INDIRECT,
     });
-
     t.trackForCleanup(buffer);
 
     const { encoder, validateFinish } = t.createEncoder('compute pass');
@@ -229,7 +227,7 @@ g.test('indirect_dispatch_buffer,usage')
           0
       )
   )
-  .fn(async t => {
+  .fn(t => {
     const { bufferUsage0, bufferUsage1 } = t.params;
 
     const bufferUsage = bufferUsage0 | bufferUsage1;
@@ -241,7 +239,6 @@ g.test('indirect_dispatch_buffer,usage')
       size: 16,
       usage: bufferUsage,
     });
-
     t.trackForCleanup(buffer);
 
     const success = (GPUBufferUsage.INDIRECT & bufferUsage) !== 0;

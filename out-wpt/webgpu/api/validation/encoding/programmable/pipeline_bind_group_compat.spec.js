@@ -55,7 +55,6 @@ class F extends ValidationTest {
       size: indirectParams.length * Uint32Array.BYTES_PER_ELEMENT,
       usage: GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST,
     });
-
     memcpy({ src: new Uint32Array(indirectParams) }, { dst: buffer.getMappedRange() });
     buffer.unmap();
     return buffer;
@@ -84,21 +83,17 @@ class F extends ValidationTest {
       layout: this.device.createPipelineLayout({
         bindGroupLayouts: bindGroups.map(entries => this.device.createBindGroupLayout({ entries })),
       }),
-
       vertex: {
         module,
         entryPoint: 'vs_main',
       },
-
       fragment: {
         module,
         entryPoint: 'fs_main',
         targets: [{ format: 'rgba8unorm' }],
       },
-
       primitive: { topology: 'triangle-list' },
     });
-
     return pipeline;
   }
 
@@ -114,13 +109,11 @@ class F extends ValidationTest {
       layout: this.device.createPipelineLayout({
         bindGroupLayouts: bindGroups.map(entries => this.device.createBindGroupLayout({ entries })),
       }),
-
       compute: {
         module,
         entryPoint: 'main',
       },
     });
-
     return pipeline;
   }
 
@@ -342,7 +335,7 @@ g.test('buffer_binding,render_pipeline')
   `
   )
   .params(u => u.combine('type', kBufferBindingTypes))
-  .fn(async t => {
+  .fn(t => {
     const { type } = t.params;
 
     // Create fixed bindGroup
@@ -404,7 +397,7 @@ g.test('sampler_binding,render_pipeline')
       .combine('bglType', kSamplerBindingTypes)
       .combine('bgType', kSamplerBindingTypes)
   )
-  .fn(async t => {
+  .fn(t => {
     const { bglType, bgType } = t.params;
     const bindGroup = t.device.createBindGroup({
       entries: [
@@ -636,7 +629,7 @@ g.test('empty_bind_group_layouts_requires_empty_bind_groups,compute_pass')
       .combine('bindGroupLayoutEntryCount', [3, 4])
       .combine('computeCommand', ['dispatchIndirect', 'dispatch'])
   )
-  .fn(async t => {
+  .fn(t => {
     const { bindGroupLayoutEntryCount, computeCommand } = t.params;
 
     const emptyBGLCount = 4;
@@ -656,7 +649,6 @@ g.test('empty_bind_group_layouts_requires_empty_bind_groups,compute_pass')
         module: t.device.createShaderModule({
           code: '@compute @workgroup_size(1) fn main() {}',
         }),
-
         entryPoint: 'main',
       },
     });
@@ -694,7 +686,7 @@ g.test('empty_bind_group_layouts_requires_empty_bind_groups,render_pass')
       .combine('bindGroupLayoutEntryCount', [3, 4])
       .combine('renderCommand', ['draw', 'drawIndexed', 'drawIndirect', 'drawIndexedIndirect'])
   )
-  .fn(async t => {
+  .fn(t => {
     const { bindGroupLayoutEntryCount, renderCommand } = t.params;
 
     const emptyBGLCount = 4;
@@ -715,15 +707,12 @@ g.test('empty_bind_group_layouts_requires_empty_bind_groups,render_pass')
         module: t.device.createShaderModule({
           code: `@vertex fn main() -> @builtin(position) vec4<f32> { return vec4<f32>(); }`,
         }),
-
         entryPoint: 'main',
       },
-
       fragment: {
         module: t.device.createShaderModule({
           code: `@fragment fn main() {}`,
         }),
-
         entryPoint: 'main',
         targets: [{ format: colorFormat, writeMask: 0 }],
       },

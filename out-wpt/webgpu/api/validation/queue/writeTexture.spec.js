@@ -16,7 +16,7 @@ g.test('texture_state')
   `
   )
   .params(u => u.combine('textureState', kResourceStates))
-  .fn(async t => {
+  .fn(t => {
     const { textureState } = t.params;
     const texture = t.createTextureWithState(textureState);
     const data = new Uint8Array(16);
@@ -42,14 +42,13 @@ g.test('usages')
     { usage: GPUConst.TextureUsage.STORAGE_BINDING | GPUConst.TextureUsage.COPY_SRC },
     { usage: GPUConst.TextureUsage.STORAGE_BINDING | GPUConst.TextureUsage.COPY_DST },
   ])
-  .fn(async t => {
+  .fn(t => {
     const { usage } = t.params;
     const texture = t.device.createTexture({
       size: { width: 16, height: 16 },
       usage,
       format: 'rgba8unorm',
     });
-
     const data = new Uint8Array(16);
     const size = [1, 1];
 
@@ -67,7 +66,7 @@ g.test('sample_count')
   `
   )
   .params(u => u.combine('sampleCount', [1, 4]))
-  .fn(async t => {
+  .fn(t => {
     const { sampleCount } = t.params;
     const texture = t.device.createTexture({
       size: { width: 16, height: 16 },
@@ -92,7 +91,7 @@ g.test('texture,device_mismatch')
   .beforeAllSubcases(t => {
     t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
-  .fn(async t => {
+  .fn(t => {
     const { mismatched } = t.params;
     const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
@@ -101,7 +100,6 @@ g.test('texture,device_mismatch')
       format: 'bgra8unorm',
       usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
-
     t.trackForCleanup(texture);
 
     const data = new Uint8Array(16);

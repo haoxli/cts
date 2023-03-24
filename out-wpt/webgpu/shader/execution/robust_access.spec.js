@@ -9,6 +9,7 @@ TODO: add tests to check that textureLoad operations stay in-bounds.
 import { makeTestGroup } from '../../../common/framework/test_group.js';
 import { assert } from '../../../common/util/util.js';
 import { GPUTest } from '../../gpu_test.js';
+import { align } from '../../util/math.js';
 import { generateTypes, supportedScalarTypes, supportsAtomics } from '../types.js';
 
 export const g = makeTestGroup(GPUTest);
@@ -123,14 +124,12 @@ g.test('linear_memory')
           access: 'read',
           dynamicOffset: false,
         },
-
         {
           storageClass: 'storage',
           storageMode: 'read_write',
           access: 'write',
           dynamicOffset: false,
         },
-
         { storageClass: 'storage', storageMode: 'read', access: 'read', dynamicOffset: true },
         { storageClass: 'storage', storageMode: 'read_write', access: 'read', dynamicOffset: true },
         {
@@ -139,7 +138,6 @@ g.test('linear_memory')
           access: 'write',
           dynamicOffset: true,
         },
-
         { storageClass: 'uniform', access: 'read', dynamicOffset: false },
         { storageClass: 'uniform', access: 'read', dynamicOffset: true },
         { storageClass: 'private', access: 'read' },
@@ -164,7 +162,7 @@ g.test('linear_memory')
       .expand('baseType', supportedScalarTypes)
       .expandWithParams(generateTypes)
   )
-  .fn(async t => {
+  .fn(t => {
     const {
       storageClass,
       storageMode,
@@ -205,7 +203,7 @@ struct S {
         {
           assert(_kTypeInfo.layout !== undefined);
           const layout = _kTypeInfo.layout;
-          bufferBindingSize = layout.size;
+          bufferBindingSize = align(layout.size, layout.alignment);
           const qualifiers = storageClass === 'storage' ? `storage, ${storageMode}` : storageClass;
           globalSource += `
 struct TestData {
@@ -401,7 +399,6 @@ fn runTest() -> u32 {
         t.device.createBindGroupLayout({
           entries: testGroupBGLEntires,
         }),
-
         t.device.createBindGroupLayout({
           entries: [
             {
@@ -411,7 +408,6 @@ fn runTest() -> u32 {
                 type: 'uniform',
               },
             },
-
             {
               binding: 1,
               visibility: GPUShaderStage.COMPUTE,

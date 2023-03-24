@@ -11,22 +11,64 @@ direction e1-2*dot(e2,e1)*e2.
 import { GPUTest } from '../../../../../gpu_test.js';
 import { TypeF32, TypeVec } from '../../../../../util/conversion.js';
 import { reflectInterval } from '../../../../../util/f32_interval.js';
-import { kVectorSparseTestValues } from '../../../../../util/math.js';
-import {
-allInputSources,
-
-makeVectorPairToVectorIntervalCase,
-run } from
-'../../expression.js';
+import { sparseVectorF32Range } from '../../../../../util/math.js';
+import { makeCaseCache } from '../../case_cache.js';
+import { allInputSources, generateVectorPairToVectorCases, run } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
 export const g = makeTestGroup(GPUTest);
 
-/** @returns a `reflect` Case for a pair of vectors of f32s input */
-const makeCaseVecF32 = (x, y) => {
-  return makeVectorPairToVectorIntervalCase(x, y, reflectInterval);
-};
+export const d = makeCaseCache('reflect', {
+  f32_vec2_const: () => {
+    return generateVectorPairToVectorCases(
+    sparseVectorF32Range(2),
+    sparseVectorF32Range(2),
+    'f32-only',
+    reflectInterval);
+
+  },
+  f32_vec2_non_const: () => {
+    return generateVectorPairToVectorCases(
+    sparseVectorF32Range(2),
+    sparseVectorF32Range(2),
+    'unfiltered',
+    reflectInterval);
+
+  },
+  f32_vec3_const: () => {
+    return generateVectorPairToVectorCases(
+    sparseVectorF32Range(3),
+    sparseVectorF32Range(3),
+    'f32-only',
+    reflectInterval);
+
+  },
+  f32_vec3_non_const: () => {
+    return generateVectorPairToVectorCases(
+    sparseVectorF32Range(3),
+    sparseVectorF32Range(3),
+    'unfiltered',
+    reflectInterval);
+
+  },
+  f32_vec4_const: () => {
+    return generateVectorPairToVectorCases(
+    sparseVectorF32Range(4),
+    sparseVectorF32Range(4),
+    'f32-only',
+    reflectInterval);
+
+  },
+  f32_vec4_non_const: () => {
+    return generateVectorPairToVectorCases(
+    sparseVectorF32Range(4),
+    sparseVectorF32Range(4),
+    'unfiltered',
+    reflectInterval);
+
+  }
+});
 
 g.test('abstract_float').
 specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions').
@@ -39,9 +81,8 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests using vec2s`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const cases = kVectorSparseTestValues[2].flatMap((i) =>
-  kVectorSparseTestValues[2].map((j) => makeCaseVecF32(i, j)));
-
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'f32_vec2_const' : 'f32_vec2_non_const');
 
   await run(
   t,
@@ -58,9 +99,8 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests using vec3s`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const cases = kVectorSparseTestValues[3].flatMap((i) =>
-  kVectorSparseTestValues[3].map((j) => makeCaseVecF32(i, j)));
-
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'f32_vec3_const' : 'f32_vec3_non_const');
 
   await run(
   t,
@@ -77,9 +117,8 @@ specURL('https://www.w3.org/TR/WGSL/#numeric-builtin-functions').
 desc(`f32 tests using vec4s`).
 params((u) => u.combine('inputSource', allInputSources)).
 fn(async (t) => {
-  const cases = kVectorSparseTestValues[4].flatMap((i) =>
-  kVectorSparseTestValues[4].map((j) => makeCaseVecF32(i, j)));
-
+  const cases = await d.get(
+  t.params.inputSource === 'const' ? 'f32_vec4_const' : 'f32_vec4_non_const');
 
   await run(
   t,

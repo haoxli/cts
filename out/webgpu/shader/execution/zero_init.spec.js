@@ -1,7 +1,7 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `Test that variables in the shader are zero initialized`;import { makeTestGroup } from '../../../common/framework/test_group.js';
-import { unreachable } from '../../../common/util/util.js';
+import { iterRange, unreachable } from '../../../common/util/util.js';
 import { GPUTest } from '../../gpu_test.js';
 import {
 
@@ -35,8 +35,8 @@ function prettyPrint(t) {
           return `${t.containerType}<${prettyPrint({
             type: 'scalar',
             scalarType: t.scalarType,
-            isAtomic: false })
-          }>`;}
+            isAtomic: false
+          })}>`;}
 
       break;
     case 'scalar':
@@ -50,9 +50,7 @@ function prettyPrint(t) {
 export const g = makeTestGroup(GPUTest);
 g.test('compute,zero_init').
 desc(
-`Test that uninitialized variables in workgroup, private, and function storage classes are initialized to zero.
-
-    TODO: Run a shader before the test to attempt to fill memory with garbage`).
+`Test that uninitialized variables in workgroup, private, and function storage classes are initialized to zero.`).
 
 params((u) =>
 u
@@ -104,8 +102,8 @@ expandWithParams(function* (p) {
         ...p,
         access: 'read_write',
         storageMode: undefined,
-        containerType: 'scalar' }) ?
-
+        containerType: 'scalar'
+      }) ?
       [true, false] :
       [false]) {
         for (const scalarType of supportedScalarTypes({ isAtomic, ...p })) {
@@ -118,8 +116,8 @@ expandWithParams(function* (p) {
           yield {
             type: 'scalar',
             scalarType,
-            isAtomic };
-
+            isAtomic
+          };
           if (!isAtomic) {
             // Vector types
             for (const vectorType of kVectorContainerTypes) {
@@ -139,8 +137,8 @@ expandWithParams(function* (p) {
               yield {
                 type: 'container',
                 containerType: vectorType,
-                scalarType };
-
+                scalarType
+              };
             }
             // Matrices can only be f32.
             if (scalarType === 'f32') {
@@ -148,8 +146,8 @@ expandWithParams(function* (p) {
                 yield {
                   type: 'container',
                   containerType: matrixType,
-                  scalarType };
-
+                  scalarType
+                };
               }
             }
           }
@@ -168,8 +166,8 @@ expandWithParams(function* (p) {
                 type: 'container',
                 containerType,
                 elementType: innerType,
-                length: elementCount };
-
+                length: elementCount
+              };
             }
           }
           break;
@@ -199,8 +197,8 @@ expandWithParams(function* (p) {
               const t = {
                 type: 'container',
                 containerType,
-                members };
-
+                members
+              };
               const serializedT = prettyPrint(t);
               if (seenTypes.has(serializedT)) {
                 // We produced an identical type. shuffle the member indices,
@@ -223,13 +221,13 @@ expandWithParams(function* (p) {
   for (const t of generateTypesMemo(p._containerDepth)) {
     yield {
       shaderTypeParam: prettyPrint(t),
-      _type: t };
-
+      _type: t
+    };
   }
 })).
 
 batch(15).
-fn(async (t) => {
+fn((t) => {
   let moduleScope = `
       struct Output {
         failed : atomic<u32>
@@ -284,8 +282,8 @@ fn(async (t) => {
             {
               type: 'scalar',
               scalarType: type.scalarType,
-              isAtomic: false },
-
+              isAtomic: false
+            },
             depth + 1)
             }>`;}
 
@@ -334,8 +332,8 @@ fn(async (t) => {
               {
                 type: 'scalar',
                 scalarType: type.scalarType,
-                isAtomic: false },
-
+                isAtomic: false
+              },
               depth + 1)
               }
                 }`;
@@ -349,8 +347,8 @@ fn(async (t) => {
               {
                 type: 'scalar',
                 scalarType: type.scalarType,
-                isAtomic: false },
-
+                isAtomic: false
+              },
               depth + 1)
               }
                   }
@@ -397,26 +395,102 @@ fn(async (t) => {
       }
     `;
 
+  if (t.params.storageClass === 'workgroup') {
+    // Populate the maximum amount of workgroup memory with known values to
+    // ensure initialization overrides in another shader.
+    const wg_memory_limits = t.device.limits.maxComputeWorkgroupStorageSize;
+    const wg_x_dim = t.device.limits.maxComputeWorkgroupSizeX;
+
+    const wgsl = `
+      @group(0) @binding(0) var<storage, read> inputs : array<u32>;
+      @group(0) @binding(1) var<storage, read_write> outputs : array<u32>;
+      var<workgroup> wg_mem : array<u32, ${wg_memory_limits} / 4>;
+
+      @compute @workgroup_size(${wg_x_dim})
+      fn fill(@builtin(local_invocation_index) lid : u32) {
+        const num_u32_per_invocation = ${wg_memory_limits} / (4 * ${wg_x_dim});
+
+        for (var i = 0u; i < num_u32_per_invocation; i++) {
+          let idx = num_u32_per_invocation * lid + i;
+          wg_mem[idx] = inputs[idx];
+        }
+        workgroupBarrier();
+        // Copy out to avoid wg_mem being elided.
+        for (var i = 0u; i < num_u32_per_invocation; i++) {
+          let idx = num_u32_per_invocation * lid + i;
+          outputs[idx] = wg_mem[idx];
+        }
+      }
+      `;
+
+    const fillPipeline = t.device.createComputePipeline({
+      layout: 'auto',
+      compute: {
+        module: t.device.createShaderModule({
+          code: wgsl
+        }),
+        entryPoint: 'fill'
+      }
+    });
+
+    const inputBuffer = t.makeBufferWithContents(
+    new Uint32Array([...iterRange(wg_memory_limits / 4, (x) => 0xdeadbeef)]),
+    GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST);
+
+    t.trackForCleanup(inputBuffer);
+    const outputBuffer = t.device.createBuffer({
+      size: wg_memory_limits,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
+    });
+    t.trackForCleanup(outputBuffer);
+
+    const bg = t.device.createBindGroup({
+      layout: fillPipeline.getBindGroupLayout(0),
+      entries: [
+      {
+        binding: 0,
+        resource: {
+          buffer: inputBuffer
+        }
+      },
+      {
+        binding: 1,
+        resource: {
+          buffer: outputBuffer
+        }
+      }]
+
+    });
+
+    const e = t.device.createCommandEncoder();
+    const p = e.beginComputePass();
+    p.setPipeline(fillPipeline);
+    p.setBindGroup(0, bg);
+    p.dispatchWorkgroups(1);
+    p.end();
+    t.queue.submit([e.finish()]);
+  }
+
   const pipeline = t.device.createComputePipeline({
     layout: 'auto',
     compute: {
       module: t.device.createShaderModule({
-        code: wgsl }),
-
-      entryPoint: 'main' } });
-
-
+        code: wgsl
+      }),
+      entryPoint: 'main'
+    }
+  });
 
   const resultBuffer = t.device.createBuffer({
     size: 4,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC });
-
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
+  });
   t.trackForCleanup(resultBuffer);
 
   const zeroBuffer = t.device.createBuffer({
     size: 4,
-    usage: GPUBufferUsage.UNIFORM });
-
+    usage: GPUBufferUsage.UNIFORM
+  });
   t.trackForCleanup(zeroBuffer);
 
   const bindGroup = t.device.createBindGroup({
@@ -425,17 +499,17 @@ fn(async (t) => {
     {
       binding: 0,
       resource: {
-        buffer: resultBuffer } },
-
-
+        buffer: resultBuffer
+      }
+    },
     {
       binding: 1,
       resource: {
-        buffer: zeroBuffer } }] });
+        buffer: zeroBuffer
+      }
+    }]
 
-
-
-
+  });
 
   const encoder = t.device.createCommandEncoder();
   const pass = encoder.beginComputePass();

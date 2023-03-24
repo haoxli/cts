@@ -22,8 +22,8 @@ class F extends ValidationTest {
   createIndirectBuffer(state, data) {
     const descriptor = {
       size: data.byteLength,
-      usage: GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST };
-
+      usage: GPUBufferUsage.INDIRECT | GPUBufferUsage.COPY_DST
+    };
 
     if (state === 'invalid') {
       descriptor.usage = 0xffff; // Invalid GPUBufferUsage
@@ -42,8 +42,8 @@ class F extends ValidationTest {
     }
 
     return buffer;
-  }}
-
+  }
+}
 
 export const g = makeTestGroup(F);
 
@@ -69,7 +69,7 @@ paramsSubcasesOnly((u) => u.combine('mismatched', [true, false])).
 beforeAllSubcases((t) => {
   t.selectMismatchedDeviceOrSkipTestCase(undefined);
 }).
-fn(async (t) => {
+fn((t) => {
   const { mismatched } = t.params;
   const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
@@ -77,11 +77,11 @@ fn(async (t) => {
     layout: 'auto',
     compute: {
       module: sourceDevice.createShaderModule({
-        code: '@compute @workgroup_size(1) fn main() {}' }),
-
-      entryPoint: 'main' } });
-
-
+        code: '@compute @workgroup_size(1) fn main() {}'
+      }),
+      entryPoint: 'main'
+    }
+  });
 
   const { encoder, validateFinish } = t.createEncoder('compute pass');
   encoder.setPipeline(pipeline);
@@ -187,7 +187,7 @@ paramsSubcasesOnly((u) => u.combine('mismatched', [true, false])).
 beforeAllSubcases((t) => {
   t.selectMismatchedDeviceOrSkipTestCase(undefined);
 }).
-fn(async (t) => {
+fn((t) => {
   const { mismatched } = t.params;
 
   const pipeline = t.createNoOpComputePipeline();
@@ -196,8 +196,8 @@ fn(async (t) => {
 
   const buffer = sourceDevice.createBuffer({
     size: 16,
-    usage: GPUBufferUsage.INDIRECT });
-
+    usage: GPUBufferUsage.INDIRECT
+  });
   t.trackForCleanup(buffer);
 
   const { encoder, validateFinish } = t.createEncoder('compute pass');
@@ -226,7 +226,7 @@ GPUConst.BufferUsage.MAP_READ | GPUConst.BufferUsage.MAP_WRITE)) !==
 0)).
 
 
-fn(async (t) => {
+fn((t) => {
   const { bufferUsage0, bufferUsage1 } = t.params;
 
   const bufferUsage = bufferUsage0 | bufferUsage1;
@@ -236,8 +236,8 @@ fn(async (t) => {
 
   const buffer = t.device.createBuffer({
     size: 16,
-    usage: bufferUsage });
-
+    usage: bufferUsage
+  });
   t.trackForCleanup(buffer);
 
   const success = (GPUBufferUsage.INDIRECT & bufferUsage) !== 0;

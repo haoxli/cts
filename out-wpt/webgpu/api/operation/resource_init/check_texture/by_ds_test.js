@@ -27,7 +27,6 @@ function getDepthTestEqualPipeline(t, format, sampleCount, expected) {
       entryPoint: 'main',
       module: makeFullscreenVertexModule(t.device),
     },
-
     fragment: {
       entryPoint: 'main',
       module: t.device.createShaderModule({
@@ -46,15 +45,13 @@ function getDepthTestEqualPipeline(t, format, sampleCount, expected) {
         }
         `,
       }),
-
       targets: [{ format: 'r8unorm' }],
     },
-
     depthStencil: {
       format,
       depthCompare: 'equal',
+      depthWriteEnabled: false,
     },
-
     primitive: { topology: 'triangle-list' },
     multisample: { count: sampleCount },
   });
@@ -67,7 +64,6 @@ function getStencilTestEqualPipeline(t, format, sampleCount) {
       entryPoint: 'main',
       module: makeFullscreenVertexModule(t.device),
     },
-
     fragment: {
       entryPoint: 'main',
       module: t.device.createShaderModule({
@@ -78,16 +74,15 @@ function getStencilTestEqualPipeline(t, format, sampleCount) {
         }
         `,
       }),
-
       targets: [{ format: 'r8unorm' }],
     },
-
     depthStencil: {
+      depthWriteEnabled: false,
+      depthCompare: 'always',
       format,
       stencilFront: { compare: 'equal' },
       stencilBack: { compare: 'equal' },
     },
-
     primitive: { topology: 'triangle-list' },
     multisample: { count: sampleCount },
   });
@@ -123,7 +118,6 @@ const checkContents = (type, t, params, texture, state, subresourceRange) => {
         format: 'r8unorm',
         usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
       });
-
       resolveTarget = resolveTexture.createView();
     }
 

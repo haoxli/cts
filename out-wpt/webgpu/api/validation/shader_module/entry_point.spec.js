@@ -13,7 +13,7 @@ The entryPoint assigned in descriptor include:
 
 TODO:
 - Test unicode normalization (gpuweb/gpuweb#1160)
-- Fine-tune test cases to reduce number by removing trivially similiar cases
+- Fine-tune test cases to reduce number by removing trivially similar cases
 `;
 import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { kDefaultVertexShaderCode, getShaderWithEntryPoint } from '../../../util/shader.js';
@@ -38,7 +38,7 @@ const kEntryPointTestCases = [
   { shaderModuleEntryPoint: 'main_t12V3', stageEntryPoint: 'main_t12V5' },
   { shaderModuleEntryPoint: 'main_t12V3', stageEntryPoint: '_main_t12V3' },
   { shaderModuleEntryPoint: 'séquençage', stageEntryPoint: 'séquençage' },
-  { shaderModuleEntryPoint: 'séquençage', stageEntryPoint: 'sequencage' },
+  { shaderModuleEntryPoint: 'séquençage', stageEntryPoint: 'séquençage' },
 ];
 
 g.test('compute')
@@ -49,7 +49,7 @@ and check that the APIs only accept matching entryPoint.
 `
   )
   .params(u => u.combine('isAsync', [true, false]).combineWithParams(kEntryPointTestCases))
-  .fn(async t => {
+  .fn(t => {
     const { isAsync, shaderModuleEntryPoint, stageEntryPoint } = t.params;
     const descriptor = {
       layout: 'auto',
@@ -57,11 +57,9 @@ and check that the APIs only accept matching entryPoint.
         module: t.device.createShaderModule({
           code: getShaderWithEntryPoint('compute', shaderModuleEntryPoint),
         }),
-
         entryPoint: stageEntryPoint,
       },
     };
-
     const _success = shaderModuleEntryPoint === stageEntryPoint;
     t.doCreateComputePipelineTest(isAsync, _success, descriptor);
   });
@@ -74,7 +72,7 @@ and check that the APIs only accept matching entryPoint.
 `
   )
   .params(u => u.combine('isAsync', [true, false]).combineWithParams(kEntryPointTestCases))
-  .fn(async t => {
+  .fn(t => {
     const { isAsync, shaderModuleEntryPoint, stageEntryPoint } = t.params;
     const descriptor = {
       layout: 'auto',
@@ -82,11 +80,9 @@ and check that the APIs only accept matching entryPoint.
         module: t.device.createShaderModule({
           code: getShaderWithEntryPoint('vertex', shaderModuleEntryPoint),
         }),
-
         entryPoint: stageEntryPoint,
       },
     };
-
     const _success = shaderModuleEntryPoint === stageEntryPoint;
     t.doCreateRenderPipelineTest(isAsync, _success, descriptor);
   });
@@ -99,7 +95,7 @@ and check that the APIs only accept matching entryPoint.
 `
   )
   .params(u => u.combine('isAsync', [true, false]).combineWithParams(kEntryPointTestCases))
-  .fn(async t => {
+  .fn(t => {
     const { isAsync, shaderModuleEntryPoint, stageEntryPoint } = t.params;
     const descriptor = {
       layout: 'auto',
@@ -107,20 +103,16 @@ and check that the APIs only accept matching entryPoint.
         module: t.device.createShaderModule({
           code: kDefaultVertexShaderCode,
         }),
-
         entryPoint: 'main',
       },
-
       fragment: {
         module: t.device.createShaderModule({
           code: getShaderWithEntryPoint('fragment', shaderModuleEntryPoint),
         }),
-
         entryPoint: stageEntryPoint,
         targets: [{ format: 'rgba8unorm' }],
       },
     };
-
     const _success = shaderModuleEntryPoint === stageEntryPoint;
     t.doCreateRenderPipelineTest(isAsync, _success, descriptor);
   });

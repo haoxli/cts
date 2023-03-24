@@ -11,12 +11,27 @@ import { makeTestGroup } from '../../../../../../common/framework/test_group.js'
 import { GPUTest } from '../../../../../gpu_test.js';
 import { TypeF32 } from '../../../../../util/conversion.js';
 import { acosInterval } from '../../../../../util/f32_interval.js';
-import { fullF32Range, linearRange } from '../../../../../util/math.js';
-import { allInputSources, Case, makeUnaryToF32IntervalCase, run } from '../../expression.js';
+import { linearRange, fullF32Range } from '../../../../../util/math.js';
+import { makeCaseCache } from '../../case_cache.js';
+import { allInputSources, generateUnaryToF32IntervalCases, run } from '../../expression.js';
 
 import { builtin } from './builtin.js';
 
 export const g = makeTestGroup(GPUTest);
+
+const inputs = [
+  ...linearRange(-1, 1, 100), // acos is defined on [-1, 1]
+  ...fullF32Range(),
+];
+
+export const d = makeCaseCache('acos', {
+  f32_const: () => {
+    return generateUnaryToF32IntervalCases(inputs, 'f32-only', acosInterval);
+  },
+  f32_non_const: () => {
+    return generateUnaryToF32IntervalCases(inputs, 'unfiltered', acosInterval);
+  },
+});
 
 g.test('abstract_float')
   .specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions')
@@ -33,14 +48,7 @@ g.test('f32')
     u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4] as const)
   )
   .fn(async t => {
-    const makeCase = (n: number): Case => {
-      return makeUnaryToF32IntervalCase(n, acosInterval);
-    };
-
-    const cases = [
-      ...linearRange(-1, 1, 100), // acos is defined on [-1, 1]
-      ...fullF32Range(),
-    ].map(makeCase);
+    const cases = await d.get(t.params.inputSource === 'const' ? 'f32_const' : 'f32_non_const');
     await run(t, builtin('acos'), [TypeF32], TypeF32, t.params, cases);
   });
 

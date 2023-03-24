@@ -35,7 +35,7 @@ g.test('pipeline,device_mismatch')
   .beforeAllSubcases(t => {
     t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
-  .fn(async t => {
+  .fn(t => {
     const { encoderType, mismatched } = t.params;
     const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
@@ -45,19 +45,15 @@ g.test('pipeline,device_mismatch')
         module: sourceDevice.createShaderModule({
           code: `@vertex fn main() -> @builtin(position) vec4<f32> { return vec4<f32>(); }`,
         }),
-
         entryPoint: 'main',
       },
-
       fragment: {
         module: sourceDevice.createShaderModule({
           code: '@fragment fn main() {}',
         }),
-
         entryPoint: 'main',
         targets: [{ format: 'rgba8unorm', writeMask: 0 }],
       },
-
       primitive: { topology: 'triangle-list' },
     });
 

@@ -37,7 +37,7 @@ g.test('index_buffer,device_mismatch')
   .beforeAllSubcases(t => {
     t.selectMismatchedDeviceOrSkipTestCase(undefined);
   })
-  .fn(async t => {
+  .fn(t => {
     const { encoderType, mismatched } = t.params;
     const sourceDevice = mismatched ? t.mismatchedDevice : t.device;
 
@@ -45,7 +45,6 @@ g.test('index_buffer,device_mismatch')
       size: 16,
       usage: GPUBufferUsage.INDEX,
     });
-
     t.trackForCleanup(indexBuffer);
 
     const { encoder, validateFinish } = t.createEncoder(encoderType);

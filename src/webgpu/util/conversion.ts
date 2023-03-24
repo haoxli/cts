@@ -1,5 +1,5 @@
 import { Colors } from '../../common/util/colors.js';
-import { assert, TypedArrayBufferView } from '../../common/util/util.js';
+import { assert, objectEquals, TypedArrayBufferView, unreachable } from '../../common/util/util.js';
 import { Float16Array } from '../../external/petamoriken/float16/float16.js';
 
 import { kBit } from './constants.js';
@@ -536,21 +536,25 @@ export type ScalarKind =
 /** ScalarType describes the type of WGSL Scalar. */
 export class ScalarType {
   readonly kind: ScalarKind; // The named type
-  readonly size: number; // In bytes
+  readonly _size: number; // In bytes
   readonly read: (buf: Uint8Array, offset: number) => Scalar; // reads a scalar from a buffer
 
   constructor(kind: ScalarKind, size: number, read: (buf: Uint8Array, offset: number) => Scalar) {
     this.kind = kind;
-    this.size = size;
+    this._size = size;
     this.read = read;
   }
 
   public toString(): string {
     return this.kind;
   }
+
+  public get size(): number {
+    return this._size;
+  }
 }
 
-/** ScalarType describes the type of WGSL Vector. */
+/** VectorType describes the type of WGSL Vector. */
 export class VectorType {
   readonly width: number; // Number of elements in the vector
   readonly elementType: ScalarType; // Element type
@@ -576,6 +580,10 @@ export class VectorType {
   public toString(): string {
     return `vec${this.width}<${this.elementType}>`;
   }
+
+  public get size(): number {
+    return this.elementType.size * this.width;
+  }
 }
 
 // Maps a string representation of a vector type to vector type.
@@ -592,8 +600,63 @@ export function TypeVec(width: number, elementType: ScalarType): VectorType {
   return ty;
 }
 
-/** Type is a ScalarType or VectorType. */
-export type Type = ScalarType | VectorType;
+/** MatrixType describes the type of WGSL Matrix. */
+export class MatrixType {
+  readonly cols: number; // Number of columns in the Matrix
+  readonly rows: number; // Number of elements per column in the Matrix
+  readonly elementType: ScalarType; // Element type
+
+  constructor(cols: number, rows: number, elementType: ScalarType) {
+    this.cols = cols;
+    this.rows = rows;
+    assert(
+      elementType.kind === 'f32' || elementType.kind === 'f16',
+      "MatrixType can only have elementType of 'f32' or 'f16'"
+    );
+    this.elementType = elementType;
+  }
+
+  /**
+   * @returns a Matrix constructed from the values read from the buffer at the
+   * given byte offset
+   */
+  public read(buf: Uint8Array, offset: number): Matrix {
+    const elements: Scalar[][] = [...Array(this.cols)].map(_ => [...Array(this.rows)]);
+    for (let c = 0; c < this.cols; c++) {
+      for (let r = 0; r < this.rows; r++) {
+        elements[c][r] = this.elementType.read(buf, offset);
+        offset += this.elementType.size;
+      }
+
+      // vec3 have one padding element, so need to skip in matrices
+      if (this.rows === 3) {
+        offset += this.elementType.size;
+      }
+    }
+    return new Matrix(elements);
+  }
+
+  public toString(): string {
+    return `mat${this.cols}x${this.rows}<${this.elementType}>`;
+  }
+}
+
+// Maps a string representation of a Matrix type to Matrix type.
+const matrixTypes = new Map<string, MatrixType>();
+
+export function TypeMat(cols: number, rows: number, elementType: ScalarType): MatrixType {
+  const key = `${elementType.toString()} ${cols} ${rows}`;
+  let ty = matrixTypes.get(key);
+  if (ty !== undefined) {
+    return ty;
+  }
+  ty = new MatrixType(cols, rows, elementType);
+  matrixTypes.set(key, ty);
+  return ty;
+}
+
+/** Type is a ScalarType, VectorType, or MatrixType. */
+export type Type = ScalarType | VectorType | MatrixType;
 
 export const TypeI32 = new ScalarType('i32', 4, (buf: Uint8Array, offset: number) =>
   i32(new Int32Array(buf.buffer, offset)[0])
@@ -660,6 +723,9 @@ export function numElementsOf(ty: Type): number {
   if (ty instanceof VectorType) {
     return ty.width;
   }
+  if (ty instanceof MatrixType) {
+    return ty.cols * ty.rows;
+  }
   throw new Error(`unhandled type ${ty}`);
 }
 
@@ -671,11 +737,14 @@ export function scalarTypeOf(ty: Type): ScalarType {
   if (ty instanceof VectorType) {
     return ty.elementType;
   }
+  if (ty instanceof MatrixType) {
+    return ty.elementType;
+  }
   throw new Error(`unhandled type ${ty}`);
 }
 
 /** ScalarValue is the JS type that can be held by a Scalar */
-type ScalarValue = Boolean | Number;
+type ScalarValue = boolean | number;
 
 /** Class that encapsulates a single scalar value of various types. */
 export class Scalar {
@@ -721,20 +790,6 @@ export class Scalar {
         case 'bool':
           return `${this.value}`;
       }
-    } else if (this.value === Number.POSITIVE_INFINITY) {
-      switch (this.type.kind) {
-        case 'f32':
-          return `(1.f/0.f)`;
-        case 'f16':
-          return `(1.h/0.h)`;
-      }
-    } else if (this.value === Number.NEGATIVE_INFINITY) {
-      switch (this.type.kind) {
-        case 'f32':
-          return `(-1.f/0.f)`;
-        case 'f16':
-          return `(-1.h/0.h)`;
-      }
     }
     throw new Error(
       `scalar of value ${this.value} and type ${this.type} has no WGSL representation`
@@ -767,6 +822,10 @@ export class Scalar {
       }
     }
   }
+}
+
+export interface ScalarBuilder {
+  (value: number): Scalar;
 }
 
 /** Create an f64 from a numeric value, a JS `number`. */
@@ -874,6 +933,30 @@ export const True = bool(true);
 /** A 'false' literal value */
 export const False = bool(false);
 
+export function reinterpretF32AsU32(f32: number): number {
+  const array = new Float32Array(1);
+  array[0] = f32;
+  return new Uint32Array(array.buffer)[0];
+}
+
+export function reinterpretU32AsF32(u32: number): number {
+  const array = new Uint32Array(1);
+  array[0] = u32;
+  return new Float32Array(array.buffer)[0];
+}
+
+export function reinterpretU32AsI32(u32: number): number {
+  const array = new Uint32Array(1);
+  array[0] = u32;
+  return new Int32Array(array.buffer)[0];
+}
+
+export function reinterpretI32AsU32(i32: number): number {
+  const array = new Int32Array(1);
+  array[0] = i32;
+  return new Uint32Array(array.buffer)[0];
+}
+
 /**
  * Class that encapsulates a vector value.
  */
@@ -958,8 +1041,208 @@ export function vec4(x: Scalar, y: Scalar, z: Scalar, w: Scalar) {
   return new Vector([x, y, z, w]);
 }
 
+/**
+ * Helper for constructing Vectors from arrays of numbers
+ *
+ * @param v array of numbers to be converted, must contain 2, 3 or 4 elements
+ * @param op function to convert from number to Scalar, e.g. 'f32`
+ */
+export function toVector(v: number[], op: (n: number) => Scalar): Vector {
+  switch (v.length) {
+    case 2:
+      return vec2(op(v[0]), op(v[1]));
+    case 3:
+      return vec3(op(v[0]), op(v[1]), op(v[2]));
+    case 4:
+      return vec4(op(v[0]), op(v[1]), op(v[2]), op(v[3]));
+  }
+  unreachable(`input to 'toVector' must contain 2, 3, or 4 elements`);
+}
+
+/**
+ * Class that encapsulates a Matrix value.
+ */
+export class Matrix {
+  readonly elements: Scalar[][];
+  readonly type: MatrixType;
+
+  public constructor(elements: Array<Array<Scalar>>) {
+    const num_cols = elements.length;
+    if (num_cols < 2 || num_cols > 4) {
+      throw new Error(`matrix cols count must be between 2 and 4, got ${num_cols}`);
+    }
+
+    const num_rows = elements[0].length;
+    if (!elements.every(c => c.length === num_rows)) {
+      throw new Error(`cannot mix matrix column lengths`);
+    }
+
+    if (num_rows < 2 || num_rows > 4) {
+      throw new Error(`matrix rows count must be between 2 and 4, got ${num_rows}`);
+    }
+
+    const elem_type = elements[0][0].type;
+    if (!elements.every(c => c.every(r => objectEquals(r.type, elem_type)))) {
+      throw new Error(`cannot mix matrix element types`);
+    }
+
+    this.elements = elements;
+    this.type = TypeMat(num_cols, num_rows, elem_type);
+  }
+
+  /**
+   * Copies the matrix value to the Uint8Array buffer at the provided byte offset.
+   * @param buffer the destination buffer
+   * @param offset the byte offset within buffer
+   */
+  public copyTo(buffer: Uint8Array, offset: number) {
+    for (let i = 0; i < this.type.cols; i++) {
+      for (let j = 0; j < this.type.rows; j++) {
+        this.elements[i][j].copyTo(buffer, offset);
+        offset += this.type.elementType.size;
+      }
+
+      // vec3 have one padding element, so need to skip in matrices
+      if (this.type.rows === 3) {
+        offset += this.type.elementType.size;
+      }
+    }
+  }
+
+  /**
+   * @returns the WGSL representation of this matrix value
+   */
+  public wgsl(): string {
+    const els = this.elements.flatMap(c => c.map(r => r.wgsl())).join(', ');
+    return `mat${this.type.cols}x${this.type.rows}(${els})`;
+  }
+
+  public toString(): string {
+    return `${this.type}(${this.elements.map(c => c.join(', ')).join(', ')})`;
+  }
+}
+
+/**
+ * Helper for constructing Matrices from arrays of numbers
+ *
+ * @param m array of array of numbers to be converted, all Array of number must
+ *          be of the same length. All Arrays must have 2, 3, or 4 elements.
+ * @param op function to convert from number to Scalar, e.g. 'f32`
+ */
+export function toMatrix(m: number[][], op: (n: number) => Scalar): Matrix {
+  const cols = m.length;
+  const rows = m[0].length;
+  const elements: Scalar[][] = [...Array<Scalar[]>(cols)].map(_ => [...Array<Scalar>(rows)]);
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      elements[i][j] = op(m[i][j]);
+    }
+  }
+
+  return new Matrix(elements);
+}
+
 /** Value is a Scalar or Vector value. */
-export type Value = Scalar | Vector;
+export type Value = Scalar | Vector | Matrix;
+
+export type SerializedValueScalar = {
+  kind: 'scalar';
+  type: ScalarKind;
+  value: boolean | number;
+};
+
+export type SerializedValueVector = {
+  kind: 'vector';
+  type: ScalarKind;
+  value: boolean[] | number[];
+};
+
+export type SerializedValueMatrix = {
+  kind: 'matrix';
+  type: ScalarKind;
+  value: number[][];
+};
+
+export type SerializedValue = SerializedValueScalar | SerializedValueVector | SerializedValueMatrix;
+
+export function serializeValue(v: Value): SerializedValue {
+  const value = (kind: ScalarKind, s: Scalar) => {
+    switch (kind) {
+      case 'f32':
+        return new Uint32Array(s.bits.buffer)[0];
+      case 'f16':
+        return new Uint16Array(s.bits.buffer)[0];
+      default:
+        return s.value;
+    }
+  };
+  if (v instanceof Scalar) {
+    const kind = v.type.kind;
+    return {
+      kind: 'scalar',
+      type: kind,
+      value: value(kind, v),
+    };
+  }
+  if (v instanceof Vector) {
+    const kind = v.type.elementType.kind;
+    return {
+      kind: 'vector',
+      type: kind,
+      value: v.elements.map(e => value(kind, e)) as boolean[] | number[],
+    };
+  }
+  if (v instanceof Matrix) {
+    const kind = v.type.elementType.kind;
+    return {
+      kind: 'matrix',
+      type: kind,
+      value: v.elements.map(c => c.map(r => value(kind, r))) as number[][],
+    };
+  }
+
+  unreachable(`unhandled value type: ${v}`);
+}
+
+export function deserializeValue(data: SerializedValue): Value {
+  const buildScalar = (v: ScalarValue): Scalar => {
+    switch (data.type) {
+      case 'f64':
+        return f64(v as number);
+      case 'i32':
+        return i32(v as number);
+      case 'u32':
+        return u32(v as number);
+      case 'f32':
+        return f32Bits(v as number);
+      case 'i16':
+        return i16(v as number);
+      case 'u16':
+        return u16(v as number);
+      case 'f16':
+        return f16Bits(v as number);
+      case 'i8':
+        return i8(v as number);
+      case 'u8':
+        return u8(v as number);
+      case 'bool':
+        return bool(v as boolean);
+      default:
+        unreachable(`unhandled value type: ${data.type}`);
+    }
+  };
+  switch (data.kind) {
+    case 'scalar': {
+      return buildScalar(data.value);
+    }
+    case 'vector': {
+      return new Vector(data.value.map(v => buildScalar(v)));
+    }
+    case 'matrix': {
+      return new Matrix(data.value.map(c => c.map(buildScalar)));
+    }
+  }
+}
 
 /** @returns if the Value is a float scalar type */
 export function isFloatValue(v: Value): boolean {

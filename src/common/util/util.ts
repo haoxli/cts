@@ -1,4 +1,5 @@
 import { Float16Array } from '../../external/petamoriken/float16/float16.js';
+import { SkipTestCase } from '../framework/fixture.js';
 import { globalTestConfig } from '../framework/test_config.js';
 import { Logger } from '../internal/logging/logger.js';
 
@@ -63,6 +64,13 @@ export async function assertReject(p: Promise<unknown>, msg?: string): Promise<v
  */
 export function unreachable(msg?: string): never {
   throw new Error(msg);
+}
+
+/**
+ * Throw a `SkipTestCase` exception, which skips the test case.
+ */
+export function skipTestCase(msg: string): never {
+  throw new SkipTestCase(msg);
 }
 
 /**
@@ -167,9 +175,15 @@ export function sortObjectByKey(v: { [k: string]: unknown }): { [k: string]: unk
 
 /**
  * Determines whether two JS values are equal, recursing into objects and arrays.
+ * NaN is treated specially, such that `objectEquals(NaN, NaN)`.
  */
 export function objectEquals(x: unknown, y: unknown): boolean {
-  if (typeof x !== 'object' || typeof y !== 'object') return x === y;
+  if (typeof x !== 'object' || typeof y !== 'object') {
+    if (typeof x === 'number' && typeof y === 'number' && Number.isNaN(x) && Number.isNaN(y)) {
+      return true;
+    }
+    return x === y;
+  }
   if (x === null || y === null) return x === y;
   if (x.constructor !== y.constructor) return false;
   if (x instanceof Function) return x === y;
@@ -211,6 +225,41 @@ export function mapLazy<T, R>(xs: Iterable<T>, f: (x: T) => R): Iterable<R> {
       }
     },
   };
+}
+
+const ReorderOrders = {
+  forward: true,
+  backward: true,
+  shiftByHalf: true,
+};
+export type ReorderOrder = keyof typeof ReorderOrders;
+export const kReorderOrderKeys = keysOf(ReorderOrders);
+
+/**
+ * Creates a new array from the given array with the first half
+ * swapped with the last half.
+ */
+export function shiftByHalf<R>(arr: R[]): R[] {
+  const len = arr.length;
+  const half = (len / 2) | 0;
+  const firstHalf = arr.splice(0, half);
+  return [...arr, ...firstHalf];
+}
+
+/**
+ * Creates a reordered array from the input array based on the Order
+ */
+export function reorder<R>(order: ReorderOrder, arr: R[]): R[] {
+  switch (order) {
+    case 'forward':
+      return arr.slice();
+    case 'backward':
+      return arr.slice().reverse();
+    case 'shiftByHalf': {
+      // should this be pseudo random?
+      return shiftByHalf(arr);
+    }
+  }
 }
 
 const TypedArrayBufferViewInstances = [
