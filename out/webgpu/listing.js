@@ -755,15 +755,6 @@ export const listing = [
       "validation",
       "capability_checks",
       "limits",
-      "maxFragmentCombinedOutputResources"
-    ]
-  },
-  {
-    "file": [
-      "api",
-      "validation",
-      "capability_checks",
-      "limits",
       "maxInterStageShaderComponents"
     ]
   },
@@ -1825,6 +1816,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicAdd"
     ]
   },
@@ -1835,6 +1827,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicAnd"
     ]
   },
@@ -1845,6 +1838,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicCompareExchangeWeak"
     ]
   },
@@ -1855,6 +1849,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicExchange"
     ]
   },
@@ -1865,6 +1860,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicLoad"
     ]
   },
@@ -1875,6 +1871,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicMax"
     ]
   },
@@ -1885,6 +1882,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicMin"
     ]
   },
@@ -1895,6 +1893,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicOr"
     ]
   },
@@ -1905,6 +1904,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicStore"
     ]
   },
@@ -1915,6 +1915,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicSub"
     ]
   },
@@ -1925,7 +1926,18 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "atomics",
       "atomicXor"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "bitcast"
     ]
   },
   {
