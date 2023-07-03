@@ -533,6 +533,7 @@ export function float16ToInt16(f16) {
 
 
 
+
 /** ScalarType describes the type of WGSL Scalar. */
 export class ScalarType {
   // The named type
@@ -664,8 +665,13 @@ i32(new Int32Array(buf.buffer, offset)[0]));
 export const TypeU32 = new ScalarType('u32', 4, (buf, offset) =>
 u32(new Uint32Array(buf.buffer, offset)[0]));
 
+export const TypeAbstractFloat = new ScalarType(
+'abstract-float',
+8,
+(buf, offset) => abstractFloat(new Float64Array(buf.buffer, offset)[0]));
+
 export const TypeF64 = new ScalarType('f64', 8, (buf, offset) =>
-f32(new Float64Array(buf.buffer, offset)[0]));
+f64(new Float64Array(buf.buffer, offset)[0]));
 
 export const TypeF32 = new ScalarType('f32', 4, (buf, offset) =>
 f32(new Float32Array(buf.buffer, offset)[0]));
@@ -692,6 +698,8 @@ bool(new Uint32Array(buf.buffer, offset)[0] !== 0));
 /** @returns the ScalarType from the ScalarKind */
 export function scalarType(kind) {
   switch (kind) {
+    case 'abstract-float':
+      return TypeAbstractFloat;
     case 'f64':
       return TypeF64;
     case 'f32':
@@ -779,6 +787,10 @@ export class Scalar {
     };
     if (isFinite(this.value)) {
       switch (this.type.kind) {
+        case 'abstract-float':
+          return `${withPoint(this.value)}`;
+        case 'f64':
+          return `${withPoint(this.value)}`;
         case 'f32':
           return `${withPoint(this.value)}f`;
         case 'f16':
@@ -828,6 +840,11 @@ export class Scalar {
 
 
 
+/** Create an AbstractFloat from a numeric value, a JS `number`. */
+export function abstractFloat(value) {
+  const arr = new Float64Array([value]);
+  return new Scalar(TypeAbstractFloat, arr[0], arr);
+}
 /** Create an f64 from a numeric value, a JS `number`. */
 export function f64(value) {
   const arr = new Float64Array([value]);
@@ -933,28 +950,100 @@ export const True = bool(true);
 /** A 'false' literal value */
 export const False = bool(false);
 
+// Encoding to u32s, instead of BigInt, for serialization
+export function reinterpretF64AsU32s(f64) {
+  const array = new Float64Array(1);
+  array[0] = f64;
+  const u32s = new Uint32Array(array.buffer);
+  return [u32s[0], u32s[1]];
+}
+
+// De-encoding from u32s, instead of BigInt, for serialization
+export function reinterpretU32sAsF64(u32s) {
+  const array = new Uint32Array(2);
+  array[0] = u32s[0];
+  array[1] = u32s[1];
+  return new Float64Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the u32 interpretation
+ * of the bits of a number assumed to be an f32 value.
+ */
 export function reinterpretF32AsU32(f32) {
   const array = new Float32Array(1);
   array[0] = f32;
   return new Uint32Array(array.buffer)[0];
 }
 
+/**
+ * @returns a number representing the i32 interpretation
+ * of the bits of a number assumed to be an f32 value.
+ */
+export function reinterpretF32AsI32(f32) {
+  const array = new Float32Array(1);
+  array[0] = f32;
+  return new Int32Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the f32 interpretation
+ * of the bits of a number assumed to be an u32 value.
+ */
 export function reinterpretU32AsF32(u32) {
   const array = new Uint32Array(1);
   array[0] = u32;
   return new Float32Array(array.buffer)[0];
 }
 
+/**
+ * @returns a number representing the i32 interpretation
+ * of the bits of a number assumed to be an u32 value.
+ */
 export function reinterpretU32AsI32(u32) {
   const array = new Uint32Array(1);
   array[0] = u32;
   return new Int32Array(array.buffer)[0];
 }
 
+/**
+ * @returns a number representing the u32 interpretation
+ * of the bits of a number assumed to be an i32 value.
+ */
 export function reinterpretI32AsU32(i32) {
   const array = new Int32Array(1);
   array[0] = i32;
   return new Uint32Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the f32 interpretation
+ * of the bits of a number assumed to be an i32 value.
+ */
+export function reinterpretI32AsF32(i32) {
+  const array = new Int32Array(1);
+  array[0] = i32;
+  return new Float32Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the u16 interpretation
+ * of the bits of a number assumed to be an f16 value.
+ */
+export function reinterpretF16AsU16(f16) {
+  const array = new Float16Array(1);
+  array[0] = f16;
+  return new Uint16Array(array.buffer)[0];
+}
+
+/**
+ * @returns a number representing the f16 interpretation
+ * of the bits of a number assumed to be an u16 value.
+ */
+export function reinterpretU16AsF16(u16) {
+  const array = new Uint16Array(1);
+  array[0] = u16;
+  return new Float16Array(array.buffer)[0];
 }
 
 /**
@@ -1207,6 +1296,8 @@ export function serializeValue(v) {
 export function deserializeValue(data) {
   const buildScalar = (v) => {
     switch (data.type) {
+      case 'abstract-float':
+        return abstractFloat(v);
       case 'f64':
         return f64(v);
       case 'i32':
@@ -1248,7 +1339,12 @@ export function deserializeValue(data) {
 export function isFloatValue(v) {
   if (v instanceof Scalar) {
     const s = v;
-    return s.type.kind === 'f64' || s.type.kind === 'f32' || s.type.kind === 'f16';
+    return (
+      s.type.kind === 'abstract-float' ||
+      s.type.kind === 'f64' ||
+      s.type.kind === 'f32' ||
+      s.type.kind === 'f16');
+
   }
   return false;
 }

@@ -12,11 +12,18 @@ Returns the original value stored in the atomic object.
 import { keysOf } from '../../../../../../../common/util/data_tables.js';
 import { GPUTest } from '../../../../../../gpu_test.js';
 
-import { dispatchSizes, workgroupSizes, runTest, kMapId } from './harness.js';
+import {
+dispatchSizes,
+workgroupSizes,
+runStorageVariableTest,
+runWorkgroupVariableTest,
+kMapId,
+typedArrayCtor } from
+'./harness.js';
 
 export const g = makeTestGroup(GPUTest);
 
-g.test('xor').
+g.test('xor_storage').
 specURL('https://www.w3.org/TR/WGSL/#atomic-rmw').
 desc(
 `
@@ -30,7 +37,8 @@ params((u) =>
 u.
 combine('workgroupSize', workgroupSizes).
 combine('dispatchSize', dispatchSizes).
-combine('mapId', keysOf(kMapId))).
+combine('mapId', keysOf(kMapId)).
+combine('scalarKind', ['u32', 'i32'])).
 
 fn((t) => {
   const numInvocations = t.params.workgroupSize * t.params.dispatchSize;
@@ -42,24 +50,83 @@ fn((t) => {
   // Note: Both WGSL and JS will shift left 1 by id modulo 32.
   const initValue = 0b11000011010110100000111100111100;
 
+  const scalarKind = t.params.scalarKind;
   const mapId = kMapId[t.params.mapId];
   const extra = mapId.wgsl(numInvocations); // Defines map_id()
   const op = `
-      let i = map_id(id);
-      atomicXor(&output[i / 32], 1u << i)
+    let i = map_id(u32(id));
+      atomicXor(&output[i / 32], ${scalarKind}(1) << i)
     `;
 
-  const expected = new Uint32Array(bufferNumElements).fill(initValue);
+  const expected = new (typedArrayCtor(scalarKind))(bufferNumElements).fill(initValue);
   for (let id = 0; id < numInvocations; ++id) {
     const i = mapId.f(id, numInvocations);
     expected[Math.floor(i / 32)] ^= 1 << i;
   }
 
-  runTest({
+  runStorageVariableTest({
     t,
     workgroupSize: t.params.workgroupSize,
     dispatchSize: t.params.dispatchSize,
     bufferNumElements,
+    initValue,
+    op,
+    expected,
+    extra
+  });
+});
+
+g.test('xor_workgroup').
+specURL('https://www.w3.org/TR/WGSL/#atomic-rmw').
+desc(
+`
+AS is storage or workgroup
+T is i32 or u32
+
+fn atomicXor(atomic_ptr: ptr<AS, atomic<T>, read_write>, v: T) -> T
+`).
+
+params((u) =>
+u.
+combine('workgroupSize', workgroupSizes).
+combine('dispatchSize', dispatchSizes).
+combine('mapId', keysOf(kMapId)).
+combine('scalarKind', ['u32', 'i32'])).
+
+fn((t) => {
+  const numInvocations = t.params.workgroupSize;
+
+  // Allocate workgroup array with bitsize of max invocations plus 1 for validation
+  const wgNumElements = Math.max(1, numInvocations / 32) + 1;
+
+  // Start with all bits set to some random value for each u32 in the buffer, then atomicXor each mapped global id bit.
+  // Note: Both WGSL and JS will shift left 1 by id modulo 32.
+  const initValue = 0b11000011010110100000111100111100;
+
+  const scalarKind = t.params.scalarKind;
+  const mapId = kMapId[t.params.mapId];
+  const extra = mapId.wgsl(numInvocations); // Defines map_id()
+  const op = `
+      let i = map_id(u32(id));
+      atomicXor(&wg[i / 32], ${scalarKind}(1) << i)
+    `;
+
+  const expected = new (typedArrayCtor(scalarKind))(wgNumElements * t.params.dispatchSize).fill(
+  initValue);
+
+  for (let d = 0; d < t.params.dispatchSize; ++d) {
+    for (let id = 0; id < numInvocations; ++id) {
+      const wg = expected.subarray(d * wgNumElements);
+      const i = mapId.f(id, numInvocations);
+      wg[Math.floor(i / 32)] ^= 1 << i;
+    }
+  }
+
+  runWorkgroupVariableTest({
+    t,
+    workgroupSize: t.params.workgroupSize,
+    dispatchSize: t.params.dispatchSize,
+    wgNumElements,
     initValue,
     op,
     expected,

@@ -41,18 +41,20 @@ TODO: Fix this test for the various skipped formats [2]:
 `;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert, memcpy, unreachable } from '../../../../common/util/util.js';
 import {
-kTextureFormatInfo,
-
-kDepthStencilFormats,
 kMinDynamicBufferOffsetAlignment,
 kBufferSizeAlignment,
-
-depthStencilBufferTextureCopySupported,
-depthStencilFormatAspectSize,
-kTextureDimensions,
-textureDimensionAndFormatCompatible,
-kColorTextureFormats } from
+kTextureDimensions } from
 '../../../capability_info.js';
+import {
+kTextureFormatInfo,
+kDepthStencilFormats,
+kColorTextureFormats,
+depthStencilBufferTextureCopySupported,
+textureDimensionAndFormatCompatible,
+depthStencilFormatAspectSize } from
+
+
+'../../../format_info.js';
 import { GPUTest } from '../../../gpu_test.js';
 import { makeBufferWithContents } from '../../../util/buffer.js';
 import { align } from '../../../util/math.js';
@@ -148,7 +150,7 @@ class ImageCopyTest extends GPUTest {
       offset +
       (texel.z - origin.z) * bytesPerImage +
       (texel.y - origin.y) / info.blockHeight * bytesPerRow +
-      (texel.x - origin.x) / info.blockWidth * info.bytesPerBlock);
+      (texel.x - origin.x) / info.blockWidth * info.color.bytes);
 
   }
 
@@ -998,7 +1000,7 @@ class ImageCopyTest extends GPUTest {
   copyMipLevel,
   initialData)
   {
-    assert(kTextureFormatInfo[depthFormat].depth);
+    assert(!!kTextureFormatInfo[depthFormat].depth);
 
     const inputTexture = this.device.createTexture({
       size: copySize,
@@ -1216,7 +1218,7 @@ class ImageCopyTest extends GPUTest {
  * [3]: Modify this after introducing tests with rendering.
  */
 function formatCanBeTested({ format }) {
-  return kTextureFormatInfo[format].copyDst && kTextureFormatInfo[format].copySrc;
+  return kTextureFormatInfo[format].color.copyDst && kTextureFormatInfo[format].color.copySrc;
 }
 
 export const g = makeTestGroup(ImageCopyTest);
@@ -1296,6 +1298,7 @@ expandWithParams((p) => {
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -1392,6 +1395,7 @@ combine('copyDepth', kOffsetsAndSizesParams.copyDepth) // 2d and 2d-array textur
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -1406,7 +1410,7 @@ fn((t) => {
   } = t.params;
   const info = kTextureFormatInfo[format];
 
-  const offset = offsetInBlocks * info.bytesPerBlock;
+  const offset = offsetInBlocks * info.color.bytes;
   const copySize = {
     width: 3 * info.blockWidth,
     height: 3 * info.blockHeight,
@@ -1471,6 +1475,7 @@ unless((p) => p.dimension === '1d' && p.coordinateToTest !== 0)).
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -1519,7 +1524,7 @@ fn((t) => {
 
 
   const rowsPerImage = copySizeBlocks[1];
-  const bytesPerRow = align(copySizeBlocks[0] * info.bytesPerBlock, 256);
+  const bytesPerRow = align(copySizeBlocks[0] * info.color.bytes, 256);
 
   const dataSize = dataBytesForCopyOrFail({
     layout: { offset: 0, bytesPerRow, rowsPerImage },
@@ -1670,6 +1675,7 @@ expand('textureSize', generateTestTextureSizes)).
 
 beforeAllSubcases((t) => {
   const info = kTextureFormatInfo[t.params.format];
+  t.skipIfTextureFormatNotSupported(t.params.format);
   t.selectDeviceOrSkipTestCase(info.feature);
 }).
 fn((t) => {
@@ -1798,9 +1804,9 @@ copyMethod)
 {
   {
     return (
-      aspect === 'stencil-only' && kTextureFormatInfo[format].stencil ||
+      aspect === 'stencil-only' && !!kTextureFormatInfo[format].stencil ||
       aspect === 'depth-only' &&
-      kTextureFormatInfo[format].depth &&
+      !!kTextureFormatInfo[format].depth &&
       copyMethod === 'CopyT2B' &&
       depthStencilBufferTextureCopySupported('CopyT2B', format, aspect));
 

@@ -3,18 +3,20 @@
 **/export const description = `copyTextureToTexture operation tests`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
 import { assert, memcpy, unreachable } from '../../../../common/util/util.js';
 import {
+kBufferSizeAlignment,
+kMinDynamicBufferOffsetAlignment,
+kTextureDimensions } from
+'../../../capability_info.js';
+import {
 kTextureFormatInfo,
 kRegularTextureFormats,
-
 kCompressedTextureFormats,
-depthStencilFormatAspectSize,
-
-kBufferSizeAlignment,
 kDepthStencilFormats,
-kMinDynamicBufferOffsetAlignment,
-kTextureDimensions,
-textureDimensionAndFormatCompatible } from
-'../../../capability_info.js';
+textureDimensionAndFormatCompatible,
+depthStencilFormatAspectSize } from
+
+
+'../../../format_info.js';
 import { GPUTest } from '../../../gpu_test.js';
 import { makeBufferWithContents } from '../../../util/buffer.js';
 import { checkElementsEqual, checkElementsEqualEither } from '../../../util/check_contents.js';
@@ -33,7 +35,7 @@ class F extends GPUTest {
   mipLevel)
   {
     const textureSizeAtLevel = physicalMipSize(textureSize, format, dimension, mipLevel);
-    const bytesPerBlock = kTextureFormatInfo[format].bytesPerBlock;
+    const bytesPerBlock = kTextureFormatInfo[format].color.bytes;
     const blockWidthInTexel = kTextureFormatInfo[format].blockWidth;
     const blockHeightInTexel = kTextureFormatInfo[format].blockHeight;
     const blocksPerSubresource =
@@ -73,6 +75,8 @@ class F extends GPUTest {
   srcCopyLevel,
   dstCopyLevel)
   {
+    this.skipIfTextureFormatNotSupported(srcFormat, dstFormat);
+
     const mipLevelCount = dimension === '1d' ? 1 : 4;
 
     // Create srcTexture and dstTexture
@@ -108,7 +112,7 @@ class F extends GPUTest {
     dimension,
     srcCopyLevel);
 
-    const bytesPerBlock = kTextureFormatInfo[srcFormat].bytesPerBlock;
+    const bytesPerBlock = kTextureFormatInfo[srcFormat].color.bytes;
     const blockWidth = kTextureFormatInfo[srcFormat].blockWidth;
     const blockHeight = kTextureFormatInfo[srcFormat].blockHeight;
     const srcBlocksPerRow = srcTextureSizeAtLevel.width / blockWidth;
