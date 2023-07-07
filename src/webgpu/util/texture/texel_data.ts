@@ -17,6 +17,7 @@ import {
   numberToFloat32Bits,
   float32BitsToNumber,
   numberToFloatBits,
+  unpackRGB9E5UFloat,
 } from '../conversion.js';
 import { clamp, signExtend } from '../math.js';
 
@@ -452,6 +453,10 @@ function makeIntegerInfo(
   opt: { signed: boolean }
 ): TexelRepresentationInfo {
   assert(bitLength <= 32);
+  const numericRange = opt.signed
+    ? { min: -(2 ** (bitLength - 1)), max: 2 ** (bitLength - 1) - 1 }
+    : { min: 0, max: 2 ** bitLength - 1 };
+  const maxUnsignedValue = 2 ** bitLength;
   const encode = applyEach(
     (n: number) => (assertInIntegerRange(n, bitLength, opt.signed), n),
     componentOrder
@@ -460,6 +465,11 @@ function makeIntegerInfo(
     (n: number) => (assertInIntegerRange(n, bitLength, opt.signed), n),
     componentOrder
   );
+  const bitsToNumber = applyEach((n: number) => {
+    const decodedN = opt.signed ? (n > numericRange.max ? n - maxUnsignedValue : n) : n;
+    assertInIntegerRange(decodedN, bitLength, opt.signed);
+    return decodedN;
+  }, componentOrder);
 
   let bitsToULPFromZero: ComponentMapFn;
   if (opt.signed) {
@@ -482,11 +492,9 @@ function makeIntegerInfo(
       packComponents(componentOrder, components, bitLength, dataType),
     unpackBits: (data: Uint8Array) => unpackComponentsBits(componentOrder, data, bitLength),
     numberToBits: applyEach(v => v & bitMask, componentOrder),
-    bitsToNumber: decode,
+    bitsToNumber,
     bitsToULPFromZero,
-    numericRange: opt.signed
-      ? { min: -(2 ** (bitLength - 1)), max: 2 ** (bitLength - 1) - 1 }
-      : { min: 0, max: 2 ** bitLength - 1 },
+    numericRange,
   };
 }
 
@@ -769,13 +777,7 @@ export const kTexelRepresentationInfo: {
         ]).buffer,
       // For the purpose of unpacking, expand into three "ufloat14" values.
       unpackBits: (data: Uint8Array) => {
-        // Pretend the exponent part is A so we can use unpackComponentsBits.
-        const parts = unpackComponentsBits(kRGBA, data, { R: 9, G: 9, B: 9, A: 5 });
-        return {
-          R: (parts.A! << 9) | parts.R!,
-          G: (parts.A! << 9) | parts.G!,
-          B: (parts.A! << 9) | parts.B!,
-        };
+        return unpackRGB9E5UFloat((data[3] << 24) | (data[2] << 16) | (data[1] << 8) | data[0]);
       },
       numberToBits: components => ({
         R: float32ToFloatBits(components.R ?? unreachable(), 0, 5, 9, 15),
