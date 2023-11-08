@@ -11,7 +11,7 @@ import { Logger } from '../internal/logging/logger.js';
 import { parseQuery } from '../internal/query/parseQuery.js';
 import { parseExpectationsForTestQuery } from '../internal/query/query.js';
 import { Colors } from '../util/colors.js';
-import { setGPUProvider } from '../util/navigator_gpu.js';
+import { setDefaultRequestAdapterOptions, setGPUProvider } from '../util/navigator_gpu.js';
 import { assert, unreachable } from '../util/util.js';
 
 import sys from './helper/sys.js';
@@ -22,6 +22,7 @@ function usage(rc) {
   tools/run_${sys.type} 'unittests:*' 'webgpu:buffers,*'
 Options:
   --colors                  Enable ANSI colors in output.
+  --compat                  Runs tests in compatibility mode.
   --coverage                Emit coverage data.
   --verbose                 Print result/log of every test as it runs.
   --list                    Print all testcase names that match the given query and exit.
@@ -99,6 +100,8 @@ for (let i = 0; i < sys.args.length; ++i) {
       quiet = true;
     } else if (a === '--unroll-const-eval-loops') {
       globalTestConfig.unrollConstEvalLoops = true;
+    } else if (a === '--compat') {
+      globalTestConfig.compatibility = true;
     } else {
       console.log('unrecognized flag: ', a);
       usage(1);
@@ -110,15 +113,20 @@ for (let i = 0; i < sys.args.length; ++i) {
 
 let codeCoverage = undefined;
 
+if (globalTestConfig.compatibility) {
+  // MAINTENANCE_TODO: remove the cast once compatibilityMode is officially added
+  setDefaultRequestAdapterOptions({ compatibilityMode: true });
+}
+
 if (gpuProviderModule) {
   setGPUProvider(() => gpuProviderModule.create(gpuProviderFlags));
   if (emitCoverage) {
     codeCoverage = gpuProviderModule.coverage;
     if (codeCoverage === undefined) {
       console.error(
-      `--coverage specified, but the GPUProviderModule does not support code coverage.
-Did you remember to build with code coverage instrumentation enabled?`);
-
+        `--coverage specified, but the GPUProviderModule does not support code coverage.
+Did you remember to build with code coverage instrumentation enabled?`
+      );
       sys.exit(1);
     }
   }
@@ -128,7 +136,7 @@ if (dataPath !== undefined) {
   dataCache.setStore({
     load: (path) => {
       return new Promise((resolve, reject) => {
-        fs.readFile(`${dataPath}/${path}`, 'utf8', (err, data) => {
+        fs.readFile(`${dataPath}/${path}`, (err, data) => {
           if (err !== null) {
             reject(err.message);
           } else {
@@ -154,9 +162,9 @@ if (queries.length === 0) {
   const filterQuery = parseQuery(queries[0]);
   const testcases = await loader.loadCases(filterQuery);
   const expectations = parseExpectationsForTestQuery(
-  await (loadWebGPUExpectations ?? []),
-  filterQuery);
-
+    await (loadWebGPUExpectations ?? []),
+    filterQuery
+  );
 
   Logger.globalDebugMode = debug;
   const log = new Logger();
@@ -183,8 +191,8 @@ if (queries.length === 0) {
         }
         continue;
       default:
-        break;}
-
+        break;
+    }
 
     const [rec, res] = log.record(name);
     await testcase.run(rec, expectations);
@@ -207,8 +215,8 @@ if (queries.length === 0) {
         skipped.push([name, res]);
         break;
       default:
-        unreachable('unrecognized status');}
-
+        unreachable('unrecognized status');
+    }
   }
 
   if (codeCoverage !== undefined) {

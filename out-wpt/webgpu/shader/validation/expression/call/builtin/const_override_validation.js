@@ -1,77 +1,98 @@
 /**
- * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
- **/ import { assert, unreachable } from '../../../../../../common/util/util.js';
-import { kValue } from '../../../../../util/constants.js';
-import {
+* AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
+**/import { assert, unreachable } from '../../../../../../common/util/util.js';import { kValue } from '../../../../../util/constants.js';import {
+
   TypeF16,
-  VectorType,
+
   elementType,
-  isAbstractType,
-  isFloatType,
-} from '../../../../../util/conversion.js';
+  elementsOf,
+  isAbstractType } from
+'../../../../../util/conversion.js';
 import { fullF16Range, fullF32Range, fullF64Range, linearRange } from '../../../../../util/math.js';
+
 
 /// A linear sweep between -2 to 2
 export const kMinusTwoToTwo = linearRange(-2, 2, 10);
 
 /// An array of values ranging from -3π to 3π, with a focus on multiples of π
 export const kMinus3PiTo3Pi = [
-  -3 * Math.PI,
-  -2.999 * Math.PI,
+-3 * Math.PI,
+-2.999 * Math.PI,
 
-  -2.501 * Math.PI,
-  -2.5 * Math.PI,
-  -2.499 * Math.PI,
+-2.501 * Math.PI,
+-2.5 * Math.PI,
+-2.499 * Math.PI,
 
-  -2.001 * Math.PI,
-  -2.0 * Math.PI,
-  -1.999 * Math.PI,
+-2.001 * Math.PI,
+-2.0 * Math.PI,
+-1.999 * Math.PI,
 
-  -1.501 * Math.PI,
-  -1.5 * Math.PI,
-  -1.499 * Math.PI,
+-1.501 * Math.PI,
+-1.5 * Math.PI,
+-1.499 * Math.PI,
 
-  -1.001 * Math.PI,
-  -1.0 * Math.PI,
-  -0.999 * Math.PI,
+-1.001 * Math.PI,
+-1.0 * Math.PI,
+-0.999 * Math.PI,
 
-  -0.501 * Math.PI,
-  -0.5 * Math.PI,
-  -0.499 * Math.PI,
+-0.501 * Math.PI,
+-0.5 * Math.PI,
+-0.499 * Math.PI,
 
-  -0.001,
-  0,
-  0.001,
+-0.001,
+0,
+0.001,
 
-  0.499 * Math.PI,
-  0.5 * Math.PI,
-  0.501 * Math.PI,
+0.499 * Math.PI,
+0.5 * Math.PI,
+0.501 * Math.PI,
 
-  0.999 * Math.PI,
-  1.0 * Math.PI,
-  1.001 * Math.PI,
+0.999 * Math.PI,
+1.0 * Math.PI,
+1.001 * Math.PI,
 
-  1.499 * Math.PI,
-  1.5 * Math.PI,
-  1.501 * Math.PI,
+1.499 * Math.PI,
+1.5 * Math.PI,
+1.501 * Math.PI,
 
-  1.999 * Math.PI,
-  2.0 * Math.PI,
-  2.001 * Math.PI,
+1.999 * Math.PI,
+2.0 * Math.PI,
+2.001 * Math.PI,
 
-  2.499 * Math.PI,
-  2.5 * Math.PI,
-  2.501 * Math.PI,
+2.499 * Math.PI,
+2.5 * Math.PI,
+2.501 * Math.PI,
 
-  2.999 * Math.PI,
-  3 * Math.PI,
-];
+2.999 * Math.PI,
+3 * Math.PI];
+
+
+/// A minimal array of values ranging from -3π to 3π, with a focus on multiples
+/// of π. Used when multiple parameters are being passed in, so the number of
+/// cases becomes the square or more of this list.
+export const kSparseMinus3PiTo3Pi = [
+-3 * Math.PI,
+-2.5 * Math.PI,
+-2.0 * Math.PI,
+-1.5 * Math.PI,
+-1.0 * Math.PI,
+-0.5 * Math.PI,
+0,
+0.5 * Math.PI,
+Math.PI,
+1.5 * Math.PI,
+2.0 * Math.PI,
+2.5 * Math.PI,
+3 * Math.PI];
+
 
 /// The evaluation stages to test
 export const kConstantAndOverrideStages = ['constant', 'override'];
 
+
+
 /**
- * @returns true if evaluation stage @p stage supports expressions of type @p.
+ * @returns true if evaluation stage `stage` supports expressions of type @p.
  */
 export function stageSupportsType(stage, type) {
   if (stage === 'override' && isAbstractType(elementType(type))) {
@@ -82,80 +103,90 @@ export function stageSupportsType(stage, type) {
 }
 
 /**
- * Runs a validation test to check that evaluation of @p builtin either evaluates with or without
+ * Runs a validation test to check that evaluation of `builtin` either evaluates with or without
  * error at shader creation time or pipeline creation time.
  * @param t the ShaderValidationTest
  * @param builtin the name of the builtin
  * @param expectedResult false if an error is expected, true if no error is expected
- * @param value the value to pass to the builtin
- * @param type the type to convert @p value to before passing to the builtin
+ * @param args the arguments to pass to the builtin
  * @param stage the evaluation stage
  */
-export function validateConstOrOverrideBuiltinEval(t, builtin, expectedResult, value, type, stage) {
-  const elTy = elementType(type);
-  const enables = elTy === TypeF16 ? 'enable f16;' : '';
-  let conversion = '';
-  if (isAbstractType(elTy)) {
-    if (type instanceof VectorType) {
-      conversion = `vec${type.width}`;
-    }
-  } else {
-    conversion = type.toString();
-  }
+export function validateConstOrOverrideBuiltinEval(
+t,
+builtin,
+expectedResult,
+args,
+stage)
+{
+  const elTys = args.map((arg) => elementType(arg.type));
+  const enables = elTys.some((ty) => ty === TypeF16) ? 'enable f16;' : '';
 
   switch (stage) {
-    case 'constant': {
-      let val_str = value.toString();
-      if (
-        isFloatType(elTy) &&
-        !val_str.includes('.') &&
-        !val_str.includes('e') &&
-        !val_str.includes('E')
-      ) {
-        val_str += '.0';
+    case 'constant':{
+        t.expectCompileResult(
+          expectedResult,
+          `${enables}
+const v = ${builtin}(${args.map((arg) => arg.wgsl()).join(', ')});`
+        );
+        break;
       }
-
-      t.expectCompileResult(
-        expectedResult,
-        `${enables}
-const v = ${builtin}(${conversion}(${val_str}));`
-      );
-
-      break;
-    }
-    case 'override': {
-      assert(!isAbstractType(elTy));
-      t.expectPipelineResult({
-        expectedResult,
-        code: `${enables}
-override o : ${elTy.toString()};
-var<private> v = ${builtin}(${conversion}(o));`,
-        constants: { o: value },
-        reference: ['v'],
-      });
-      break;
-    }
+    case 'override':{
+        assert(!elTys.some((ty) => isAbstractType(ty)));
+        const constants = {};
+        const overrideDecls = [];
+        const callArgs = [];
+        let numOverrides = 0;
+        for (const arg of args) {
+          const argOverrides = [];
+          for (const el of elementsOf(arg)) {
+            const name = `o${numOverrides++}`;
+            overrideDecls.push(`override ${name} : ${el.type};`);
+            argOverrides.push(name);
+            constants[name] = Number(el.value);
+          }
+          callArgs.push(`${arg.type}(${argOverrides.join(', ')})`);
+        }
+        t.expectPipelineResult({
+          expectedResult,
+          code: `${enables}
+${overrideDecls.join('\n')}
+var<private> v = ${builtin}(${callArgs.join(', ')});`,
+          constants,
+          reference: ['v']
+        });
+        break;
+      }
   }
 }
 
-/** @returns a sweep of the representable values for element type of @p type */
-export function fullRangeForType(type) {
+/** @returns a sweep of the representable values for element type of `type` */
+export function fullRangeForType(type, count) {
+  if (count === undefined) {
+    count = 25;
+  }
   switch (elementType(type)?.kind) {
     case 'abstract-float':
-      return fullF64Range();
+      return fullF64Range({
+        pos_sub: Math.ceil(count * 1 / 5),
+        pos_norm: Math.ceil(count * 4 / 5)
+      });
     case 'f32':
-      return fullF32Range();
+      return fullF32Range({
+        pos_sub: Math.ceil(count * 1 / 5),
+        pos_norm: Math.ceil(count * 4 / 5)
+      });
     case 'f16':
-      return fullF16Range();
+      return fullF16Range({
+        pos_sub: Math.ceil(count * 1 / 5),
+        pos_norm: Math.ceil(count * 4 / 5)
+      });
     case 'i32':
-      return linearRange(kValue.i32.negative.min, kValue.i32.positive.max, 50).map(f =>
-        Math.floor(f)
+      return linearRange(kValue.i32.negative.min, kValue.i32.positive.max, count).map((f) =>
+      Math.floor(f)
       );
-
     case 'u32':
-      return linearRange(0, kValue.u32.max, 50).map(f => Math.floor(f));
+      return linearRange(0, kValue.u32.max, count).map((f) => Math.floor(f));
   }
-
   unreachable();
 }
 

@@ -18,13 +18,21 @@ Component-wise when T is a vector.
 
 `;import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../../../gpu_test.js';
-import { i32, TypeF32, TypeI32, TypeU32, u32 } from '../../../../../util/conversion.js';
+import {
+  i32,
+  TypeF32,
+  TypeF16,
+  TypeI32,
+  TypeU32,
+  u32,
+  TypeAbstractFloat } from
+'../../../../../util/conversion.js';
 import { FP } from '../../../../../util/floating_point.js';
-import { fullF32Range } from '../../../../../util/math.js';
+import { fullF32Range, fullF16Range, sparseF64Range } from '../../../../../util/math.js';
 import { makeCaseCache } from '../../case_cache.js';
-import { allInputSources, run } from '../../expression.js';
+import { allInputSources, onlyConstInputSource, run } from '../../expression.js';
 
-import { builtin } from './builtin.js';
+import { abstractBuiltin, builtin } from './builtin.js';
 
 /** Generate set of max test cases from list of interesting values */
 function generateTestCases(
@@ -45,11 +53,27 @@ export const g = makeTestGroup(GPUTest);
 export const d = makeCaseCache('max', {
   f32: () => {
     return FP.f32.generateScalarPairToIntervalCases(
-    fullF32Range(),
-    fullF32Range(),
-    'unfiltered',
-    FP.f32.maxInterval);
-
+      fullF32Range(),
+      fullF32Range(),
+      'unfiltered',
+      FP.f32.maxInterval
+    );
+  },
+  f16: () => {
+    return FP.f16.generateScalarPairToIntervalCases(
+      fullF16Range(),
+      fullF16Range(),
+      'unfiltered',
+      FP.f16.maxInterval
+    );
+  },
+  abstract: () => {
+    return FP.abstract.generateScalarPairToIntervalCases(
+      sparseF64Range(),
+      sparseF64Range(),
+      'unfiltered',
+      FP.abstract.maxInterval
+    );
   }
 });
 
@@ -57,16 +81,16 @@ g.test('abstract_int').
 specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions').
 desc(`abstract int tests`).
 params((u) =>
-u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])).
-
+u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])
+).
 unimplemented();
 
 g.test('u32').
 specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions').
 desc(`u32 tests`).
 params((u) =>
-u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])).
-
+u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])
+).
 fn(async (t) => {
   const makeCase = (x, y) => {
     return { input: [u32(x), u32(y)], expected: u32(Math.max(x, y)) };
@@ -82,8 +106,8 @@ g.test('i32').
 specURL('https://www.w3.org/TR/WGSL/#integer-builtin-functions').
 desc(`i32 tests`).
 params((u) =>
-u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])).
-
+u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])
+).
 fn(async (t) => {
   const makeCase = (x, y) => {
     return { input: [i32(x), i32(y)], expected: i32(Math.max(x, y)) };
@@ -99,16 +123,28 @@ g.test('abstract_float').
 specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions').
 desc(`abstract float tests`).
 params((u) =>
-u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])).
-
-unimplemented();
+u.
+combine('inputSource', onlyConstInputSource).
+combine('vectorize', [undefined, 2, 3, 4])
+).
+fn(async (t) => {
+  const cases = await d.get('abstract');
+  await run(
+    t,
+    abstractBuiltin('max'),
+    [TypeAbstractFloat, TypeAbstractFloat],
+    TypeAbstractFloat,
+    t.params,
+    cases
+  );
+});
 
 g.test('f32').
 specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions').
 desc(`f32 tests`).
 params((u) =>
-u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])).
-
+u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])
+).
 fn(async (t) => {
   const cases = await d.get('f32');
   await run(t, builtin('max'), [TypeF32, TypeF32], TypeF32, t.params, cases);
@@ -118,7 +154,13 @@ g.test('f16').
 specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions').
 desc(`f16 tests`).
 params((u) =>
-u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])).
-
-unimplemented();
+u.combine('inputSource', allInputSources).combine('vectorize', [undefined, 2, 3, 4])
+).
+beforeAllSubcases((t) => {
+  t.selectDeviceOrSkipTestCase({ requiredFeatures: ['shader-f16'] });
+}).
+fn(async (t) => {
+  const cases = await d.get('f16');
+  await run(t, builtin('max'), [TypeF16, TypeF16], TypeF16, t.params, cases);
+});
 //# sourceMappingURL=max.spec.js.map

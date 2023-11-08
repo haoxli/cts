@@ -1,30 +1,37 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import { globalTestConfig } from '../../../../common/framework/test_config.js';import { assert, objectEquals, unreachable } from '../../../../common/util/util.js';
+
 import { compare } from '../../../util/compare.js';
+import { kValue } from '../../../util/constants.js';
 import {
-ScalarType,
-Scalar,
+  ScalarType,
+  Scalar,
 
-TypeVec,
-TypeU32,
+  TypeVec,
+  TypeU32,
 
-Vector,
-VectorType,
-u32,
-i32,
-Matrix,
-MatrixType,
+  Vector,
+  VectorType,
+  u32,
+  i32,
+  Matrix,
+  MatrixType,
 
-scalarTypeOf } from
+  scalarTypeOf } from
 '../../../util/conversion.js';
 import { FPInterval } from '../../../util/floating_point.js';
 import {
-cartesianProduct,
+  cartesianProduct,
 
-quantizeToI32,
-quantizeToU32 } from
+  quantizeToI32,
+  quantizeToU32 } from
 '../../../util/math.js';
+
+
+
+
+
 
 
 
@@ -56,10 +63,10 @@ export function toComparator(input) {
 
 
 
+/** CaseList is a list of Cases */
 
 
-
-
+/** The input value source */
 
 
 
@@ -68,6 +75,9 @@ export function toComparator(input) {
 
 /** All possible input sources */
 export const allInputSources = ['const', 'uniform', 'storage_r', 'storage_rw'];
+
+/** Just constant input source */
+export const onlyConstInputSource = ['const'];
 
 /** Configuration for running a expression test */
 
@@ -84,6 +94,56 @@ export const allInputSources = ['const', 'uniform', 'storage_r', 'storage_rw'];
 
 // Helper for returning the stride for a given Type
 function valueStride(ty) {
+  // AbstractFloats are passed out of the shader via a struct of 2x u32s and
+  // unpacking containers as arrays
+  if (scalarTypeOf(ty).kind === 'abstract-float') {
+    if (ty instanceof ScalarType) {
+      return 16;
+    }
+    if (ty instanceof VectorType) {
+      if (ty.width === 2) {
+        return 16;
+      }
+      // vec3s have padding to make them the same size as vec4s
+      return 32;
+    }
+    if (ty instanceof MatrixType) {
+      switch (ty.cols) {
+        case 2:
+          switch (ty.rows) {
+            case 2:
+              return 32;
+            case 3:
+              return 64;
+            case 4:
+              return 64;
+          }
+          break;
+        case 3:
+          switch (ty.rows) {
+            case 2:
+              return 48;
+            case 3:
+              return 96;
+            case 4:
+              return 96;
+          }
+          break;
+        case 4:
+          switch (ty.rows) {
+            case 2:
+              return 64;
+            case 3:
+              return 128;
+            case 4:
+              return 128;
+          }
+          break;
+      }
+    }
+    unreachable(`AbstractFloats have not yet been implemented for ${ty.toString()}`);
+  }
+
   if (ty instanceof MatrixType) {
     switch (ty.cols) {
       case 2:
@@ -93,8 +153,8 @@ function valueStride(ty) {
           case 3:
             return 32;
           case 4:
-            return 32;}
-
+            return 32;
+        }
         break;
       case 3:
         switch (ty.rows) {
@@ -103,8 +163,8 @@ function valueStride(ty) {
           case 3:
             return 64;
           case 4:
-            return 64;}
-
+            return 64;
+        }
         break;
       case 4:
         switch (ty.rows) {
@@ -113,13 +173,13 @@ function valueStride(ty) {
           case 3:
             return 64;
           case 4:
-            return 64;}
-
-        break;}
-
+            return 64;
+        }
+        break;
+    }
     unreachable(
-    `Attempted to get stride length for a matrix with dimensions (${ty.cols}x${ty.rows}), which isn't currently handled`);
-
+      `Attempted to get stride length for a matrix with dimensions (${ty.cols}x${ty.rows}), which isn't currently handled`
+    );
   }
 
   // Handles scalars and vectors
@@ -134,6 +194,11 @@ function valueStrides(tys) {
 // Helper for returning the WGSL storage type for the given Type.
 function storageType(ty) {
   if (ty instanceof ScalarType) {
+    assert(ty.kind !== 'f64', `No storage type defined for 'f64' values`);
+    assert(
+      ty.kind !== 'abstract-float',
+      `Custom handling is implemented for 'abstract-float' values`
+    );
     if (ty.kind === 'bool') {
       return TypeU32;
     }
@@ -147,16 +212,18 @@ function storageType(ty) {
 // Helper for converting a value of the type 'ty' from the storage type.
 function fromStorage(ty, expr) {
   if (ty instanceof ScalarType) {
-    assert(ty.kind !== 'abstract-float', `No storage type defined for AbstractFloat values`);
+    assert(ty.kind !== 'abstract-float', `AbstractFloat values should not be in input storage`);
+    assert(ty.kind !== 'f64', `'No storage type defined for 'f64' values`);
     if (ty.kind === 'bool') {
       return `${expr} != 0u`;
     }
   }
   if (ty instanceof VectorType) {
     assert(
-    ty.elementType.kind !== 'abstract-float',
-    `No storage type defined for AbstractFloat values`);
-
+      ty.elementType.kind !== 'abstract-float',
+      `AbstractFloat values cannot appear in input storage`
+    );
+    assert(ty.elementType.kind !== 'f64', `'No storage type defined for 'f64' values`);
     if (ty.elementType.kind === 'bool') {
       return `${expr} != vec${ty.width}<u32>(0u)`;
     }
@@ -167,16 +234,21 @@ function fromStorage(ty, expr) {
 // Helper for converting a value of the type 'ty' to the storage type.
 function toStorage(ty, expr) {
   if (ty instanceof ScalarType) {
-    assert(ty.kind !== 'abstract-float', `No storage type defined for AbstractFloat values`);
+    assert(
+      ty.kind !== 'abstract-float',
+      `AbstractFloat values have custom code for writing to storage`
+    );
+    assert(ty.kind !== 'f64', `No storage type defined for 'f64' values`);
     if (ty.kind === 'bool') {
       return `select(0u, 1u, ${expr})`;
     }
   }
   if (ty instanceof VectorType) {
     assert(
-    ty.elementType.kind !== 'abstract-float',
-    `No storage type defined for AbstractFloat values`);
-
+      ty.elementType.kind !== 'abstract-float',
+      `AbstractFloat values have custom code for writing to storage`
+    );
+    assert(ty.elementType.kind !== 'f64', `'No storage type defined for 'f64' values`);
     if (ty.elementType.kind === 'bool') {
       return `select(vec${ty.width}<u32>(0u), vec${ty.width}<u32>(1u), ${expr})`;
     }
@@ -189,7 +261,7 @@ function toStorage(ty, expr) {
 
 /**
  * Searches for an entry with the given key, adding and returning the result of calling
- * @p create if the entry was not found.
+ * `create` if the entry was not found.
  * @param map the cache map
  * @param key the entry's key
  * @param create the function used to construct a value, if not found in the cache
@@ -216,6 +288,7 @@ function getOrCreate(map, key, create) {
  * @param resultType the return type for the expression overload
  * @param cfg test configuration values
  * @param cases list of test cases
+ * @param batch_size override the calculated casesPerBatch.
  */
 export async function run(
 t,
@@ -223,7 +296,8 @@ shaderBuilder,
 parameterTypes,
 resultType,
 cfg = { inputSource: 'storage_r' },
-cases)
+cases,
+batch_size)
 {
   // If the 'vectorize' config option was provided, pack the cases into vectors.
   if (cfg.vectorize !== undefined) {
@@ -237,6 +311,9 @@ cases)
   // so chunk the tests up into batches that fit into the limits. We also split
   // the cases into smaller batches to help with shader compilation performance.
   const casesPerBatch = function () {
+    if (batch_size) {
+      return batch_size;
+    }
     switch (cfg.inputSource) {
       case 'const':
         // Some drivers are slow to optimize shaders with many constant values,
@@ -247,15 +324,15 @@ cases)
         // Some drivers are slow to build pipelines with large uniform buffers.
         // 2k appears to be a sweet-spot when benchmarking.
         return Math.floor(
-        Math.min(1024 * 2, t.device.limits.maxUniformBufferBindingSize) /
-        valueStrides(parameterTypes));
-
+          Math.min(1024 * 2, t.device.limits.maxUniformBufferBindingSize) /
+          valueStrides(parameterTypes)
+        );
       case 'storage_r':
       case 'storage_rw':
         return Math.floor(
-        t.device.limits.maxStorageBufferBindingSize / valueStrides(parameterTypes));}
-
-
+          t.device.limits.maxStorageBufferBindingSize / valueStrides(parameterTypes)
+        );
+    }
   }();
 
   // A cache to hold built shader pipelines.
@@ -276,6 +353,22 @@ cases)
     }
   };
 
+  const processBatch = async (batchCases) => {
+    const checkBatch = await submitBatch(
+      t,
+      shaderBuilder,
+      parameterTypes,
+      resultType,
+      batchCases,
+      cfg.inputSource,
+      pipelineCache
+    );
+    checkBatch();
+    void t.queue.onSubmittedWorkDone().finally(batchFinishedCallback);
+  };
+
+  const pendingBatches = [];
+
   for (let i = 0; i < cases.length; i += casesPerBatch) {
     const batchCases = cases.slice(i, Math.min(i + casesPerBatch, cases.length));
 
@@ -288,18 +381,10 @@ cases)
     }
     batchesInFlight += 1;
 
-    const checkBatch = submitBatch(
-    t,
-    shaderBuilder,
-    parameterTypes,
-    resultType,
-    batchCases,
-    cfg.inputSource,
-    pipelineCache);
-
-    checkBatch();
-    t.queue.onSubmittedWorkDone().finally(batchFinishedCallback);
+    pendingBatches.push(processBatch(batchCases));
   }
+
+  await Promise.all(pendingBatches);
 }
 
 /**
@@ -314,7 +399,7 @@ cases)
  * @param pipelineCache the cache of compute pipelines, shared between batches
  * @returns a function that checks the results are as expected
  */
-function submitBatch(
+async function submitBatch(
 t,
 shaderBuilder,
 parameterTypes,
@@ -330,16 +415,16 @@ pipelineCache)
     usage: GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST | GPUBufferUsage.STORAGE
   });
 
-  const [pipeline, group] = buildPipeline(
-  t,
-  shaderBuilder,
-  parameterTypes,
-  resultType,
-  cases,
-  inputSource,
-  outputBuffer,
-  pipelineCache);
-
+  const [pipeline, group] = await buildPipeline(
+    t,
+    shaderBuilder,
+    parameterTypes,
+    resultType,
+    cases,
+    inputSource,
+    outputBuffer,
+    pipelineCache
+  );
 
   const encoder = t.device.createCommandEncoder();
   const pass = encoder.beginComputePass();
@@ -391,9 +476,9 @@ pipelineCache)
 }
 
 /**
- * map is a helper for returning a new array with each element of @p v
- * transformed with @p fn.
- * If @p v is not an array, then @p fn is called with (v, 0).
+ * map is a helper for returning a new array with each element of `v`
+ * transformed with `fn`.
+ * If `v` is not an array, then `fn` is called with (v, 0).
  */
 function map(v, fn) {
   if (v instanceof Array) {
@@ -421,11 +506,54 @@ function map(v, fn) {
  * Helper that returns the WGSL to declare the output storage buffer for a shader
  */
 function wgslOutputs(resultType, count) {
-  return `
+  let output_struct = undefined;
+  if (scalarTypeOf(resultType).kind !== 'abstract-float') {
+    output_struct = `
 struct Output {
   @size(${valueStride(resultType)}) value : ${storageType(resultType)}
+};`;
+  } else {
+    if (resultType instanceof ScalarType) {
+      output_struct = `struct AF {
+  low: u32,
+  high: u32,
 };
-@group(0) @binding(0) var<storage, read_write> outputs : array<Output, ${count}>;`;
+
+struct Output {
+  @size(${valueStride(resultType)}) value: AF,
+};`;
+    }
+    if (resultType instanceof VectorType) {
+      const dim = resultType.width;
+      output_struct = `struct AF {
+  low: u32,
+  high: u32,
+};
+
+struct Output {
+  @size(${valueStride(resultType)}) value: array<AF, ${dim}>,
+};`;
+    }
+
+    if (resultType instanceof MatrixType) {
+      const cols = resultType.cols;
+      const rows = resultType.rows === 2 ? 2 : 4; // 3 element rows have a padding element
+      output_struct = `struct AF {
+  low: u32,
+  high: u32,
+};
+
+struct Output {
+   @size(${valueStride(resultType)}) value: array<array<AF, ${rows}>, ${cols}>,
+};`;
+    }
+
+    assert(output_struct !== undefined, `No implementation for result type '${resultType}'`);
+  }
+
+  return `${output_struct}
+@group(0) @binding(0) var<storage, read_write> outputs : array<Output, ${count}>;
+`;
 }
 
 /**
@@ -437,10 +565,6 @@ resultType,
 cases,
 expressionBuilder)
 {
-  // AbstractFloat values cannot be stored in an array
-  if (parameterTypes.some((ty) => scalarTypeOf(ty).kind === 'abstract-float')) {
-    return '';
-  }
   return `
 const values = array(
   ${cases.map((c) => expressionBuilder(map(c.input, (v) => v.wgsl()))).join(',\n  ')}
@@ -457,8 +581,8 @@ function wgslInputVar(inputSource, count) {
     case 'storage_rw':
       return `@group(0) @binding(1) var<storage, read_write> inputs : array<Input, ${count}>;`;
     case 'uniform':
-      return `@group(0) @binding(1) var<uniform> inputs : array<Input, ${count}>;`;}
-
+      return `@group(0) @binding(1) var<uniform> inputs : array<Input, ${count}>;`;
+  }
   throw new Error(`InputSource ${inputSource} does not use an input var`);
 }
 
@@ -484,43 +608,49 @@ function wgslHeader(parameterTypes, resultType) {
  * Returns a ShaderBuilder that builds a basic expression test shader.
  * @param expressionBuilder the expression builder
  */
-export function basicExpressionBuilder(expressionBuilder) {
-  return (
-  parameterTypes,
-  resultType,
-  cases,
-  inputSource) =>
-  {
-    if (inputSource === 'const') {
-      //////////////////////////////////////////////////////////////////////////
-      // Constant eval
-      //////////////////////////////////////////////////////////////////////////
-      let body = '';
-      if (parameterTypes.some((ty) => scalarTypeOf(ty).kind === 'abstract-float')) {
-        // Directly assign the expression to the output, to avoid an
-        // intermediate store, which will concretize the value early
-        body = cases.
-        map(
-        (c, i) => `  outputs[${i}].value = ${expressionBuilder(map(c.input, (v) => v.wgsl()))};`).
-
-        join('\n  ');
-      } else if (globalTestConfig.unrollConstEvalLoops) {
-        body = cases.
-        map((_, i) => {
-          const value = `values[${i}]`;
-          return `  outputs[${i}].value = ${toStorage(resultType, value)};`;
-        }).
-        join('\n  ');
-      } else {
-        body = `
+function basicExpressionShaderBody(
+expressionBuilder,
+parameterTypes,
+resultType,
+cases,
+inputSource)
+{
+  assert(
+    scalarTypeOf(resultType).kind !== 'abstract-float',
+    `abstractFloatShaderBuilder should be used when result type is 'abstract-float`
+  );
+  if (inputSource === 'const') {
+    //////////////////////////////////////////////////////////////////////////
+    // Constant eval
+    //////////////////////////////////////////////////////////////////////////
+    let body = '';
+    if (parameterTypes.some((ty) => scalarTypeOf(ty).kind === 'abstract-float')) {
+      // Directly assign the expression to the output, to avoid an
+      // intermediate store, which will concretize the value early
+      body = cases.
+      map(
+        (c, i) =>
+        `  outputs[${i}].value = ${toStorage(
+          resultType,
+          expressionBuilder(map(c.input, (v) => v.wgsl()))
+        )};`
+      ).
+      join('\n  ');
+    } else if (globalTestConfig.unrollConstEvalLoops) {
+      body = cases.
+      map((_, i) => {
+        const value = `values[${i}]`;
+        return `  outputs[${i}].value = ${toStorage(resultType, value)};`;
+      }).
+      join('\n  ');
+    } else {
+      body = `
   for (var i = 0u; i < ${cases.length}; i++) {
     outputs[i].value = ${toStorage(resultType, `values[i]`)};
   }`;
-      }
+    }
 
-      return `
-${wgslHeader(parameterTypes, resultType)}
-
+    return `
 ${wgslOutputs(resultType, cases.length)}
 
 ${wgslValuesArray(parameterTypes, resultType, cases, expressionBuilder)}
@@ -529,24 +659,22 @@ ${wgslValuesArray(parameterTypes, resultType, cases, expressionBuilder)}
 fn main() {
 ${body}
 }`;
-    } else {
-      //////////////////////////////////////////////////////////////////////////
-      // Runtime eval
-      //////////////////////////////////////////////////////////////////////////
+  } else {
+    //////////////////////////////////////////////////////////////////////////
+    // Runtime eval
+    //////////////////////////////////////////////////////////////////////////
 
-      // returns the WGSL expression to load the ith parameter of the given type from the input buffer
-      const paramExpr = (ty, i) => fromStorage(ty, `inputs[i].param${i}`);
+    // returns the WGSL expression to load the ith parameter of the given type from the input buffer
+    const paramExpr = (ty, i) => fromStorage(ty, `inputs[i].param${i}`);
 
-      // resolves to the expression that calls the builtin
-      const expr = toStorage(resultType, expressionBuilder(parameterTypes.map(paramExpr)));
+    // resolves to the expression that calls the builtin
+    const expr = toStorage(resultType, expressionBuilder(parameterTypes.map(paramExpr)));
 
-      return `
-${wgslHeader(parameterTypes, resultType)}
-
+    return `
 struct Input {
 ${parameterTypes.
-      map((ty, i) => `  @size(${valueStride(ty)}) param${i} : ${storageType(ty)},`).
-      join('\n')}
+    map((ty, i) => `  @size(${valueStride(ty)}) param${i} : ${storageType(ty)},`).
+    join('\n')}
 };
 
 ${wgslOutputs(resultType, cases.length)}
@@ -560,7 +688,49 @@ fn main() {
   }
 }
 `;
-    }
+  }
+}
+
+/**
+ * Returns a ShaderBuilder that builds a basic expression test shader.
+ * @param expressionBuilder the expression builder
+ */
+export function basicExpressionBuilder(expressionBuilder) {
+  return (
+  parameterTypes,
+  resultType,
+  cases,
+  inputSource) =>
+  {
+    return `\
+${wgslHeader(parameterTypes, resultType)}
+
+${basicExpressionShaderBody(expressionBuilder, parameterTypes, resultType, cases, inputSource)}`;
+  };
+}
+
+/**
+ * Returns a ShaderBuilder that builds a basic expression test shader with given predeclaration
+ * string goes after WGSL header (i.e. enable directives) if any but before anything else.
+ * @param expressionBuilder the expression builder
+ * @param predeclaration the predeclaration string
+ */
+export function basicExpressionWithPredeclarationBuilder(
+expressionBuilder,
+predeclaration)
+{
+  return (
+  parameterTypes,
+  resultType,
+  cases,
+  inputSource) =>
+  {
+    return `\
+${wgslHeader(parameterTypes, resultType)}
+
+${predeclaration}
+
+${basicExpressionShaderBody(expressionBuilder, parameterTypes, resultType, cases, inputSource)}`;
   };
 }
 
@@ -585,8 +755,8 @@ export function compoundAssignmentBuilder(op) {
     const rhsType = parameterTypes[1];
     if (!objectEquals(lhsType, resultType)) {
       throw new Error(
-      `compoundBinaryOp() requires result type (${resultType}) to be equal to the LHS type (${lhsType})`);
-
+        `compoundBinaryOp() requires result type (${resultType}) to be equal to the LHS type (${lhsType})`
+      );
     }
     if (inputSource === 'const') {
       //////////////////////////////////////////////////////////////////////////
@@ -657,9 +827,180 @@ fn main() {
 }
 
 /**
+ * @returns a string that extracts the value of an AbstractFloat into an output
+ *          destination
+ * @param expr expression for an AbstractFloat value, if working with vectors or
+ *             matrices, this string needs to include indexing into the
+ *             container.
+ * @param case_idx index in the case output array to assign the result
+ * @param accessor string representing how access to the AF that needs to be
+ *                 operated on.
+ *                 For scalars this should be left as ''.
+ *                 For vectors this will be an indexing operation,
+ *                 i.e. '[i]'
+ *                 For matrices this will double indexing operation,
+ *                 i.e. '[c][r]'
+ */
+function abstractFloatSnippet(expr, case_idx, accessor = '') {
+  // AbstractFloats are f64s under the hood. WebGPU does not support
+  // putting f64s in buffers, so the result needs to be split up into u32s
+  // and rebuilt in the test framework.
+  //
+  // Since there is no 64-bit data type that can be used as an element for a
+  // vector or a matrix in WGSL, the testing framework needs to pass the u32s
+  // via a struct with two u32s, and deconstruct vectors and matrices into
+  // arrays.
+  //
+  // This is complicated by the fact that user defined functions cannot
+  // take/return AbstractFloats, and AbstractFloats cannot be stored in
+  // variables, so the code cannot just inject a simple utility function
+  // at the top of the shader, instead this snippet needs to be inlined
+  // everywhere the test needs to return an AbstractFloat.
+  //
+  // select is used below, since ifs are not available during constant
+  // eval. This has the side effect of short-circuiting doesn't occur, so
+  // both sides of the select have to evaluate and be valid.
+  //
+  // This snippet implements FTZ for subnormals to bypass the need for
+  // complex subnormal specific logic.
+  //
+  // Expressions resulting in subnormals can still be reasonably tested,
+  // since this snippet will return 0 with the correct sign, which is
+  // always in the acceptance interval for a subnormal result, since an
+  // implementation may FTZ.
+  //
+  // Documentation for the snippet working with scalar results is included here
+  // in this code block, since shader length affects compilation time
+  // significantly on some backends. The code for vectors and matrices basically
+  // the same thing, with extra indexing operations.
+  //
+  // Snippet with documentation:
+  //   const kExponentBias = 1022;
+  //
+  //   // Detect if the value is zero or subnormal, so that FTZ behaviour
+  //   // can occur
+  //   const subnormal_or_zero : bool = (${expr} <= ${kValue.f64.positive.subnormal.max}) && (${expr} >= ${kValue.f64.negative.subnormal.min});
+  //
+  //   // MSB of the upper u32 is 1 if the value is negative, otherwise 0
+  //   // Extract the sign bit early, so that abs() can be used with
+  //   // frexp() so negative cases do not need to be handled
+  //   const sign_bit : u32 = select(0, 0x80000000, ${expr} < 0);
+  //
+  //   // Use frexp() to obtain the exponent and fractional parts, and
+  //   // then perform FTZ if needed
+  //   const f = frexp(abs(${expr}));
+  //   const f_fract = select(f.fract, 0, subnormal_or_zero);
+  //   const f_exp = select(f.exp, -kExponentBias, subnormal_or_zero);
+  //
+  //   // Adjust for the exponent bias and shift for storing in bits
+  //   // [20..31] of the upper u32
+  //   const exponent_bits : u32 = (f_exp + kExponentBias) << 20;
+  //
+  //   // Extract the portion of the mantissa that appears in upper u32 as
+  //   // a float for later use
+  //   const high_mantissa = ldexp(f_fract, 21);
+  //
+  //   // Extract the portion of the mantissa that appears in upper u32 as
+  //   // as bits. This value is masked, because normals will explicitly
+  //   // have the implicit leading 1 that should not be in the final
+  //   // result.
+  //   const high_mantissa_bits : u32 = u32(ldexp(f_fract, 21)) & 0x000fffff;
+  //
+  //   // Calculate the mantissa stored in the lower u32 as a float
+  //   const low_mantissa = f_fract - ldexp(floor(high_mantissa), -21);
+  //
+  //   // Convert the lower u32 mantissa to bits
+  //   const low_mantissa_bits = u32(ldexp(low_mantissa, 53));
+  //
+  //   outputs[${i}].value.high = sign_bit | exponent_bits | high_mantissa_bits;
+  //   outputs[${i}].value.low = low_mantissa_bits;
+
+  return `  {
+    const kExponentBias = 1022;
+    const subnormal_or_zero : bool = (${expr}${accessor} <= ${kValue.f64.positive.subnormal.max}) && (${expr}${accessor} >= ${kValue.f64.negative.subnormal.min});
+    const sign_bit : u32 = select(0, 0x80000000, ${expr}${accessor} < 0);
+    const f = frexp(abs(${expr}${accessor}));
+    const f_fract = select(f.fract, 0, subnormal_or_zero);
+    const f_exp = select(f.exp, -kExponentBias, subnormal_or_zero);
+    const exponent_bits : u32 = (f_exp + kExponentBias) << 20;
+    const high_mantissa = ldexp(f_fract, 21);
+    const high_mantissa_bits : u32 = u32(ldexp(f_fract, 21)) & 0x000fffff;
+    const low_mantissa = f_fract - ldexp(floor(high_mantissa), -21);
+    const low_mantissa_bits = u32(ldexp(low_mantissa, 53));
+    outputs[${case_idx}].value${accessor}.high = sign_bit | exponent_bits | high_mantissa_bits;
+    outputs[${case_idx}].value${accessor}.low = low_mantissa_bits;
+  }`;
+}
+
+/** @returns a string for a specific case that has a AbstractFloat result */
+function abstractFloatCaseBody(expr, resultType, i) {
+  if (resultType instanceof ScalarType) {
+    return abstractFloatSnippet(expr, i);
+  }
+
+  if (resultType instanceof VectorType) {
+    return [...Array(resultType.width).keys()].
+    map((idx) => abstractFloatSnippet(expr, i, `[${idx}]`)).
+    join('  \n');
+  }
+
+  if (resultType instanceof MatrixType) {
+    const cols = resultType.cols;
+    const rows = resultType.rows;
+    const results = [...Array(cols * rows)];
+
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows; r++) {
+        results[c * rows + r] = abstractFloatSnippet(expr, i, `[${c}][${r}]`);
+      }
+    }
+
+    return results.join('  \n');
+  }
+
+  unreachable(`Results of type '${resultType}' not yet implemented`);
+}
+
+/**
+ * @returns a ShaderBuilder that builds a test shader hands AbstractFloat results.
+ * @param expressionBuilder an expression builder that will return AbstractFloats
+ */
+export function abstractFloatShaderBuilder(expressionBuilder) {
+  return (
+  parameterTypes,
+  resultType,
+  cases,
+  inputSource) =>
+  {
+    assert(inputSource === 'const', 'AbstractFloat results are only defined for const-eval');
+    assert(
+      scalarTypeOf(resultType).kind === 'abstract-float',
+      `Expected resultType of 'abstract-float', received '${scalarTypeOf(resultType).kind}' instead`
+    );
+
+    const body = cases.
+    map((c, i) => {
+      const expr = `${expressionBuilder(map(c.input, (v) => v.wgsl()))}`;
+      return abstractFloatCaseBody(expr, resultType, i);
+    }).
+    join('\n  ');
+
+    return `
+${wgslHeader(parameterTypes, resultType)}
+
+${wgslOutputs(resultType, cases.length)}
+
+@compute @workgroup_size(1)
+fn main() {
+${body}
+}`;
+  };
+}
+
+/**
  * Constructs and returns a GPUComputePipeline and GPUBindGroup for running a
  * batch of test cases. If a pre-created pipeline can be found in
- * @p pipelineCache, then this may be returned instead of creating a new
+ * `pipelineCache`, then this may be returned instead of creating a new
  * pipeline.
  * @param t the GPUTest
  * @param shaderBuilder the shader builder
@@ -670,7 +1011,7 @@ fn main() {
  * @param outputBuffer the buffer that will hold the output values of the tests
  * @param pipelineCache the cache of compute pipelines, shared between batches
  */
-function buildPipeline(
+async function buildPipeline(
 t,
 shaderBuilder,
 parameterTypes,
@@ -686,8 +1027,8 @@ pipelineCache)
       const input_str = `[${inputTypes.join(',')}]`;
       const param_str = `[${parameterTypes.join(',')}]`;
       throw new Error(
-      `case input types ${input_str} do not match provided runner parameter types ${param_str}`);
-
+        `case input types ${input_str} do not match provided runner parameter types ${param_str}`
+      );
     }
   });
 
@@ -699,7 +1040,7 @@ pipelineCache)
         const module = t.device.createShaderModule({ code: source });
 
         // build the pipeline
-        const pipeline = t.device.createComputePipeline({
+        const pipeline = await t.device.createComputePipelineAsync({
           layout: 'auto',
           compute: { module, entryPoint: 'main' }
         });
@@ -756,10 +1097,10 @@ pipelineCache)
 
         // build the input buffer
         const inputBuffer = t.makeBufferWithContents(
-        inputData,
-        GPUBufferUsage.COPY_SRC | (
-        inputSource === 'uniform' ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE));
-
+          inputData,
+          GPUBufferUsage.COPY_SRC | (
+          inputSource === 'uniform' ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE)
+        );
 
         // build the bind group
         const group = t.device.createBindGroup({
@@ -771,8 +1112,8 @@ pipelineCache)
         });
 
         return [pipeline, group];
-      }}
-
+      }
+  }
 }
 
 /**
@@ -793,14 +1134,14 @@ vectorWidth)
     const ty = parameterTypes[i];
     if (!(ty instanceof ScalarType)) {
       throw new Error(
-      `packScalarsToVector() can only be used on scalar parameter types, but the ${i}'th parameter type is a ${ty}'`);
-
+        `packScalarsToVector() can only be used on scalar parameter types, but the ${i}'th parameter type is a ${ty}'`
+      );
     }
   }
   if (!(resultType instanceof ScalarType)) {
     throw new Error(
-    `packScalarsToVector() can only be used with a scalar return type, but the return type is a ${resultType}'`);
-
+      `packScalarsToVector() can only be used with a scalar return type, but the return type is a ${resultType}'`
+    );
   }
 
   const packedCases = [];
@@ -866,12 +1207,12 @@ vectorWidth)
  */
 
 
+// No expectations
 
-
-
-
-
-
+/**
+ * A function that performs a binary operation on x and y, and returns the expected
+ * result.
+ */
 
 
 
@@ -908,7 +1249,11 @@ scalarize)
  * @param param1s array of inputs to try for the second param
  * @param op callback called on each pair of inputs to produce each case
  */
-export function generateBinaryToI32Cases(param0s, param1s, op) {
+export function generateBinaryToI32Cases(
+param0s,
+param1s,
+op)
+{
   return generateScalarBinaryToScalarCases(param0s, param1s, op, quantizeToI32, i32);
 }
 
@@ -918,7 +1263,11 @@ export function generateBinaryToI32Cases(param0s, param1s, op) {
  * @param param1s array of inputs to try for the second param
  * @param op callback called on each pair of inputs to produce each case
  */
-export function generateBinaryToU32Cases(param0s, param1s, op) {
+export function generateBinaryToU32Cases(
+param0s,
+param1s,
+op)
+{
   return generateScalarBinaryToScalarCases(param0s, param1s, op, quantizeToU32, u32);
 }
 

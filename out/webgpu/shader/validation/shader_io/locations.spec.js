@@ -1,6 +1,7 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/export const description = `Validation tests for entry point user-defined IO`;import { makeTestGroup } from '../../../../common/framework/test_group.js';
+import { keysOf } from '../../../../common/util/data_tables.js';
 import { ShaderValidationTest } from '../shader_validation_test.js';
 
 import { generateShader } from './util.js';
@@ -33,8 +34,8 @@ const kValidLocationTypes = new Set([
 'vec4f',
 'vec4i',
 'vec4u',
-'MyAlias']);
-
+'MyAlias']
+);
 
 const kInvalidLocationTypes = new Set([
 'bool',
@@ -93,8 +94,8 @@ const kInvalidLocationTypes = new Set([
 'texture_depth_cube_array',
 'texture_depth_multisampled_2d',
 'sampler',
-'sampler_comparison']);
-
+'sampler_comparison']
+);
 
 g.test('stage_inout').
 desc(`Test validation of user-defined IO stage and in/out usage`).
@@ -103,8 +104,8 @@ u.
 combine('use_struct', [true, false]).
 combine('target_stage', ['vertex', 'fragment', 'compute']).
 combine('target_io', ['in', 'out']).
-beginSubcases()).
-
+beginSubcases()
+).
 fn((t) => {
   const code = generateShader({
     attribute: '@location(0)',
@@ -128,8 +129,8 @@ params((u) =>
 u.
 combine('use_struct', [true, false]).
 combine('type', new Set([...kValidLocationTypes, ...kInvalidLocationTypes])).
-beginSubcases()).
-
+beginSubcases()
+).
 beforeAllSubcases((t) => {
   if (
   t.params.type === 'f16' ||
@@ -178,8 +179,8 @@ params((u) =>
 u.
 combine('target_stage', ['vertex', 'fragment', '']).
 combine('target_io', ['in', 'out']).
-beginSubcases()).
-
+beginSubcases()
+).
 fn((t) => {
   let code = '';
 
@@ -216,8 +217,8 @@ u
 // By default, all of these user-defined IO variables will have unique location attributes.
 .combine('first', ['p1', 's1a', 's2a', 'ra']).
 combine('second', ['p2', 's1b', 's2b', 'rb']).
-beginSubcases()).
-
+beginSubcases()
+).
 fn((t) => {
   const p1 = t.params.first === 'p1' ? '0' : '1';
   const p2 = t.params.second === 'p2' ? '0' : '2';
@@ -256,5 +257,127 @@ fn((t) => {
   const secondIsRet = t.params.second === 'rb';
   const expectation = firstIsRet !== secondIsRet;
   t.expectCompileResult(expectation, code);
+});
+
+const kValidationTests = {
+  zero: {
+    src: `@location(0)`,
+    pass: true
+  },
+  one: {
+    src: `@location(1)`,
+    pass: true
+  },
+  extra_comma: {
+    src: `@location(1,)`,
+    pass: true
+  },
+  i32: {
+    src: `@location(1i)`,
+    pass: true
+  },
+  u32: {
+    src: `@location(1u)`,
+    pass: true
+  },
+  hex: {
+    src: `@location(0x1)`,
+    pass: true
+  },
+  const_expr: {
+    src: `@location(a + b)`,
+    pass: true
+  },
+  max: {
+    src: `@location(2147483647)`,
+    pass: true
+  },
+  newline: {
+    src: '@\nlocation(1)',
+    pass: true
+  },
+  comment: {
+    src: `@/* comment */location(1)`,
+    pass: true
+  },
+
+  misspelling: {
+    src: `@mlocation(1)`,
+    pass: false
+  },
+  no_parens: {
+    src: `@location`,
+    pass: false
+  },
+  empty_params: {
+    src: `@location()`,
+    pass: false
+  },
+  missing_left_paren: {
+    src: `@location 1)`,
+    pass: false
+  },
+  missing_right_paren: {
+    src: `@location(1`,
+    pass: false
+  },
+  extra_params: {
+    src: `@location(1, 2)`,
+    pass: false
+  },
+  f32: {
+    src: `@location(1f)`,
+    pass: false
+  },
+  f32_literal: {
+    src: `@location(1.0)`,
+    pass: false
+  },
+  negative: {
+    src: `@location(-1)`,
+    pass: false
+  },
+  override_expr: {
+    src: `@location(z + y)`,
+    pass: false
+  },
+  vec: {
+    src: `@location(vec2(1,1))`,
+    pass: false
+  }
+};
+g.test('validation').
+desc(`Test validation of location`).
+params((u) => u.combine('attr', keysOf(kValidationTests))).
+fn((t) => {
+  const code = `
+const a = 5;
+const b = 6;
+override z = 7;
+override y = 8;
+
+@vertex fn main(
+  ${kValidationTests[t.params.attr].src} res: f32
+) -> @builtin(position) vec4f {
+  return vec4f(0);
+}`;
+  t.expectCompileResult(kValidationTests[t.params.attr].pass, code);
+});
+
+g.test('location_fp16').
+desc(`Test validation of location with fp16`).
+params((u) => u.combine('ext', ['', 'h'])).
+beforeAllSubcases((t) => {
+  t.selectDeviceOrSkipTestCase('shader-f16');
+}).
+fn((t) => {
+  const code = `
+
+@vertex fn main(
+  @location(1${t.params.ext}) res: f32
+) -> @builtin(position) vec4f {
+  return vec4f();
+}`;
+  t.expectCompileResult(t.params.ext === '', code);
 });
 //# sourceMappingURL=locations.spec.js.map

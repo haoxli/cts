@@ -18,12 +18,12 @@ export class ShaderValidationTest extends GPUTest {
   expectCompileResult(expectedResult, code) {
     let shaderModule;
     this.expectGPUError(
-    'validation',
-    () => {
-      shaderModule = this.device.createShaderModule({ code });
-    },
-    expectedResult !== true);
-
+      'validation',
+      () => {
+        shaderModule = this.device.createShaderModule({ code });
+      },
+      expectedResult !== true
+    );
 
     const error = new ErrorWithExtra('', () => ({ shaderModule }));
     this.eventualAsyncExpectation(async () => {
@@ -49,6 +49,55 @@ export class ShaderValidationTest extends GPUTest {
           this.rec.validationFailed(error);
         } else {
           error.message = `No compilationInfo 'error' messages, as expected.\n` + messagesLog;
+          this.rec.debug(error);
+        }
+      }
+    });
+  }
+
+  /**
+   * Add a test expectation for whether a createShaderModule call issues a warning.
+   *
+   * @example
+   * ```ts
+   * t.expectCompileWarning(true, `wgsl code`); // Expect compile success and any warning message
+   * t.expectCompileWarning(false, `wgsl code`); // Expect compile success and no warning messages
+   * ```
+   */
+  expectCompileWarning(expectWarning, code) {
+    let shaderModule;
+    this.expectGPUError(
+      'validation',
+      () => {
+        shaderModule = this.device.createShaderModule({ code });
+      },
+      false
+    );
+
+    const error = new ErrorWithExtra('', () => ({ shaderModule }));
+    this.eventualAsyncExpectation(async () => {
+      const compilationInfo = await shaderModule.getCompilationInfo();
+
+      // MAINTENANCE_TODO: Pretty-print error messages with source context.
+      const messagesLog = compilationInfo.messages.
+      map((m) => `${m.lineNum}:${m.linePos}: ${m.type}: ${m.message}`).
+      join('\n');
+      error.extra.compilationInfo = compilationInfo;
+
+      if (compilationInfo.messages.some((m) => m.type === 'warning')) {
+        if (expectWarning) {
+          error.message = `No 'warning' message as expected.\n` + messagesLog;
+          this.rec.debug(error);
+        } else {
+          error.message = `Missing expected compilationInfo 'warning' message.\n` + messagesLog;
+          this.rec.validationFailed(error);
+        }
+      } else {
+        if (expectWarning) {
+          error.message = `Missing expected 'warning' message.\n` + messagesLog;
+          this.rec.validationFailed(error);
+        } else {
+          error.message = `Found a 'warning' message as expected.\n` + messagesLog;
           this.rec.debug(error);
         }
       }
@@ -87,23 +136,23 @@ fn main() {
 
     let shaderModule;
     this.expectGPUError(
-    'validation',
-    () => {
-      shaderModule = this.device.createShaderModule({ code });
-    },
-    false);
-
+      'validation',
+      () => {
+        shaderModule = this.device.createShaderModule({ code });
+      },
+      false
+    );
 
     this.expectGPUError(
-    'validation',
-    () => {
-      this.device.createComputePipeline({
-        layout: 'auto',
-        compute: { module: shaderModule, entryPoint: 'main', constants: args.constants }
-      });
-    },
-    !args.expectedResult);
-
+      'validation',
+      () => {
+        this.device.createComputePipeline({
+          layout: 'auto',
+          compute: { module: shaderModule, entryPoint: 'main', constants: args.constants }
+        });
+      },
+      !args.expectedResult
+    );
   }
 
   /**

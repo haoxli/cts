@@ -67,6 +67,11 @@ export const listing = [
   },
   {
     "file": [
+      "prng"
+    ]
+  },
+  {
+    "file": [
       "query_compare"
     ]
   },
@@ -88,6 +93,11 @@ export const listing = [
   {
     "file": [
       "test_query"
+    ]
+  },
+  {
+    "file": [
+      "texture_ok"
     ]
   }
 ];

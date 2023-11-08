@@ -1,6 +1,7 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import { keysOf } from '../common/util/data_tables.js';import { assert } from '../common/util/util.js';
+import { align } from './util/math.js';
 
 
 //
@@ -56,12 +57,12 @@ function formatTableWithDefaults({
 
 {
   return Object.fromEntries(
-  Object.entries(table).map(([k, row]) => [
-  k,
-  { ...kFormatUniversalDefaults, ...defaults, ...row }]));
+    Object.entries(table).map(([k, row]) => [
+    k,
+    { ...kFormatUniversalDefaults, ...defaults, ...row }]
+    )
 
-
-
+  );
 }
 
 /** "plain color formats", plus rgb9e5ufloat. */
@@ -407,6 +408,16 @@ const kRegularTextureFormatInfo = formatTableWithDefaults({
 
     // plain, mixed component width, 32 bits per texel
 
+    rgb10a2uint: {
+      color: { type: 'uint', copySrc: true, copyDst: true, storage: false, bytes: 4 },
+      colorRender: { blend: false, resolve: false, byteCost: 8, alignment: 4 },
+      renderable: true,
+      get renderTargetComponentAlignment() {return this.colorRender.alignment;},
+      get renderTargetPixelByteCost() {return this.colorRender.byteCost;},
+      multisample: true,
+      get sampleType() {return this.color.type;},
+      get bytesPerBlock() {return this.color.bytes;}
+    },
     rgb10a2unorm: {
       color: { type: 'float', copySrc: true, copyDst: true, storage: false, bytes: 4 },
       colorRender: { blend: true, resolve: true, byteCost: 8, alignment: 4 },
@@ -876,22 +887,22 @@ const kAllTextureFormatInfo = { ...kUncompressedTextureFormatInfo, ...kCompresse
 
 /** A "regular" texture format (uncompressed, sized, single-plane color formats). */
 
+/** A sized depth/stencil texture format. */
+
+/** An unsized depth/stencil texture format. */
+
+/** A compressed (block) texture format. */
 
 
+/** A color texture format (regular | compressed). */
 
+/** An encodable texture format (regular | sized depth/stencil). */
 
+/** A sized texture format (regular | sized depth/stencil | compressed). */
 
+/** A depth/stencil format (sized | unsized). */
 
-
-
-
-
-
-
-
-
-
-
+/** An uncompressed (block size 1x1) format (regular | depth/stencil). */
 
 
 export const kRegularTextureFormats = keysOf(kRegularTextureFormatInfo);
@@ -908,15 +919,15 @@ export const kAllTextureFormats = keysOf(kAllTextureFormatInfo);
 
 // CompressedTextureFormat are unrenderable so filter from RegularTextureFormats for color targets is enough
 export const kRenderableColorTextureFormats = kRegularTextureFormats.filter(
-(v) => kColorTextureFormatInfo[v].colorRender);
-
+  (v) => kColorTextureFormatInfo[v].colorRender
+);
 assert(
-kRenderableColorTextureFormats.every(
-(f) =>
-kAllTextureFormatInfo[f].renderTargetComponentAlignment !== undefined &&
-kAllTextureFormatInfo[f].renderTargetPixelByteCost !== undefined));
-
-
+  kRenderableColorTextureFormats.every(
+    (f) =>
+    kAllTextureFormatInfo[f].renderTargetComponentAlignment !== undefined &&
+    kAllTextureFormatInfo[f].renderTargetPixelByteCost !== undefined
+  )
+);
 
 /** Per-GPUTextureFormat-per-aspect info. */
 
@@ -929,30 +940,30 @@ kAllTextureFormatInfo[f].renderTargetPixelByteCost !== undefined));
 
 
 
+/** Per GPUTextureFormat-per-aspect info for color aspects. */
 
 
 
 
 
+/** Per GPUTextureFormat-per-aspect info for depth aspects. */
+
+
+
+
+/** Per GPUTextureFormat-per-aspect info for stencil aspects. */
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * Per-GPUTextureFormat info.
+ * This is not actually the type of values in kTextureFormatInfo; that type is fully const
+ * so that it can be narrowed very precisely at usage sites by the compiler.
+ * This type exists only as a type check on the inferred type of kTextureFormatInfo.
+ * Documentation is also written here, but not actually visible to the IDE.
+ */
 
 
 
@@ -1178,9 +1189,9 @@ format,
 aspect)
 {
   const supportedAspects = depthStencilFormatCopyableAspects(
-  type,
-  format);
-
+    type,
+    format
+  );
   return supportedAspects.includes(aspect);
 }
 
@@ -1240,4 +1251,24 @@ export function isCompressedTextureFormat(format) {
 }
 
 export const kFeaturesForFormats = getFeaturesForFormats(kTextureFormats);
+
+/**
+ * Given an array of texture formats return the number of bytes per sample.
+ */
+export function computeBytesPerSampleFromFormats(formats) {
+  let bytesPerSample = 0;
+  for (const format of formats) {
+    const info = kTextureFormatInfo[format];
+    const alignedBytesPerSample = align(bytesPerSample, info.colorRender.alignment);
+    bytesPerSample = alignedBytesPerSample + info.colorRender.byteCost;
+  }
+  return bytesPerSample;
+}
+
+/**
+ * Given an array of GPUColorTargetState return the number of bytes per sample
+ */
+export function computeBytesPerSample(targets) {
+  return computeBytesPerSampleFromFormats(targets.map(({ format }) => format));
+}
 //# sourceMappingURL=format_info.js.map

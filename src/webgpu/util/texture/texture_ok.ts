@@ -1,9 +1,11 @@
 import { assert, ErrorWithExtra, unreachable } from '../../../common/util/util.js';
 import { kTextureFormatInfo, EncodableTextureFormat } from '../../format_info.js';
 import { GPUTest } from '../../gpu_test.js';
+import { numbersApproximatelyEqual } from '../conversion.js';
 import { generatePrettyTable } from '../pretty_diff_tables.js';
 import { reifyExtent3D, reifyOrigin3D } from '../unions.js';
 
+import { fullSubrectCoordinates } from './base.js';
 import { getTextureSubCopyLayout } from './layout.js';
 import { kTexelRepresentationInfo, PerTexelComponent, TexelComponent } from './texel_data.js';
 import { TexelView } from './texel_view.js';
@@ -158,7 +160,7 @@ function comparePerComponent(
     const act = actual[k]!;
     const exp = expected[k];
     if (exp === undefined) return false;
-    return Math.abs(act - exp) <= maxDiff;
+    return numbersApproximatelyEqual(act, exp, maxDiff);
   });
 }
 
@@ -186,20 +188,7 @@ function createTextureCopyForMapRead(
   return { buffer, bytesPerRow, rowsPerImage };
 }
 
-function* fullSubrectCoordinates(
-  subrectOrigin: Required<GPUOrigin3DDict>,
-  subrectSize: Required<GPUExtent3DDict>
-): Generator<Required<GPUOrigin3DDict>> {
-  for (let z = subrectOrigin.z; z < subrectOrigin.z + subrectSize.depthOrArrayLayers; ++z) {
-    for (let y = subrectOrigin.y; y < subrectOrigin.y + subrectSize.height; ++y) {
-      for (let x = subrectOrigin.x; x < subrectOrigin.x + subrectSize.width; ++x) {
-        yield { x, y, z };
-      }
-    }
-  }
-}
-
-function findFailedPixels(
+export function findFailedPixels(
   format: EncodableTextureFormat,
   subrectOrigin: Required<GPUOrigin3DDict>,
   subrectSize: Required<GPUExtent3DDict>,

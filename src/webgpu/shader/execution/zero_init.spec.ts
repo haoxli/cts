@@ -15,7 +15,7 @@ import {
 
 type ShaderTypeInfo =
   | { type: 'container'; containerType: 'array'; elementType: ShaderTypeInfo; length: number }
-  | { type: 'container'; containerType: 'struct'; members: ShaderTypeInfo[] }
+  | { type: 'container'; containerType: 'struct'; members: readonly ShaderTypeInfo[] }
   | {
       type: 'container';
       containerType: keyof typeof kVectorContainerTypeInfo | keyof typeof kMatrixContainerTypeInfo;
@@ -227,7 +227,15 @@ g.test('compute,zero_init')
       })
   )
   .batch(15)
-  .fn(t => {
+  .fn(async t => {
+    const { workgroupSize } = t.params;
+    const { maxComputeInvocationsPerWorkgroup } = t.device.limits;
+    const numWorkgroupInvocations = workgroupSize.reduce((a, b) => a * b);
+    t.skipIf(
+      numWorkgroupInvocations > maxComputeInvocationsPerWorkgroup,
+      `workgroupSize: ${workgroupSize} > maxComputeInvocationsPerWorkgroup: ${maxComputeInvocationsPerWorkgroup}`
+    );
+
     let moduleScope = `
       struct Output {
         failed : atomic<u32>
@@ -423,8 +431,24 @@ g.test('compute,zero_init')
       }
       `;
 
-      const fillPipeline = t.device.createComputePipeline({
-        layout: 'auto',
+      const fillLayout = t.device.createBindGroupLayout({
+        entries: [
+          {
+            binding: 0,
+            visibility: GPUShaderStage.COMPUTE,
+            buffer: { type: 'read-only-storage' },
+          },
+          {
+            binding: 1,
+            visibility: GPUShaderStage.COMPUTE,
+            buffer: { type: 'storage' },
+          },
+        ],
+      });
+
+      const fillPipeline = await t.device.createComputePipelineAsync({
+        layout: t.device.createPipelineLayout({ bindGroupLayouts: [fillLayout] }),
+        label: 'Workgroup Fill Pipeline',
         compute: {
           module: t.device.createShaderModule({
             code: wgsl,
@@ -434,7 +458,7 @@ g.test('compute,zero_init')
       });
 
       const inputBuffer = t.makeBufferWithContents(
-        new Uint32Array([...iterRange(wg_memory_limits / 4, x => 0xdeadbeef)]),
+        new Uint32Array([...iterRange(wg_memory_limits / 4, _i => 0xdeadbeef)]),
         GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
       );
       t.trackForCleanup(inputBuffer);
@@ -471,7 +495,7 @@ g.test('compute,zero_init')
       t.queue.submit([e.finish()]);
     }
 
-    const pipeline = t.device.createComputePipeline({
+    const pipeline = await t.device.createComputePipelineAsync({
       layout: 'auto',
       compute: {
         module: t.device.createShaderModule({

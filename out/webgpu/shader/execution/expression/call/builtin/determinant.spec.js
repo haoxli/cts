@@ -8,7 +8,7 @@ T is AbstractFloat, f32, or f16
 Returns the determinant of e.
 `;import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../../../gpu_test.js';
-import { TypeF32, TypeMat } from '../../../../../util/conversion.js';
+import { TypeF32, TypeF16, TypeMat } from '../../../../../util/conversion.js';
 import { FP } from '../../../../../util/floating_point.js';
 import { makeCaseCache } from '../../case_cache.js';
 import { allInputSources, run } from '../../expression.js';
@@ -26,16 +26,16 @@ export const g = makeTestGroup(GPUTest);
 // quadroot, but using the tighter 4x4 limits for all cases for simplicity.
 const kDeterminantValues = [-38, -10, -5, -1, 0, 1, 5, 10, 38];
 
-const kDeterminantMatrixF32Values = {
+const kDeterminantMatrixValues = {
   2: kDeterminantValues.map((f, idx) => [
   [idx % 4 === 0 ? f : idx, idx % 4 === 1 ? f : -idx],
-  [idx % 4 === 2 ? f : -idx, idx % 4 === 3 ? f : idx]]),
-
+  [idx % 4 === 2 ? f : -idx, idx % 4 === 3 ? f : idx]]
+  ),
   3: kDeterminantValues.map((f, idx) => [
   [idx % 9 === 0 ? f : idx, idx % 9 === 1 ? f : -idx, idx % 9 === 2 ? f : idx],
   [idx % 9 === 3 ? f : -idx, idx % 9 === 4 ? f : idx, idx % 9 === 5 ? f : -idx],
-  [idx % 9 === 6 ? f : idx, idx % 9 === 7 ? f : -idx, idx % 9 === 8 ? f : idx]]),
-
+  [idx % 9 === 6 ? f : idx, idx % 9 === 7 ? f : -idx, idx % 9 === 8 ? f : idx]]
+  ),
   4: kDeterminantValues.map((f, idx) => [
   [
   idx % 16 === 0 ? f : idx,
@@ -59,54 +59,44 @@ const kDeterminantMatrixF32Values = {
   idx % 16 === 12 ? f : -idx,
   idx % 16 === 13 ? f : idx,
   idx % 16 === 14 ? f : -idx,
-  idx % 16 === 15 ? f : idx]])
+  idx % 16 === 15 ? f : idx]]
 
-
+  )
 };
 
-export const d = makeCaseCache('determinant', {
-  f32_mat2x2_const: () => {
+// Cases: f32_matDxD_[non_]const
+const f32_cases = [2, 3, 4].
+flatMap((dim) =>
+[true, false].map((nonConst) => ({
+  [`f32_mat${dim}x${dim}_${nonConst ? 'non_const' : 'const'}`]: () => {
     return FP.f32.generateMatrixToScalarCases(
-    kDeterminantMatrixF32Values[2],
-    'finite',
-    FP.f32.determinantInterval);
-
-  },
-  f32_mat2x2_non_const: () => {
-    return FP.f32.generateMatrixToScalarCases(
-    kDeterminantMatrixF32Values[2],
-    'unfiltered',
-    FP.f32.determinantInterval);
-
-  },
-  f32_mat3x3_const: () => {
-    return FP.f32.generateMatrixToScalarCases(
-    kDeterminantMatrixF32Values[3],
-    'finite',
-    FP.f32.determinantInterval);
-
-  },
-  f32_mat3x3_non_const: () => {
-    return FP.f32.generateMatrixToScalarCases(
-    kDeterminantMatrixF32Values[3],
-    'unfiltered',
-    FP.f32.determinantInterval);
-
-  },
-  f32_mat4x4_const: () => {
-    return FP.f32.generateMatrixToScalarCases(
-    kDeterminantMatrixF32Values[4],
-    'finite',
-    FP.f32.determinantInterval);
-
-  },
-  f32_mat4x4_non_const: () => {
-    return FP.f32.generateMatrixToScalarCases(
-    kDeterminantMatrixF32Values[4],
-    'unfiltered',
-    FP.f32.determinantInterval);
-
+      kDeterminantMatrixValues[dim],
+      nonConst ? 'unfiltered' : 'finite',
+      FP.f32.determinantInterval
+    );
   }
+}))
+).
+reduce((a, b) => ({ ...a, ...b }), {});
+
+// Cases: f16_matDxD_[non_]const
+const f16_cases = [2, 3, 4].
+flatMap((dim) =>
+[true, false].map((nonConst) => ({
+  [`f16_mat${dim}x${dim}_${nonConst ? 'non_const' : 'const'}`]: () => {
+    return FP.f16.generateMatrixToScalarCases(
+      kDeterminantMatrixValues[dim],
+      nonConst ? 'unfiltered' : 'finite',
+      FP.f16.determinantInterval
+    );
+  }
+}))
+).
+reduce((a, b) => ({ ...a, ...b }), {});
+
+export const d = makeCaseCache('determinant', {
+  ...f32_cases,
+  ...f16_cases
 });
 
 g.test('abstract_float').
@@ -122,16 +112,27 @@ params((u) => u.combine('inputSource', allInputSources).combine('dim', [2, 3, 4]
 fn(async (t) => {
   const dim = t.params.dim;
   const cases = await d.get(
-  t.params.inputSource === 'const' ?
-  `f32_mat${dim}x${dim}_const` :
-  `f32_mat${dim}x${dim}_non_const`);
-
+    t.params.inputSource === 'const' ?
+    `f32_mat${dim}x${dim}_const` :
+    `f32_mat${dim}x${dim}_non_const`
+  );
   await run(t, builtin('determinant'), [TypeMat(dim, dim, TypeF32)], TypeF32, t.params, cases);
 });
 
 g.test('f16').
 specURL('https://www.w3.org/TR/WGSL/#matrix-builtin-functions').
 desc(`f16 tests`).
-params((u) => u.combine('inputSource', allInputSources).combine('dimension', [2, 3, 4])).
-unimplemented();
+params((u) => u.combine('inputSource', allInputSources).combine('dim', [2, 3, 4])).
+beforeAllSubcases((t) => {
+  t.selectDeviceOrSkipTestCase('shader-f16');
+}).
+fn(async (t) => {
+  const dim = t.params.dim;
+  const cases = await d.get(
+    t.params.inputSource === 'const' ?
+    `f16_mat${dim}x${dim}_const` :
+    `f16_mat${dim}x${dim}_non_const`
+  );
+  await run(t, builtin('determinant'), [TypeMat(dim, dim, TypeF16)], TypeF16, t.params, cases);
+});
 //# sourceMappingURL=determinant.spec.js.map

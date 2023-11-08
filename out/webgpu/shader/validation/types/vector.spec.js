@@ -10,6 +10,9 @@ export const g = makeTestGroup(ShaderValidationTest);
 
 const kCases = {
   // Valid vector types
+  vec2_bool: { wgsl: 'alias T = vec2<bool>;', ok: true },
+  vec3_bool: { wgsl: 'alias T = vec3<bool>;', ok: true },
+  vec4_bool: { wgsl: 'alias T = vec4<bool>;', ok: true },
   vec2_i32: { wgsl: 'alias T = vec2<i32>;', ok: true },
   vec3_i32: { wgsl: 'alias T = vec3<i32>;', ok: true },
   vec4_i32: { wgsl: 'alias T = vec4<i32>;', ok: true },
@@ -54,13 +57,14 @@ const kCases = {
   vec_of_struct: { wgsl: 'struct S { i : i32 }\nalias T = vec3<S>;', ok: false },
   vec_of_atomic: { wgsl: 'alias T = vec3<atomic<i32>>;', ok: false },
   vec_of_matrix: { wgsl: 'alias T = vec3<mat2x2f>;', ok: false },
-  vec_of_vec: { wgsl: 'alias T = vec3<vec2f>;', ok: false }
+  vec_of_vec: { wgsl: 'alias T = vec3<vec2f>;', ok: false },
+  no_bool_shortform: { wgsl: 'const c : vec2b = vec2<bool>();', ok: false }
 };
 
 g.test('vector').
 desc('Tests validation of vector types').
 params(
-(u) => u.combine('case', keysOf(kCases)) //
+  (u) => u.combine('case', keysOf(kCases)) //
 ).
 beforeAllSubcases((t) => {
   const c = kCases[t.params.case];

@@ -1,16 +1,19 @@
 /**
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
-**/import { assert } from '../../common/util/util.js';import { Float16Array } from '../../external/petamoriken/float16/float16.js';
+**/import { assert } from '../../common/util/util.js';import {
+  Float16Array,
+  getFloat16,
+  hfround,
+  setFloat16 } from
+'../../external/petamoriken/float16/float16.js';
+
 import { kBit, kValue } from './constants.js';
 import {
-f32,
-f16,
-floatBitsToNumber,
-i32,
-kFloat16Format,
-kFloat32Format,
-u32 } from
-'./conversion.js';
+  reinterpretF64AsU64,
+  reinterpretU64AsF64,
+  reinterpretU32AsF32,
+  reinterpretU16AsF16 } from
+'./reinterpret.js';
 
 /**
  * A multiple of 8 guaranteed to be way too large to allocate (just under 8 pebibytes).
@@ -85,7 +88,7 @@ export function isFiniteF16(n) {
 /** Should FTZ occur during calculations or not */
 
 
-
+/** Should nextAfter calculate towards positive infinity or negative infinity */
 
 
 /**
@@ -118,26 +121,26 @@ export function nextAfterF64(val, dir, mode) {
   }
 
   if (val === Number.POSITIVE_INFINITY) {
-    return kValue.f64.infinity.positive;
+    return kValue.f64.positive.infinity;
   }
 
   if (val === Number.NEGATIVE_INFINITY) {
-    return kValue.f64.infinity.negative;
+    return kValue.f64.negative.infinity;
   }
 
   assert(
-  val <= kValue.f64.positive.max && val >= kValue.f64.negative.min,
-  `${val} is not in the range of f64`);
-
+    val <= kValue.f64.positive.max && val >= kValue.f64.negative.min,
+    `${val} is not in the range of f64`
+  );
 
   val = mode === 'flush' ? flushSubnormalNumberF64(val) : val;
 
   // -/+0 === 0 returns true
   if (val === 0) {
     if (dir === 'positive') {
-      return mode === 'flush' ? kValue.f64.positive.min : kValue.f64.subnormal.positive.min;
+      return mode === 'flush' ? kValue.f64.positive.min : kValue.f64.positive.subnormal.min;
     } else {
-      return mode === 'flush' ? kValue.f64.negative.max : kValue.f64.subnormal.negative.max;
+      return mode === 'flush' ? kValue.f64.negative.max : kValue.f64.negative.subnormal.max;
     }
   }
 
@@ -152,9 +155,9 @@ export function nextAfterF64(val, dir, mode) {
   // Checking for overflow
   if ((nextAfterF64Int[0] & 0x7ff0_0000_0000_0000n) === 0x7ff0_0000_0000_0000n) {
     if (dir === 'positive') {
-      return kValue.f64.infinity.positive;
+      return kValue.f64.positive.infinity;
     } else {
-      return kValue.f64.infinity.negative;
+      return kValue.f64.negative.infinity;
     }
   }
 
@@ -191,26 +194,26 @@ export function nextAfterF32(val, dir, mode) {
   }
 
   if (val === Number.POSITIVE_INFINITY) {
-    return kValue.f32.infinity.positive;
+    return kValue.f32.positive.infinity;
   }
 
   if (val === Number.NEGATIVE_INFINITY) {
-    return kValue.f32.infinity.negative;
+    return kValue.f32.negative.infinity;
   }
 
   assert(
-  val <= kValue.f32.positive.max && val >= kValue.f32.negative.min,
-  `${val} is not in the range of f32`);
-
+    val <= kValue.f32.positive.max && val >= kValue.f32.negative.min,
+    `${val} is not in the range of f32`
+  );
 
   val = mode === 'flush' ? flushSubnormalNumberF32(val) : val;
 
   // -/+0 === 0 returns true
   if (val === 0) {
     if (dir === 'positive') {
-      return mode === 'flush' ? kValue.f32.positive.min : kValue.f32.subnormal.positive.min;
+      return mode === 'flush' ? kValue.f32.positive.min : kValue.f32.positive.subnormal.min;
     } else {
-      return mode === 'flush' ? kValue.f32.negative.max : kValue.f32.subnormal.negative.max;
+      return mode === 'flush' ? kValue.f32.negative.max : kValue.f32.negative.subnormal.max;
     }
   }
 
@@ -233,9 +236,9 @@ export function nextAfterF32(val, dir, mode) {
   // Checking for overflow
   if ((nextAfterF32Int[0] & 0x7f800000) === 0x7f800000) {
     if (dir === 'positive') {
-      return kValue.f32.infinity.positive;
+      return kValue.f32.positive.infinity;
     } else {
-      return kValue.f32.infinity.negative;
+      return kValue.f32.negative.infinity;
     }
   }
 
@@ -272,26 +275,26 @@ export function nextAfterF16(val, dir, mode) {
   }
 
   if (val === Number.POSITIVE_INFINITY) {
-    return kValue.f16.infinity.positive;
+    return kValue.f16.positive.infinity;
   }
 
   if (val === Number.NEGATIVE_INFINITY) {
-    return kValue.f16.infinity.negative;
+    return kValue.f16.negative.infinity;
   }
 
   assert(
-  val <= kValue.f16.positive.max && val >= kValue.f16.negative.min,
-  `${val} is not in the range of f16`);
-
+    val <= kValue.f16.positive.max && val >= kValue.f16.negative.min,
+    `${val} is not in the range of f16`
+  );
 
   val = mode === 'flush' ? flushSubnormalNumberF16(val) : val;
 
   // -/+0 === 0 returns true
   if (val === 0) {
     if (dir === 'positive') {
-      return mode === 'flush' ? kValue.f16.positive.min : kValue.f16.subnormal.positive.min;
+      return mode === 'flush' ? kValue.f16.positive.min : kValue.f16.positive.subnormal.min;
     } else {
-      return mode === 'flush' ? kValue.f16.negative.max : kValue.f16.subnormal.negative.max;
+      return mode === 'flush' ? kValue.f16.negative.max : kValue.f16.negative.subnormal.max;
     }
   }
 
@@ -314,9 +317,9 @@ export function nextAfterF16(val, dir, mode) {
   // Checking for overflow
   if ((nextAfterF16Hex[0] & 0x7c00) === 0x7c00) {
     if (dir === 'positive') {
-      return kValue.f16.infinity.positive;
+      return kValue.f16.positive.infinity;
     } else {
-      return kValue.f16.infinity.negative;
+      return kValue.f16.negative.infinity;
     }
   }
 
@@ -525,21 +528,20 @@ export function correctlyRoundedF32(n) {
 
   // f32 finite
   if (n <= kValue.f32.positive.max && n >= kValue.f32.negative.min) {
-    const n_32 = new Float32Array([n])[0];
-    const converted = n_32;
-    if (n === converted) {
+    const n_32 = quantizeToF32(n);
+    if (n === n_32) {
       // n is precisely expressible as a f32, so should not be rounded
       return [n];
     }
 
-    if (converted > n) {
+    if (n_32 > n) {
       // n_32 rounded towards +inf, so is after n
       const other = nextAfterF32(n_32, 'negative', 'no-flush');
-      return [other, converted];
+      return [other, n_32];
     } else {
       // n_32 rounded towards -inf, so is before n
       const other = nextAfterF32(n_32, 'positive', 'no-flush');
-      return [converted, other];
+      return [n_32, other];
     }
   }
 
@@ -594,21 +596,20 @@ export function correctlyRoundedF16(n) {
 
   // f16 finite
   if (n <= kValue.f16.positive.max && n >= kValue.f16.negative.min) {
-    const n_16 = new Float16Array([n])[0];
-    const converted = n_16;
-    if (n === converted) {
+    const n_16 = quantizeToF16(n);
+    if (n === n_16) {
       // n is precisely expressible as a f16, so should not be rounded
       return [n];
     }
 
-    if (converted > n) {
+    if (n_16 > n) {
       // n_16 rounded towards +inf, so is after n
       const other = nextAfterF16(n_16, 'negative', 'no-flush');
-      return [other, converted];
+      return [other, n_16];
     } else {
       // n_16 rounded towards -inf, so is before n
       const other = nextAfterF16(n_16, 'positive', 'no-flush');
-      return [converted, other];
+      return [n_16, other];
     }
   }
 
@@ -622,56 +623,135 @@ export function correctlyRoundedF16(n) {
 }
 
 /**
- * Once-allocated ArrayBuffer/views to avoid overhead of allocation in frexp
- *
- * This makes frexp non-reentrant due to shared state between calls.
- */
-const frexpData = new ArrayBuffer(4);
-const frexpDataU32 = new Uint32Array(frexpData);
-const frexpDataF32 = new Float32Array(frexpData);
-
-/**
  * Calculates WGSL frexp
  *
  * Splits val into a fraction and an exponent so that
  * val = fraction * 2 ^ exponent.
  * The fraction is 0.0 or its magnitude is in the range [0.5, 1.0).
  *
- * Inspired by golang's implementation of frexp.
- *
- * This code is non-reentrant due to the use of a non-local data buffer and
- * views.
- *
- * @param val the f32 to split
+ * @param val the float to split
+ * @param trait the float type, f32 or f16 or f64
  * @returns the results of splitting val
  */
-export function frexp(val) {
-  frexpDataF32[0] = val;
-  // Do not directly use val after this point, so that changes are reflected in
-  // both the f32 and u32 views.
+export function frexp(val, trait) {
+  const buffer = new ArrayBuffer(8);
+  const dataView = new DataView(buffer);
 
-  // Handles 0 and -0
-  if (frexpDataF32[0] === 0) {
-    return { fract: frexpDataF32[0], exp: 0 };
+  // expBitCount and fractBitCount is the bitwidth of exponent and fractional part of the given FP type.
+  // expBias is the bias constant of exponent of the given FP type.
+  // Biased exponent (unsigned integer, i.e. the exponent part of float) = unbiased exponent (signed integer) + expBias.
+  let expBitCount, fractBitCount, expBias;
+  // To handle the exponent bits of given FP types (f16, f32, and f64), considering the highest 16
+  // bits is enough.
+  // expMaskForHigh16Bits indicates the exponent bitfield in the highest 16 bits of the given FP
+  // type, and targetExpBitsForHigh16Bits is the exponent bits that corresponding to unbiased
+  // exponent -1, i.e. the exponent bits when the FP values is in range [0.5, 1.0).
+  let expMaskForHigh16Bits, targetExpBitsForHigh16Bits;
+  // Helper function that store the given FP value into buffer as the given FP types
+  let setFloatToBuffer;
+  // Helper function that read back FP value from buffer as the given FP types
+  let getFloatFromBuffer;
+
+  let isFinite;
+  let isSubnormal;
+
+  if (trait === 'f32') {
+    // f32 bit pattern: s_eeeeeeee_fffffff_ffffffffffffffff
+    expBitCount = 8;
+    fractBitCount = 23;
+    expBias = 127;
+    // The exponent bitmask for high 16 bits of f32.
+    expMaskForHigh16Bits = 0x7f80;
+    // The target exponent bits is equal to those for f32 0.5 = 0x3f000000.
+    targetExpBitsForHigh16Bits = 0x3f00;
+    isFinite = isFiniteF32;
+    isSubnormal = isSubnormalNumberF32;
+    // Enforce big-endian so that offset 0 is highest byte.
+    setFloatToBuffer = (v) => dataView.setFloat32(0, v, false);
+    getFloatFromBuffer = () => dataView.getFloat32(0, false);
+  } else if (trait === 'f16') {
+    // f16 bit pattern: s_eeeee_ffffffffff
+    expBitCount = 5;
+    fractBitCount = 10;
+    expBias = 15;
+    // The exponent bitmask for 16 bits of f16.
+    expMaskForHigh16Bits = 0x7c00;
+    // The target exponent bits is equal to those for f16 0.5 = 0x3800.
+    targetExpBitsForHigh16Bits = 0x3800;
+    isFinite = isFiniteF16;
+    isSubnormal = isSubnormalNumberF16;
+    // Enforce big-endian so that offset 0 is highest byte.
+    setFloatToBuffer = (v) => setFloat16(dataView, 0, v, false);
+    getFloatFromBuffer = () => getFloat16(dataView, 0, false);
+  } else {
+    assert(trait === 'f64');
+    // f64 bit pattern: s_eeeeeeeeeee_ffff_ffffffffffffffffffffffffffffffffffffffffffffffff
+    expBitCount = 11;
+    fractBitCount = 52;
+    expBias = 1023;
+    // The exponent bitmask for 16 bits of f64.
+    expMaskForHigh16Bits = 0x7ff0;
+    // The target exponent bits is equal to those for f64 0.5 = 0x3fe0_0000_0000_0000.
+    targetExpBitsForHigh16Bits = 0x3fe0;
+    isFinite = Number.isFinite;
+    isSubnormal = isSubnormalNumberF64;
+    // Enforce big-endian so that offset 0 is highest byte.
+    setFloatToBuffer = (v) => dataView.setFloat64(0, v, false);
+    getFloatFromBuffer = () => dataView.getFloat64(0, false);
+  }
+  // Helper function that extract the unbiased exponent of the float in buffer.
+  const extractUnbiasedExpFromNormalFloatInBuffer = () => {
+    // Assert the float in buffer is finite normal float.
+    assert(isFinite(getFloatFromBuffer()) && !isSubnormal(getFloatFromBuffer()));
+    // Get the highest 16 bits of float as uint16, which can contain the whole exponent part for both f16, f32, and f64.
+    const high16BitsAsUint16 = dataView.getUint16(0, false);
+    // Return the unbiased exp by masking, shifting and unbiasing.
+    return ((high16BitsAsUint16 & expMaskForHigh16Bits) >> 16 - 1 - expBitCount) - expBias;
+  };
+  // Helper function that modify the exponent of float in buffer to make it in range [0.5, 1.0).
+  // By setting the unbiased exponent to -1, the fp value will be in range 2**-1 * [1.0, 2.0), i.e. [0.5, 1.0).
+  const modifyExpOfNormalFloatInBuffer = () => {
+    // Assert the float in buffer is finite normal float.
+    assert(isFinite(getFloatFromBuffer()) && !isSubnormal(getFloatFromBuffer()));
+    // Get the highest 16 bits of float as uint16, which contains the whole exponent part for both f16, f32, and f64.
+    const high16BitsAsUint16 = dataView.getUint16(0, false);
+    // Modify the exponent bits.
+    const modifiedHigh16Bits =
+    high16BitsAsUint16 & ~expMaskForHigh16Bits | targetExpBitsForHigh16Bits;
+    // Set back to buffer
+    dataView.setUint16(0, modifiedHigh16Bits, false);
+  };
+
+  // +/- 0.0
+  if (val === 0) {
+    return { fract: val, exp: 0 };
+  }
+  // NaN and Inf
+  if (!isFinite(val)) {
+    return { fract: val, exp: 0 };
   }
 
-  // Covers NaNs, OOB and Infinities
-  if (!isFiniteF32(frexpDataF32[0])) {
-    return { fract: frexpDataF32[0], exp: 0 };
-  }
+  setFloatToBuffer(val);
+  // Don't use val below. Use helper functions working with buffer instead.
 
-  // Normalize if subnormal
   let exp = 0;
-  if (isSubnormalNumberF32(frexpDataF32[0])) {
-    frexpDataF32[0] = frexpDataF32[0] * (1 << 23);
-    exp = -23;
+  // Normailze the value if it is subnormal. Increase the exponent by multiplying a subnormal value
+  // with 2**fractBitCount will result in a finite normal FP value of the given FP type.
+  if (isSubnormal(getFloatFromBuffer())) {
+    setFloatToBuffer(getFloatFromBuffer() * 2 ** fractBitCount);
+    exp = -fractBitCount;
   }
-  exp += (frexpDataU32[0] >> 23 & 0xff) - 126; // shift & mask, minus the bias + 1
+  // A normal FP value v is represented as v = ((-1)**s)*(2**(unbiased exponent))*f, where f is in
+  // range [1.0, 2.0). By moving a factor 2 from f to exponent, we have
+  // v = ((-1)**s)*(2**(unbiased exponent + 1))*(f / 2), where (f / 2) is in range [0.5, 1.0), so
+  // the exp = (unbiased exponent + 1) and fract = ((-1)**s)*(f / 2) is what we expect to get from
+  // frexp function. Note that fract and v only differs in exponent bitfield as long as v is normal.
+  // Calc the result exp by getting the unbiased float exponent and plus 1.
+  exp += extractUnbiasedExpFromNormalFloatInBuffer() + 1;
+  // Modify the exponent of float in buffer to make it be in range [0.5, 1.0) to get fract.
+  modifyExpOfNormalFloatInBuffer();
 
-  frexpDataU32[0] &= 0x807fffff; // mask the exponent bits
-  frexpDataU32[0] |= 0x3f000000; // extract the mantissa bits
-  const fract = frexpDataF32[0]; // Convert from bits to number
-  return { fract, exp };
+  return { fract: getFloatFromBuffer(), exp };
 }
 
 /**
@@ -833,16 +913,19 @@ counts =
   const bit_fields = [
   ...linearRange(kBit.f32.negative.min, kBit.f32.negative.max, counts.neg_norm),
   ...linearRange(
-  kBit.f32.subnormal.negative.min,
-  kBit.f32.subnormal.negative.max,
-  counts.neg_sub),
-
+    kBit.f32.negative.subnormal.min,
+    kBit.f32.negative.subnormal.max,
+    counts.neg_sub
+  ),
+  // -0.0
+  0x80000000,
+  // +0.0
   0,
   ...linearRange(
-  kBit.f32.subnormal.positive.min,
-  kBit.f32.subnormal.positive.max,
-  counts.pos_sub),
-
+    kBit.f32.positive.subnormal.min,
+    kBit.f32.positive.subnormal.max,
+    counts.pos_sub
+  ),
   ...linearRange(kBit.f32.positive.min, kBit.f32.positive.max, counts.pos_norm)].
   map(Math.trunc);
   return bit_fields.map(reinterpretU32AsF32);
@@ -897,16 +980,19 @@ counts =
   const bit_fields = [
   ...linearRange(kBit.f16.negative.min, kBit.f16.negative.max, counts.neg_norm),
   ...linearRange(
-  kBit.f16.subnormal.negative.min,
-  kBit.f16.subnormal.negative.max,
-  counts.neg_sub),
-
+    kBit.f16.negative.subnormal.min,
+    kBit.f16.negative.subnormal.max,
+    counts.neg_sub
+  ),
+  // -0.0
+  0x8000,
+  // +0.0
   0,
   ...linearRange(
-  kBit.f16.subnormal.positive.min,
-  kBit.f16.subnormal.positive.max,
-  counts.pos_sub),
-
+    kBit.f16.positive.subnormal.min,
+    kBit.f16.positive.subnormal.max,
+    counts.pos_sub
+  ),
   ...linearRange(kBit.f16.positive.min, kBit.f16.positive.max, counts.pos_norm)].
   map(Math.trunc);
   return bit_fields.map(reinterpretU16AsF16);
@@ -945,16 +1031,19 @@ counts =
   const bit_fields = [
   ...linearRangeBigInt(kBit.f64.negative.min, kBit.f64.negative.max, counts.neg_norm),
   ...linearRangeBigInt(
-  kBit.f64.subnormal.negative.min,
-  kBit.f64.subnormal.negative.max,
-  counts.neg_sub),
-
+    kBit.f64.negative.subnormal.min,
+    kBit.f64.negative.subnormal.max,
+    counts.neg_sub
+  ),
+  // -0.0
+  0x8000_0000_0000_0000n,
+  // +0.0
   0n,
   ...linearRangeBigInt(
-  kBit.f64.subnormal.positive.min,
-  kBit.f64.subnormal.positive.max,
-  counts.pos_sub),
-
+    kBit.f64.positive.subnormal.min,
+    kBit.f64.positive.subnormal.max,
+    counts.pos_sub
+  ),
   ...linearRangeBigInt(kBit.f64.positive.min, kBit.f64.positive.max, counts.pos_norm)];
 
   return bit_fields.map(reinterpretU64AsF64);
@@ -985,9 +1074,9 @@ counts = {
 })
 {
   assert(
-  begin <= kValue.f64.negative.max,
-  `Beginning of range ${begin} must be negative f64 normal`);
-
+    begin <= kValue.f64.negative.max,
+    `Beginning of range ${begin} must be negative f64 normal`
+  );
   assert(end >= kValue.f64.positive.min, `Ending of range ${end} must be positive f64 normal`);
 
   counts.neg_norm = counts.neg_norm === undefined ? counts.pos_norm : counts.neg_norm;
@@ -1001,16 +1090,19 @@ counts = {
   const bit_fields = [
   ...linearRangeBigInt(u64_begin, kBit.f64.negative.max, counts.neg_norm),
   ...linearRangeBigInt(
-  kBit.f64.subnormal.negative.min,
-  kBit.f64.subnormal.negative.max,
-  counts.neg_sub),
-
+    kBit.f64.negative.subnormal.min,
+    kBit.f64.negative.subnormal.max,
+    counts.neg_sub
+  ),
+  // -0.0
+  0x8000_0000_0000_0000n,
+  // +0.0
   0n,
   ...linearRangeBigInt(
-  kBit.f64.subnormal.positive.min,
-  kBit.f64.subnormal.positive.max,
-  counts.pos_sub),
-
+    kBit.f64.positive.subnormal.min,
+    kBit.f64.positive.subnormal.max,
+    counts.pos_sub
+  ),
   ...linearRangeBigInt(kBit.f64.positive.min, u64_end, counts.pos_norm)];
 
   return bit_fields.map(reinterpretU64AsF64);
@@ -1046,16 +1138,16 @@ const kVectorI32Values = {
   [f, 1],
   [1, f],
   [f, -1],
-  [-1, f]]),
-
+  [-1, f]]
+  ),
   3: kInterestingI32Values.flatMap((f) => [
   [f, 1, 2],
   [1, f, 2],
   [1, 2, f],
   [f, -1, -2],
   [-1, f, -2],
-  [-1, -2, f]]),
-
+  [-1, -2, f]]
+  ),
   4: kInterestingI32Values.flatMap((f) => [
   [f, 1, 2, 3],
   [1, f, 2, 3],
@@ -1064,8 +1156,8 @@ const kVectorI32Values = {
   [f, -1, -2, -3],
   [-1, f, -2, -3],
   [-1, -2, f, -3],
-  [-1, -2, -3, f]])
-
+  [-1, -2, -3, f]]
+  )
 };
 
 /**
@@ -1131,19 +1223,19 @@ export function sparseU32Range() {
 const kVectorU32Values = {
   2: kInterestingU32Values.flatMap((f) => [
   [f, 1],
-  [1, f]]),
-
+  [1, f]]
+  ),
   3: kInterestingU32Values.flatMap((f) => [
   [f, 1, 2],
   [1, f, 2],
-  [1, 2, f]]),
-
+  [1, 2, f]]
+  ),
   4: kInterestingU32Values.flatMap((f) => [
   [f, 1, 2, 3],
   [1, f, 2, 3],
   [1, 2, f, 3],
-  [1, 2, 3, f]])
-
+  [1, 2, 3, f]]
+  )
 };
 
 /**
@@ -1180,13 +1272,16 @@ const kInterestingF32Values = [
 kValue.f32.negative.min,
 -10.0,
 -1.0,
+-0.125,
 kValue.f32.negative.max,
-kValue.f32.subnormal.negative.min,
-kValue.f32.subnormal.negative.max,
+kValue.f32.negative.subnormal.min,
+kValue.f32.negative.subnormal.max,
+-0.0,
 0.0,
-kValue.f32.subnormal.positive.min,
-kValue.f32.subnormal.positive.max,
+kValue.f32.positive.subnormal.min,
+kValue.f32.positive.subnormal.max,
 kValue.f32.positive.min,
+0.125,
 1.0,
 10.0,
 kValue.f32.positive.max];
@@ -1213,16 +1308,16 @@ const kVectorF32Values = {
   [f, 1.0],
   [1.0, f],
   [f, -1.0],
-  [-1.0, f]]),
-
+  [-1.0, f]]
+  ),
   3: sparseF32Range().flatMap((f) => [
   [f, 1.0, 2.0],
   [1.0, f, 2.0],
   [1.0, 2.0, f],
   [f, -1.0, -2.0],
   [-1.0, f, -2.0],
-  [-1.0, -2.0, f]]),
-
+  [-1.0, -2.0, f]]
+  ),
   4: sparseF32Range().flatMap((f) => [
   [f, 1.0, 2.0, 3.0],
   [1.0, f, 2.0, 3.0],
@@ -1231,8 +1326,8 @@ const kVectorF32Values = {
   [f, -1.0, -2.0, -3.0],
   [-1.0, f, -2.0, -3.0],
   [-1.0, -2.0, f, -3.0],
-  [-1.0, -2.0, -3.0, f]])
-
+  [-1.0, -2.0, -3.0, f]]
+  )
 };
 
 /**
@@ -1258,14 +1353,14 @@ const kSparseVectorF32Values = {
   3: sparseF32Range().map((f, idx) => [
   idx % 3 === 0 ? f : idx,
   idx % 3 === 1 ? f : -idx,
-  idx % 3 === 2 ? f : idx]),
-
+  idx % 3 === 2 ? f : idx]
+  ),
   4: sparseF32Range().map((f, idx) => [
   idx % 4 === 0 ? f : idx,
   idx % 4 === 1 ? f : -idx,
   idx % 4 === 2 ? f : idx,
-  idx % 4 === 3 ? f : -idx])
-
+  idx % 4 === 3 ? f : -idx]
+  )
 };
 
 /**
@@ -1279,9 +1374,9 @@ const kSparseVectorF32Values = {
  */
 export function sparseVectorF32Range(dim) {
   assert(
-  dim === 2 || dim === 3 || dim === 4,
-  'sparseVectorF32Range only accepts dimensions 2, 3, and 4');
-
+    dim === 2 || dim === 3 || dim === 4,
+    'sparseVectorF32Range only accepts dimensions 2, 3, and 4'
+  );
   return kSparseVectorF32Values[dim];
 }
 
@@ -1289,12 +1384,12 @@ const kSparseMatrixF32Values = {
   2: {
     2: kInterestingF32Values.map((f, idx) => [
     [idx % 4 === 0 ? f : idx, idx % 4 === 1 ? f : -idx],
-    [idx % 4 === 2 ? f : -idx, idx % 4 === 3 ? f : idx]]),
-
+    [idx % 4 === 2 ? f : -idx, idx % 4 === 3 ? f : idx]]
+    ),
     3: kInterestingF32Values.map((f, idx) => [
     [idx % 6 === 0 ? f : idx, idx % 6 === 1 ? f : -idx, idx % 6 === 2 ? f : idx],
-    [idx % 6 === 3 ? f : -idx, idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]),
-
+    [idx % 6 === 3 ? f : -idx, idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]
+    ),
     4: kInterestingF32Values.map((f, idx) => [
     [
     idx % 8 === 0 ? f : idx,
@@ -1306,21 +1401,21 @@ const kSparseMatrixF32Values = {
     idx % 8 === 4 ? f : -idx,
     idx % 8 === 5 ? f : idx,
     idx % 8 === 6 ? f : -idx,
-    idx % 8 === 7 ? f : idx]])
+    idx % 8 === 7 ? f : idx]]
 
-
+    )
   },
   3: {
     2: kInterestingF32Values.map((f, idx) => [
     [idx % 6 === 0 ? f : idx, idx % 6 === 1 ? f : -idx],
     [idx % 6 === 2 ? f : -idx, idx % 6 === 3 ? f : idx],
-    [idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]),
-
+    [idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]
+    ),
     3: kInterestingF32Values.map((f, idx) => [
     [idx % 9 === 0 ? f : idx, idx % 9 === 1 ? f : -idx, idx % 9 === 2 ? f : idx],
     [idx % 9 === 3 ? f : -idx, idx % 9 === 4 ? f : idx, idx % 9 === 5 ? f : -idx],
-    [idx % 9 === 6 ? f : idx, idx % 9 === 7 ? f : -idx, idx % 9 === 8 ? f : idx]]),
-
+    [idx % 9 === 6 ? f : idx, idx % 9 === 7 ? f : -idx, idx % 9 === 8 ? f : idx]]
+    ),
     4: kInterestingF32Values.map((f, idx) => [
     [
     idx % 12 === 0 ? f : idx,
@@ -1338,23 +1433,23 @@ const kSparseMatrixF32Values = {
     idx % 12 === 8 ? f : idx,
     idx % 12 === 9 ? f : -idx,
     idx % 12 === 10 ? f : idx,
-    idx % 12 === 11 ? f : -idx]])
+    idx % 12 === 11 ? f : -idx]]
 
-
+    )
   },
   4: {
     2: kInterestingF32Values.map((f, idx) => [
     [idx % 8 === 0 ? f : idx, idx % 8 === 1 ? f : -idx],
     [idx % 8 === 2 ? f : -idx, idx % 8 === 3 ? f : idx],
     [idx % 8 === 4 ? f : idx, idx % 8 === 5 ? f : -idx],
-    [idx % 8 === 6 ? f : -idx, idx % 8 === 7 ? f : idx]]),
-
+    [idx % 8 === 6 ? f : -idx, idx % 8 === 7 ? f : idx]]
+    ),
     3: kInterestingF32Values.map((f, idx) => [
     [idx % 12 === 0 ? f : idx, idx % 12 === 1 ? f : -idx, idx % 12 === 2 ? f : idx],
     [idx % 12 === 3 ? f : -idx, idx % 12 === 4 ? f : idx, idx % 12 === 5 ? f : -idx],
     [idx % 12 === 6 ? f : idx, idx % 12 === 7 ? f : -idx, idx % 12 === 8 ? f : idx],
-    [idx % 12 === 9 ? f : -idx, idx % 12 === 10 ? f : idx, idx % 12 === 11 ? f : -idx]]),
-
+    [idx % 12 === 9 ? f : -idx, idx % 12 === 10 ? f : idx, idx % 12 === 11 ? f : -idx]]
+    ),
     4: kInterestingF32Values.map((f, idx) => [
     [
     idx % 16 === 0 ? f : idx,
@@ -1378,9 +1473,9 @@ const kSparseMatrixF32Values = {
     idx % 16 === 12 ? f : -idx,
     idx % 16 === 13 ? f : idx,
     idx % 16 === 14 ? f : -idx,
-    idx % 16 === 15 ? f : idx]])
+    idx % 16 === 15 ? f : idx]]
 
-
+    )
   }
 };
 
@@ -1398,13 +1493,13 @@ const kSparseMatrixF32Values = {
  */
 export function sparseMatrixF32Range(c, r) {
   assert(
-  c === 2 || c === 3 || c === 4,
-  'sparseMatrixF32Range only accepts column counts of 2, 3, and 4');
-
+    c === 2 || c === 3 || c === 4,
+    'sparseMatrixF32Range only accepts column counts of 2, 3, and 4'
+  );
   assert(
-  r === 2 || r === 3 || r === 4,
-  'sparseMatrixF32Range only accepts row counts of 2, 3, and 4');
-
+    r === 2 || r === 3 || r === 4,
+    'sparseMatrixF32Range only accepts row counts of 2, 3, and 4'
+  );
   return kSparseMatrixF32Values[c][r];
 }
 
@@ -1413,13 +1508,16 @@ const kInterestingF16Values = [
 kValue.f16.negative.min,
 -10.0,
 -1.0,
+-0.125,
 kValue.f16.negative.max,
-kValue.f16.subnormal.negative.min,
-kValue.f16.subnormal.negative.max,
+kValue.f16.negative.subnormal.min,
+kValue.f16.negative.subnormal.max,
+-0.0,
 0.0,
-kValue.f16.subnormal.positive.min,
-kValue.f16.subnormal.positive.max,
+kValue.f16.positive.subnormal.min,
+kValue.f16.positive.subnormal.max,
 kValue.f16.positive.min,
+0.125,
 1.0,
 10.0,
 kValue.f16.positive.max];
@@ -1446,16 +1544,16 @@ const kVectorF16Values = {
   [f, 1.0],
   [1.0, f],
   [f, -1.0],
-  [-1.0, f]]),
-
+  [-1.0, f]]
+  ),
   3: sparseF16Range().flatMap((f) => [
   [f, 1.0, 2.0],
   [1.0, f, 2.0],
   [1.0, 2.0, f],
   [f, -1.0, -2.0],
   [-1.0, f, -2.0],
-  [-1.0, -2.0, f]]),
-
+  [-1.0, -2.0, f]]
+  ),
   4: sparseF16Range().flatMap((f) => [
   [f, 1.0, 2.0, 3.0],
   [1.0, f, 2.0, 3.0],
@@ -1464,8 +1562,8 @@ const kVectorF16Values = {
   [f, -1.0, -2.0, -3.0],
   [-1.0, f, -2.0, -3.0],
   [-1.0, -2.0, f, -3.0],
-  [-1.0, -2.0, -3.0, f]])
-
+  [-1.0, -2.0, -3.0, f]]
+  )
 };
 
 /**
@@ -1491,14 +1589,14 @@ const kSparseVectorF16Values = {
   3: sparseF16Range().map((f, idx) => [
   idx % 3 === 0 ? f : idx,
   idx % 3 === 1 ? f : -idx,
-  idx % 3 === 2 ? f : idx]),
-
+  idx % 3 === 2 ? f : idx]
+  ),
   4: sparseF16Range().map((f, idx) => [
   idx % 4 === 0 ? f : idx,
   idx % 4 === 1 ? f : -idx,
   idx % 4 === 2 ? f : idx,
-  idx % 4 === 3 ? f : -idx])
-
+  idx % 4 === 3 ? f : -idx]
+  )
 };
 
 /**
@@ -1512,9 +1610,9 @@ const kSparseVectorF16Values = {
  */
 export function sparseVectorF16Range(dim) {
   assert(
-  dim === 2 || dim === 3 || dim === 4,
-  'sparseVectorF16Range only accepts dimensions 2, 3, and 4');
-
+    dim === 2 || dim === 3 || dim === 4,
+    'sparseVectorF16Range only accepts dimensions 2, 3, and 4'
+  );
   return kSparseVectorF16Values[dim];
 }
 
@@ -1522,12 +1620,12 @@ const kSparseMatrixF16Values = {
   2: {
     2: kInterestingF16Values.map((f, idx) => [
     [idx % 4 === 0 ? f : idx, idx % 4 === 1 ? f : -idx],
-    [idx % 4 === 2 ? f : -idx, idx % 4 === 3 ? f : idx]]),
-
+    [idx % 4 === 2 ? f : -idx, idx % 4 === 3 ? f : idx]]
+    ),
     3: kInterestingF16Values.map((f, idx) => [
     [idx % 6 === 0 ? f : idx, idx % 6 === 1 ? f : -idx, idx % 6 === 2 ? f : idx],
-    [idx % 6 === 3 ? f : -idx, idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]),
-
+    [idx % 6 === 3 ? f : -idx, idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]
+    ),
     4: kInterestingF16Values.map((f, idx) => [
     [
     idx % 8 === 0 ? f : idx,
@@ -1539,21 +1637,21 @@ const kSparseMatrixF16Values = {
     idx % 8 === 4 ? f : -idx,
     idx % 8 === 5 ? f : idx,
     idx % 8 === 6 ? f : -idx,
-    idx % 8 === 7 ? f : idx]])
+    idx % 8 === 7 ? f : idx]]
 
-
+    )
   },
   3: {
     2: kInterestingF16Values.map((f, idx) => [
     [idx % 6 === 0 ? f : idx, idx % 6 === 1 ? f : -idx],
     [idx % 6 === 2 ? f : -idx, idx % 6 === 3 ? f : idx],
-    [idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]),
-
+    [idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]
+    ),
     3: kInterestingF16Values.map((f, idx) => [
     [idx % 9 === 0 ? f : idx, idx % 9 === 1 ? f : -idx, idx % 9 === 2 ? f : idx],
     [idx % 9 === 3 ? f : -idx, idx % 9 === 4 ? f : idx, idx % 9 === 5 ? f : -idx],
-    [idx % 9 === 6 ? f : idx, idx % 9 === 7 ? f : -idx, idx % 9 === 8 ? f : idx]]),
-
+    [idx % 9 === 6 ? f : idx, idx % 9 === 7 ? f : -idx, idx % 9 === 8 ? f : idx]]
+    ),
     4: kInterestingF16Values.map((f, idx) => [
     [
     idx % 12 === 0 ? f : idx,
@@ -1571,23 +1669,23 @@ const kSparseMatrixF16Values = {
     idx % 12 === 8 ? f : idx,
     idx % 12 === 9 ? f : -idx,
     idx % 12 === 10 ? f : idx,
-    idx % 12 === 11 ? f : -idx]])
+    idx % 12 === 11 ? f : -idx]]
 
-
+    )
   },
   4: {
     2: kInterestingF16Values.map((f, idx) => [
     [idx % 8 === 0 ? f : idx, idx % 8 === 1 ? f : -idx],
     [idx % 8 === 2 ? f : -idx, idx % 8 === 3 ? f : idx],
     [idx % 8 === 4 ? f : idx, idx % 8 === 5 ? f : -idx],
-    [idx % 8 === 6 ? f : -idx, idx % 8 === 7 ? f : idx]]),
-
+    [idx % 8 === 6 ? f : -idx, idx % 8 === 7 ? f : idx]]
+    ),
     3: kInterestingF16Values.map((f, idx) => [
     [idx % 12 === 0 ? f : idx, idx % 12 === 1 ? f : -idx, idx % 12 === 2 ? f : idx],
     [idx % 12 === 3 ? f : -idx, idx % 12 === 4 ? f : idx, idx % 12 === 5 ? f : -idx],
     [idx % 12 === 6 ? f : idx, idx % 12 === 7 ? f : -idx, idx % 12 === 8 ? f : idx],
-    [idx % 12 === 9 ? f : -idx, idx % 12 === 10 ? f : idx, idx % 12 === 11 ? f : -idx]]),
-
+    [idx % 12 === 9 ? f : -idx, idx % 12 === 10 ? f : idx, idx % 12 === 11 ? f : -idx]]
+    ),
     4: kInterestingF16Values.map((f, idx) => [
     [
     idx % 16 === 0 ? f : idx,
@@ -1611,9 +1709,9 @@ const kSparseMatrixF16Values = {
     idx % 16 === 12 ? f : -idx,
     idx % 16 === 13 ? f : idx,
     idx % 16 === 14 ? f : -idx,
-    idx % 16 === 15 ? f : idx]])
+    idx % 16 === 15 ? f : idx]]
 
-
+    )
   }
 };
 
@@ -1631,14 +1729,250 @@ const kSparseMatrixF16Values = {
  */
 export function sparseMatrixF16Range(c, r) {
   assert(
-  c === 2 || c === 3 || c === 4,
-  'sparseMatrixF16Range only accepts column counts of 2, 3, and 4');
-
+    c === 2 || c === 3 || c === 4,
+    'sparseMatrixF16Range only accepts column counts of 2, 3, and 4'
+  );
   assert(
-  r === 2 || r === 3 || r === 4,
-  'sparseMatrixF16Range only accepts row counts of 2, 3, and 4');
-
+    r === 2 || r === 3 || r === 4,
+    'sparseMatrixF16Range only accepts row counts of 2, 3, and 4'
+  );
   return kSparseMatrixF16Values[c][r];
+}
+
+/** Short list of f64 values of interest to test against */
+const kInterestingF64Values = [
+kValue.f64.negative.min,
+-10.0,
+-1.0,
+-0.125,
+kValue.f64.negative.max,
+kValue.f64.negative.subnormal.min,
+kValue.f64.negative.subnormal.max,
+-0.0,
+0.0,
+kValue.f64.positive.subnormal.min,
+kValue.f64.positive.subnormal.max,
+kValue.f64.positive.min,
+0.125,
+1.0,
+10.0,
+kValue.f64.positive.max];
+
+
+/** @returns minimal F64 values that cover the entire range of F64 behaviours
+ *
+ * Has specially selected values that cover edge cases, normals, and subnormals.
+ * This is used instead of fullF64Range when the number of test cases being
+ * generated is a super linear function of the length of F64 values which is
+ * leading to time outs.
+ *
+ * These values have been chosen to attempt to test the widest range of F64
+ * behaviours in the lowest number of entries, so may potentially miss function
+ * specific values of interest. If there are known values of interest they
+ * should be appended to this list in the test generation code.
+ */
+export function sparseF64Range() {
+  return kInterestingF64Values;
+}
+
+const kVectorF64Values = {
+  2: sparseF64Range().flatMap((f) => [
+  [f, 1.0],
+  [1.0, f],
+  [f, -1.0],
+  [-1.0, f]]
+  ),
+  3: sparseF64Range().flatMap((f) => [
+  [f, 1.0, 2.0],
+  [1.0, f, 2.0],
+  [1.0, 2.0, f],
+  [f, -1.0, -2.0],
+  [-1.0, f, -2.0],
+  [-1.0, -2.0, f]]
+  ),
+  4: sparseF64Range().flatMap((f) => [
+  [f, 1.0, 2.0, 3.0],
+  [1.0, f, 2.0, 3.0],
+  [1.0, 2.0, f, 3.0],
+  [1.0, 2.0, 3.0, f],
+  [f, -1.0, -2.0, -3.0],
+  [-1.0, f, -2.0, -3.0],
+  [-1.0, -2.0, f, -3.0],
+  [-1.0, -2.0, -3.0, f]]
+  )
+};
+
+/**
+ * Returns set of vectors, indexed by dimension containing interesting float
+ * values.
+ *
+ * The tests do not do the simple option for coverage of computing the cartesian
+ * product of all of the interesting float values N times for vecN tests,
+ * because that creates a huge number of tests for vec3 and vec4, leading to
+ * time outs.
+ *
+ * Instead they insert the interesting F64 values into each location of the
+ * vector to get a spread of testing over the entire range. This reduces the
+ * number of cases being run substantially, but maintains coverage.
+ */
+export function vectorF64Range(dim) {
+  assert(dim === 2 || dim === 3 || dim === 4, 'vectorF64Range only accepts dimensions 2, 3, and 4');
+  return kVectorF64Values[dim];
+}
+
+const kSparseVectorF64Values = {
+  2: sparseF64Range().map((f, idx) => [idx % 2 === 0 ? f : idx, idx % 2 === 1 ? f : -idx]),
+  3: sparseF64Range().map((f, idx) => [
+  idx % 3 === 0 ? f : idx,
+  idx % 3 === 1 ? f : -idx,
+  idx % 3 === 2 ? f : idx]
+  ),
+  4: sparseF64Range().map((f, idx) => [
+  idx % 4 === 0 ? f : idx,
+  idx % 4 === 1 ? f : -idx,
+  idx % 4 === 2 ? f : idx,
+  idx % 4 === 3 ? f : -idx]
+  )
+};
+
+/**
+ * Minimal set of vectors, indexed by dimension, that contain interesting f64
+ * values.
+ *
+ * This is an even more stripped down version of `vectorF64Range` for when
+ * pairs of vectors are being tested.
+ * All the interesting floats from sparseF64 are guaranteed to be tested, but
+ * not in every position.
+ */
+export function sparseVectorF64Range(dim) {
+  assert(
+    dim === 2 || dim === 3 || dim === 4,
+    'sparseVectorF64Range only accepts dimensions 2, 3, and 4'
+  );
+  return kSparseVectorF64Values[dim];
+}
+
+const kSparseMatrixF64Values = {
+  2: {
+    2: kInterestingF64Values.map((f, idx) => [
+    [idx % 4 === 0 ? f : idx, idx % 4 === 1 ? f : -idx],
+    [idx % 4 === 2 ? f : -idx, idx % 4 === 3 ? f : idx]]
+    ),
+    3: kInterestingF64Values.map((f, idx) => [
+    [idx % 6 === 0 ? f : idx, idx % 6 === 1 ? f : -idx, idx % 6 === 2 ? f : idx],
+    [idx % 6 === 3 ? f : -idx, idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]
+    ),
+    4: kInterestingF64Values.map((f, idx) => [
+    [
+    idx % 8 === 0 ? f : idx,
+    idx % 8 === 1 ? f : -idx,
+    idx % 8 === 2 ? f : idx,
+    idx % 8 === 3 ? f : -idx],
+
+    [
+    idx % 8 === 4 ? f : -idx,
+    idx % 8 === 5 ? f : idx,
+    idx % 8 === 6 ? f : -idx,
+    idx % 8 === 7 ? f : idx]]
+
+    )
+  },
+  3: {
+    2: kInterestingF64Values.map((f, idx) => [
+    [idx % 6 === 0 ? f : idx, idx % 6 === 1 ? f : -idx],
+    [idx % 6 === 2 ? f : -idx, idx % 6 === 3 ? f : idx],
+    [idx % 6 === 4 ? f : idx, idx % 6 === 5 ? f : -idx]]
+    ),
+    3: kInterestingF64Values.map((f, idx) => [
+    [idx % 9 === 0 ? f : idx, idx % 9 === 1 ? f : -idx, idx % 9 === 2 ? f : idx],
+    [idx % 9 === 3 ? f : -idx, idx % 9 === 4 ? f : idx, idx % 9 === 5 ? f : -idx],
+    [idx % 9 === 6 ? f : idx, idx % 9 === 7 ? f : -idx, idx % 9 === 8 ? f : idx]]
+    ),
+    4: kInterestingF64Values.map((f, idx) => [
+    [
+    idx % 12 === 0 ? f : idx,
+    idx % 12 === 1 ? f : -idx,
+    idx % 12 === 2 ? f : idx,
+    idx % 12 === 3 ? f : -idx],
+
+    [
+    idx % 12 === 4 ? f : -idx,
+    idx % 12 === 5 ? f : idx,
+    idx % 12 === 6 ? f : -idx,
+    idx % 12 === 7 ? f : idx],
+
+    [
+    idx % 12 === 8 ? f : idx,
+    idx % 12 === 9 ? f : -idx,
+    idx % 12 === 10 ? f : idx,
+    idx % 12 === 11 ? f : -idx]]
+
+    )
+  },
+  4: {
+    2: kInterestingF64Values.map((f, idx) => [
+    [idx % 8 === 0 ? f : idx, idx % 8 === 1 ? f : -idx],
+    [idx % 8 === 2 ? f : -idx, idx % 8 === 3 ? f : idx],
+    [idx % 8 === 4 ? f : idx, idx % 8 === 5 ? f : -idx],
+    [idx % 8 === 6 ? f : -idx, idx % 8 === 7 ? f : idx]]
+    ),
+    3: kInterestingF64Values.map((f, idx) => [
+    [idx % 12 === 0 ? f : idx, idx % 12 === 1 ? f : -idx, idx % 12 === 2 ? f : idx],
+    [idx % 12 === 3 ? f : -idx, idx % 12 === 4 ? f : idx, idx % 12 === 5 ? f : -idx],
+    [idx % 12 === 6 ? f : idx, idx % 12 === 7 ? f : -idx, idx % 12 === 8 ? f : idx],
+    [idx % 12 === 9 ? f : -idx, idx % 12 === 10 ? f : idx, idx % 12 === 11 ? f : -idx]]
+    ),
+    4: kInterestingF64Values.map((f, idx) => [
+    [
+    idx % 16 === 0 ? f : idx,
+    idx % 16 === 1 ? f : -idx,
+    idx % 16 === 2 ? f : idx,
+    idx % 16 === 3 ? f : -idx],
+
+    [
+    idx % 16 === 4 ? f : -idx,
+    idx % 16 === 5 ? f : idx,
+    idx % 16 === 6 ? f : -idx,
+    idx % 16 === 7 ? f : idx],
+
+    [
+    idx % 16 === 8 ? f : idx,
+    idx % 16 === 9 ? f : -idx,
+    idx % 16 === 10 ? f : idx,
+    idx % 16 === 11 ? f : -idx],
+
+    [
+    idx % 16 === 12 ? f : -idx,
+    idx % 16 === 13 ? f : idx,
+    idx % 16 === 14 ? f : -idx,
+    idx % 16 === 15 ? f : idx]]
+
+    )
+  }
+};
+
+/**
+ * Returns a minimal set of matrices, indexed by dimension containing interesting
+ * float values.
+ *
+ * This is the matrix analogue of `sparseVectorF64Range`, so it is producing a
+ * minimal coverage set of matrices that test all the interesting f64 values.
+ * There is not a more expansive set of matrices, since matrices are even more
+ * expensive than vectors for increasing runtime with coverage.
+ *
+ * All the interesting floats from sparseF64 are guaranteed to be tested, but
+ * not in every position.
+ */
+export function sparseMatrixF64Range(c, r) {
+  assert(
+    c === 2 || c === 3 || c === 4,
+    'sparseMatrixF64Range only accepts column counts of 2, 3, and 4'
+  );
+  assert(
+    r === 2 || r === 3 || r === 4,
+    'sparseMatrixF64Range only accepts row counts of 2, 3, and 4'
+  );
+  return kSparseMatrixF64Values[c][r];
 }
 
 /**
@@ -1681,22 +2015,40 @@ export function signExtend(n, bits) {
 
 /** @returns the closest 32-bit floating point value to the input */
 export function quantizeToF32(num) {
-  return f32(num).value;
+  return Math.fround(num);
 }
 
 /** @returns the closest 16-bit floating point value to the input */
 export function quantizeToF16(num) {
-  return f16(num).value;
+  return hfround(num);
 }
 
-/** @returns the closest 32-bit signed integer value to the input */
+/**
+ * @returns the closest 32-bit signed integer value to the input, rounding
+ * towards 0, if not already an integer
+ */
 export function quantizeToI32(num) {
-  return i32(num).value;
+  if (num >= kValue.i32.positive.max) {
+    return kValue.i32.positive.max;
+  }
+  if (num <= kValue.i32.negative.min) {
+    return kValue.i32.negative.min;
+  }
+  return Math.trunc(num);
 }
 
-/** @returns the closest 32-bit signed integer value to the input */
+/**
+ * @returns the closest 32-bit unsigned integer value to the input, rounding
+ * towards 0, if not already an integer
+ */
 export function quantizeToU32(num) {
-  return u32(num).value;
+  if (num >= kValue.u32.max) {
+    return kValue.u32.max;
+  }
+  if (num <= 0) {
+    return 0;
+  }
+  return Math.trunc(num);
 }
 
 /** @returns whether the number is an integer and a power of two */
@@ -1704,6 +2056,7 @@ export function isPowerOfTwo(n) {
   if (!Number.isInteger(n)) {
     return false;
   }
+  assert((n | 0) === n, 'isPowerOfTwo only supports 32-bit numbers');
   return n !== 0 && (n & n - 1) === 0;
 }
 
@@ -1726,38 +2079,6 @@ export function lcm(a, b) {
   return a * b / gcd(a, b);
 }
 
-/**
- * @returns the bit representation as a 64-integer, via interpreting the input
- * as a 64-bit float value
- */
-export function reinterpretF64AsU64(input) {
-  return new BigUint64Array(new Float64Array([input]).buffer)[0];
-}
-
-/**
- * @returns a 64-bit float value via interpreting the input as the bit
- * representation as a 64-bit integer
- */
-export function reinterpretU64AsF64(input) {
-  return new Float64Array(new BigUint64Array([input]).buffer)[0];
-}
-
-/**
- * @returns a 32-bit float value via interpreting the input as the bit
- * representation as a 32-bit integer
- */
-export function reinterpretU32AsF32(input) {
-  return floatBitsToNumber(input, kFloat32Format);
-}
-
-/**
- * @returns a 16-bit float value via interpreting the input as the bit
- * representation as a 16-bit integer
- */
-export function reinterpretU16AsF16(hex) {
-  return floatBitsToNumber(hex, kFloat16Format);
-}
-
 /** @returns the cross of an array with the intermediate result of cartesianProduct
  *
  * @param elements array of values to cross with the intermediate result of
@@ -1765,7 +2086,10 @@ export function reinterpretU16AsF16(hex) {
  * @param intermediate arrays of values representing the partial result of
  *                     cartesianProduct
  */
-function cartesianProductImpl(elements, intermediate) {
+function cartesianProductImpl(
+elements,
+intermediate)
+{
   const result = [];
   elements.forEach((e) => {
     if (intermediate.length > 0) {
@@ -1850,9 +2174,9 @@ export function flatten2DArray(m) {
   const c = m.length;
   const r = m[0].length;
   assert(
-  m.every((c) => c.length === r),
-  `Unexpectedly received jagged array to flatten`);
-
+    m.every((c) => c.length === r),
+    `Unexpectedly received jagged array to flatten`
+  );
   const result = Array(c * r);
   for (let i = 0; i < c; i++) {
     for (let j = 0; j < r; j++) {
@@ -1870,9 +2194,9 @@ export function flatten2DArray(m) {
  */
 export function unflatten2DArray(n, c, r) {
   assert(
-  c > 0 && Number.isInteger(c) && r > 0 && Number.isInteger(r),
-  `columns (${c}) and rows (${r}) need to be positive integers`);
-
+    c > 0 && Number.isInteger(c) && r > 0 && Number.isInteger(r),
+    `columns (${c}) and rows (${r}) need to be positive integers`
+  );
   assert(n.length === c * r, `m.length(${n.length}) should equal c * r (${c * r})`);
   const result = [...Array(c)].map((_) => [...Array(r)]);
   for (let i = 0; i < c; i++) {
@@ -1895,9 +2219,9 @@ export function map2DArray(m, op) {
   const c = m.length;
   const r = m[0].length;
   assert(
-  m.every((c) => c.length === r),
-  `Unexpectedly received jagged array to map`);
-
+    m.every((c) => c.length === r),
+    `Unexpectedly received jagged array to map`
+  );
   const result = [...Array(c)].map((_) => [...Array(r)]);
   for (let i = 0; i < c; i++) {
     for (let j = 0; j < r; j++) {
@@ -1905,5 +2229,21 @@ export function map2DArray(m, op) {
     }
   }
   return result;
+}
+
+/**
+ * Performs a .every over a matrix and return the result
+ *
+ * @param m input matrix of type T
+ * @param op operation that performs a test on an element
+ * @returns a boolean indicating if the test passed for every element
+ */
+export function every2DArray(m, op) {
+  const r = m[0].length;
+  assert(
+    m.every((c) => c.length === r),
+    `Unexpectedly received jagged array to map`
+  );
+  return m.every((col) => col.every((el) => op(el)));
 }
 //# sourceMappingURL=math.js.map

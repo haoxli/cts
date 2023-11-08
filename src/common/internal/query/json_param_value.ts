@@ -1,4 +1,4 @@
-import { assert, sortObjectByKey } from '../../util/util.js';
+import { assert, sortObjectByKey, isPlainObject } from '../../util/util.js';
 import { JSONWithUndefined } from '../params_utils.js';
 
 // JSON can't represent various values and by default stores them as `null`.
@@ -33,7 +33,7 @@ const fromStringMagicValue = new Map<string, unknown>([
   [jsNegativeZeroMagicValue, -0],
 ]);
 
-function stringifyFilter(k: string, v: unknown): unknown {
+function stringifyFilter(_k: string, v: unknown): unknown {
   // Make sure no one actually uses a magic value as a parameter.
   if (typeof v === 'string') {
     assert(
@@ -51,6 +51,17 @@ function stringifyFilter(k: string, v: unknown): unknown {
       `${v} matches bigint magic pattern for stringification, so cannot be used`
     );
   }
+
+  const isObject = v !== null && typeof v === 'object' && !Array.isArray(v);
+  if (isObject) {
+    assert(
+      isPlainObject(v),
+      `value must be a plain object but it appears to be a '${
+        Object.getPrototypeOf(v).constructor.name
+      }`
+    );
+  }
+  assert(typeof v !== 'function', `${v} can not be a function`);
 
   if (Object.is(v, -0)) {
     return jsNegativeZeroMagicValue;
@@ -82,7 +93,7 @@ export function stringifyParamValueUniquely(value: JSONWithUndefined): string {
 
 // 'any' is part of the JSON.parse reviver interface, so cannot be avoided.
 // eslint-disable-next-line  @typescript-eslint/no-explicit-any
-function parseParamValueReviver(k: string, v: any): any {
+function parseParamValueReviver(_k: string, v: any): any {
   if (fromStringMagicValue.has(v)) {
     return fromStringMagicValue.get(v);
   }

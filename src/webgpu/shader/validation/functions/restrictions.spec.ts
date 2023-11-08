@@ -248,14 +248,24 @@ const kFunctionParamTypeCases: Record<string, ParamTypeCase> = {
 
   // Invalid pointers.
   ptr5: { name: `ptr<storage, u32>`, valid: false },
-  ptr6: { name: `ptr<storage, u32, read_write>`, valid: false },
-  ptr7: { name: `ptr<uniform, u32>`, valid: false },
-  ptr8: { name: `ptr<workgroup, u32>`, valid: false },
+  ptr6: { name: `ptr<storage, u32, read>`, valid: false },
+  ptr7: { name: `ptr<storage, u32, read_write>`, valid: false },
+  ptr8: { name: `ptr<uniform, u32>`, valid: false },
+  ptr9: { name: `ptr<workgroup, u32>`, valid: false },
+  ptr10: { name: `ptr<handle, u32>`, valid: false }, // Can't spell handle address space
+  ptr12: { name: `ptr<not_an_address_space, u32>`, valid: false },
+  ptr13: { name: `ptr<storage>`, valid: false }, // No store type
+  ptr14: { name: `ptr<private,clamp>`, valid: false }, // Invalid store type
+  ptr15: { name: `ptr<private,u32,read>`, valid: false }, // Can't specify access mode
+  ptr16: { name: `ptr<private,u32,write>`, valid: false }, // Can't specify access mode
+  ptr17: { name: `ptr<private,u32,read_write>`, valid: false }, // Can't specify access mode
+  ptrWorkgroupAtomic: { name: `ptr<workgroup, atomic<u32>>`, valid: false },
+  ptrWorkgroupNestedAtomic: { name: `ptr<workgroup, array<atomic<u32>,1>>`, valid: false },
 };
 
 g.test('function_parameter_types')
   .specURL('https://gpuweb.github.io/gpuweb/wgsl/#function-restriction')
-  .desc(`Test that function return types must be constructible`)
+  .desc(`Test validation of user-declared function parameter types`)
   .params(u => u.combine('case', keysOf(kFunctionParamTypeCases)))
   .beforeAllSubcases(t => {
     if (kFunctionParamTypeCases[t.params.case].name === 'f16') {
@@ -438,7 +448,9 @@ function parameterMatches(decl: string, matches: string[]): boolean {
 
 g.test('function_parameter_matching')
   .specURL('https://gpuweb.github.io/gpuweb/wgsl/#function-restriction')
-  .desc(`Test that function return types must be constructible`)
+  .desc(
+    `Test that function parameter types match function parameter type on user-declared functions`
+  )
   .params(u =>
     u
       .combine('decl', keysOf(kFunctionParamTypeCases))
@@ -584,4 +596,162 @@ fn foo() {
 }`;
 
     t.expectCompileResult(false, code);
+  });
+
+g.test('param_names_must_differ')
+  .specURL('https://gpuweb.github.io/gpuweb/wgsl/#function-declaration-sec')
+  .desc(`Test that function parameters must have different names`)
+  .params(u => u.combine('p1', ['a', 'b', 'c'] as const).combine('p2', ['a', 'b', 'c'] as const))
+  .fn(t => {
+    const code = `fn foo(${t.params.p1} : u32, ${t.params.p2} : f32) { }`;
+    t.expectCompileResult(t.params.p1 !== t.params.p2, code);
+  });
+
+const kParamUseCases: Record<string, string> = {
+  body: `fn foo(param : u32) {
+    let tmp = param;
+  }`,
+  var: `var<private> v : u32 = param;
+  fn foo(param : u32) { }`,
+  const: `const c : u32 = param;
+  fn foo(param : u32) { }`,
+  override: `override o : u32 = param;
+  fn foo(param : u32) { }`,
+  function: `fn bar() { let tmp = param; }
+  fn foo(param : u32) { }`,
+};
+
+g.test('param_scope_is_function_body')
+  .specURL('https://gpuweb.github.io/gpuweb/wgsl/#function-declaration-sec')
+  .desc(`Test that function parameters are only in scope in the function body`)
+  .params(u => u.combine('use', keysOf(kParamUseCases)))
+  .fn(t => {
+    t.expectCompileResult(t.params.use === 'body', kParamUseCases[t.params.use]);
+  });
+
+g.test('param_number_matches_call')
+  .specURL('https://gpuweb.github.io/gpuweb/wgsl/#function-calls')
+  .desc(`Test that function calls have an equal number of arguments as the number of parameters`)
+  .params(u =>
+    u
+      .combine('num_args', [0, 1, 2, 3, 4, 255] as const)
+      .combine('num_params', [0, 1, 2, 3, 4, 255] as const)
+  )
+  .fn(t => {
+    let code = `
+    fn bar(`;
+    for (let i = 0; i < t.params.num_params; i++) {
+      code += `p${i} : u32,`;
+    }
+    code += `) { }\n`;
+    code += `fn foo() {\nbar(`;
+    for (let i = 0; i < t.params.num_args; i++) {
+      code += `0,`;
+    }
+    code += `);\n}`;
+    t.expectCompileResult(t.params.num_args === t.params.num_params, code);
+  });
+
+const kParamsTypes = ['u32', 'i32', 'f32'];
+
+interface ArgValue {
+  value: string;
+  matches: string[];
+}
+
+const kArgValues: Record<string, ArgValue> = {
+  abstract_int: {
+    value: '0',
+    matches: ['u32', 'i32', 'f32'],
+  },
+  abstract_float: {
+    value: '0.0',
+    matches: ['f32'],
+  },
+  unsigned_int: {
+    value: '0u',
+    matches: ['u32'],
+  },
+  signed_int: {
+    value: '0i',
+    matches: ['i32'],
+  },
+  float: {
+    value: '0f',
+    matches: ['f32'],
+  },
+};
+
+function checkArgTypeMatch(param_type: string, arg_matches: string[]): boolean {
+  for (const match of arg_matches) {
+    if (match === param_type) {
+      return true;
+    }
+  }
+  return false;
+}
+
+g.test('call_arg_types_match_params')
+  .specURL('https://gpuweb.github.io/gpuweb/wgsl/#function-calls')
+  .desc(`Test that the argument types match in order`)
+  .params(u =>
+    u
+      .combine('num_args', [1, 2, 3] as const)
+      .combine('p1_type', kParamsTypes)
+      .combine('p2_type', kParamsTypes)
+      .combine('p3_type', kParamsTypes)
+      .combine('arg1_value', keysOf(kArgValues))
+      .combine('arg2_value', keysOf(kArgValues))
+      .combine('arg3_value', keysOf(kArgValues))
+  )
+  .fn(t => {
+    let code = `
+    fn bar(`;
+    for (let i = 0; i < t.params.num_args; i++) {
+      switch (i) {
+        case 0:
+        default: {
+          code += `p${i} : ${t.params.p1_type},`;
+          break;
+        }
+        case 1: {
+          code += `p${i} : ${t.params.p2_type},`;
+          break;
+        }
+        case 2: {
+          code += `p${i} : ${t.params.p3_type},`;
+          break;
+        }
+      }
+    }
+    code += `) { }
+    fn foo() {
+      bar(`;
+    for (let i = 0; i < t.params.num_args; i++) {
+      switch (i) {
+        case 0:
+        default: {
+          code += `${kArgValues[t.params.arg1_value].value},`;
+          break;
+        }
+        case 1: {
+          code += `${kArgValues[t.params.arg2_value].value},`;
+          break;
+        }
+        case 2: {
+          code += `${kArgValues[t.params.arg3_value].value},`;
+          break;
+        }
+      }
+    }
+    code += `);\n}`;
+
+    let res = checkArgTypeMatch(t.params.p1_type, kArgValues[t.params.arg1_value].matches);
+    if (res && t.params.num_args > 1) {
+      res = checkArgTypeMatch(t.params.p2_type, kArgValues[t.params.arg2_value].matches);
+    }
+    if (res && t.params.num_args > 2) {
+      res = checkArgTypeMatch(t.params.p3_type, kArgValues[t.params.arg3_value].matches);
+    }
+    t.expectCompileResult(res, code);
   });
