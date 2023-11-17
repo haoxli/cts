@@ -32,7 +32,7 @@
 </script>
 <script type=module src=/webgpu/common/runtime/wpt.js></script>
 
-<!-- Prefix: "?q="; 8528 variants generated from 2001 tests in 447 files -->
+<!-- Prefix: "?q="; 8528 variants generated from 2001 tests in 448 files -->
 <meta name=variant content='?q=webgpu:api,operation,adapter,requestAdapter:requestAdapter:*'><!-- estimated: 1368.747 ms -->
 <meta name=variant content='?q=webgpu:api,operation,adapter,requestAdapter:requestAdapter_no_parameters:*'><!-- estimated: 384.601 ms -->
 <meta name=variant content='?q=webgpu:api,operation,adapter,requestAdapterInfo:adapter_info:*'><!-- estimated: 136.601 ms -->
@@ -1883,7 +1883,7 @@
 <meta name=variant content='?q=webgpu:api,validation,buffer,mapping:gc_behavior,mappedAtCreation:*'><!-- estimated: 76.200 ms -->
 <meta name=variant content='?q=webgpu:api,validation,buffer,mapping:gc_behavior,mapAsync:*'><!-- estimated: 64.400 ms -->
 <meta name=variant content='?q=webgpu:api,validation,capability_checks,features,query_types:createQuerySet:*'><!-- estimated: 41.804 ms -->
-<meta name=variant content='?q=webgpu:api,validation,capability_checks,features,query_types:writeTimestamp:*'><!-- estimated: 2.400 ms -->
+<meta name=variant content='?q=webgpu:api,validation,capability_checks,features,query_types:timestamp:*'><!-- estimated: 2.400 ms -->
 <meta name=variant content='?q=webgpu:api,validation,capability_checks,features,texture_formats:texture_descriptor:*'><!-- estimated: 405.980 ms -->
 <meta name=variant content='?q=webgpu:api,validation,capability_checks,features,texture_formats:texture_descriptor_view_formats:*'><!-- estimated: 607.804 ms -->
 <meta name=variant content='?q=webgpu:api,validation,capability_checks,features,texture_formats:texture_view_descriptor:*'><!-- estimated: 435.978 ms -->
@@ -2817,7 +2817,6 @@
 <meta name=variant content='?q=webgpu:api,validation,encoding,createRenderBundleEncoder:attachment_state,empty_color_formats:*'><!-- estimated: 0.900 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,createRenderBundleEncoder:valid_texture_formats:*'><!-- estimated: 404.700 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,createRenderBundleEncoder:depth_stencil_readonly:*'><!-- estimated: 43.296 ms -->
-<meta name=variant content='?q=webgpu:api,validation,encoding,createRenderBundleEncoder:depth_stencil_readonly_with_undefined_depth:*'><!-- estimated: 59.300 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,encoder_open_state:non_pass_commands:*'><!-- estimated: 628.584 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,encoder_open_state:render_pass_commands:*'><!-- estimated: 130.320 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,encoder_open_state:render_bundle_commands:*'><!-- estimated: 62.700 ms -->
@@ -2842,9 +2841,9 @@
 <meta name=variant content='?q=webgpu:api,validation,encoding,queries,general:occlusion_query,query_type:*'><!-- estimated: 14.106 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,queries,general:occlusion_query,invalid_query_set:*'><!-- estimated: 3.302 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,queries,general:occlusion_query,query_index:*'><!-- estimated: 1.000 ms -->
-<meta name=variant content='?q=webgpu:api,validation,encoding,queries,general:timestamp_query,query_type_and_index:*'><!-- estimated: 0.903 ms -->
-<meta name=variant content='?q=webgpu:api,validation,encoding,queries,general:timestamp_query,invalid_query_set:*'><!-- estimated: 0.202 ms -->
-<meta name=variant content='?q=webgpu:api,validation,encoding,queries,general:timestamp_query,device_mismatch:*'><!-- estimated: 0.202 ms -->
+<meta name=variant content='?q=webgpu:api,validation,encoding,queries,general:writeTimestamp,query_type_and_index:*'><!-- estimated: 0.903 ms -->
+<meta name=variant content='?q=webgpu:api,validation,encoding,queries,general:writeTimestamp,invalid_query_set:*'><!-- estimated: 0.202 ms -->
+<meta name=variant content='?q=webgpu:api,validation,encoding,queries,general:writeTimestamp,device_mismatch:*'><!-- estimated: 0.202 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,queries,resolveQuerySet:queryset_and_destination_buffer_state:*'><!-- estimated: 81.702 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,queries,resolveQuerySet:first_query_and_query_count:*'><!-- estimated: 1.000 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,queries,resolveQuerySet:destination_buffer_usage:*'><!-- estimated: 32.100 ms -->
@@ -2855,7 +2854,7 @@
 <meta name=variant content='?q=webgpu:api,validation,encoding,render_bundle:device_mismatch:*'><!-- estimated: 1.899 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,render_bundle:color_formats_mismatch:*'><!-- estimated: 54.700 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,render_bundle:depth_stencil_formats_mismatch:*'><!-- estimated: 16.200 ms -->
-<meta name=variant content='?q=webgpu:api,validation,encoding,render_bundle:depth_stencil_readonly_mismatch:*'><!-- estimated: 323.136 ms -->
+<meta name=variant content='?q=webgpu:api,validation,encoding,render_bundle:depth_stencil_readonly_mismatch:*'><!-- estimated: 430.848 ms -->
 <meta name=variant content='?q=webgpu:api,validation,encoding,render_bundle:sample_count_mismatch:*'><!-- estimated: 33.300 ms -->
 <meta name=variant content='?q=webgpu:api,validation,error_scope:simple:*'><!-- estimated: 61.902 ms -->
 <meta name=variant content='?q=webgpu:api,validation,error_scope:empty:*'><!-- estimated: 0.801 ms -->
@@ -5345,7 +5344,7 @@
 <meta name=variant content='?q=webgpu:api,validation,render_pass,attachment_compatibility:render_pass_or_bundle_and_pipeline,color_sparse:encoderType="render%20bundle";attachmentCount=31;*'><!-- estimated: 523.264 ms -->
 <meta name=variant content='?q=webgpu:api,validation,render_pass,attachment_compatibility:render_pass_or_bundle_and_pipeline,color_sparse:encoderType="render%20bundle";attachmentCount=32;*'><!-- estimated: 556.479 ms -->
 <meta name=variant content='?q=webgpu:api,validation,render_pass,attachment_compatibility:render_pass_or_bundle_and_pipeline,depth_format:*'><!-- estimated: 107.520 ms -->
-<meta name=variant content='?q=webgpu:api,validation,render_pass,attachment_compatibility:render_pass_or_bundle_and_pipeline,depth_stencil_read_only_write_state:*'><!-- estimated: 450.528 ms -->
+<meta name=variant content='?q=webgpu:api,validation,render_pass,attachment_compatibility:render_pass_or_bundle_and_pipeline,depth_stencil_read_only_write_state:*'><!-- estimated: 589.152 ms -->
 <meta name=variant content='?q=webgpu:api,validation,render_pass,attachment_compatibility:render_pass_or_bundle_and_pipeline,sample_count:*'><!-- estimated: 7.296 ms -->
 <meta name=variant content='?q=webgpu:api,validation,render_pass,render_pass_descriptor:attachments,one_color_attachment:*'><!-- estimated: 33.401 ms -->
 <meta name=variant content='?q=webgpu:api,validation,render_pass,render_pass_descriptor:attachments,one_depth_stencil_attachment:*'><!-- estimated: 15.301 ms -->
@@ -5856,6 +5855,7 @@
 <meta name=variant content='?q=webgpu:compat,api,validation,encoding,cmds,copyTextureToBuffer:compressed:format="astc-12x10-unorm-srgb";*'><!-- estimated: 202.929 ms -->
 <meta name=variant content='?q=webgpu:compat,api,validation,encoding,cmds,copyTextureToBuffer:compressed:format="astc-12x12-unorm";*'><!-- estimated: 202.929 ms -->
 <meta name=variant content='?q=webgpu:compat,api,validation,encoding,cmds,copyTextureToBuffer:compressed:format="astc-12x12-unorm-srgb";*'><!-- estimated: 202.929 ms -->
+<meta name=variant content='?q=webgpu:compat,api,validation,encoding,cmds,copyTextureToTexture:compressed:*'><!-- estimated: 31.200 ms -->
 <meta name=variant content='?q=webgpu:compat,api,validation,encoding,programmable,pipeline_bind_group_compat:twoDifferentTextureViews,render_pass,used:*'><!-- estimated: 0.000 ms -->
 <meta name=variant content='?q=webgpu:compat,api,validation,encoding,programmable,pipeline_bind_group_compat:twoDifferentTextureViews,render_pass,unused:*'><!-- estimated: 64.008 ms -->
 <meta name=variant content='?q=webgpu:compat,api,validation,encoding,programmable,pipeline_bind_group_compat:twoDifferentTextureViews,compute_pass,used:*'><!-- estimated: 592.860 ms -->
