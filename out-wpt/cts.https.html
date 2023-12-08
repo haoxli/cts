@@ -809,6 +809,9 @@
 <meta name=variant content='?q=webgpu:api,validation,shader_module,entry_point:compute:*'>
 <meta name=variant content='?q=webgpu:api,validation,shader_module,entry_point:vertex:*'>
 <meta name=variant content='?q=webgpu:api,validation,shader_module,entry_point:fragment:*'>
+<meta name=variant content='?q=webgpu:api,validation,shader_module,entry_point:compute_undefined_entry_point_and_extra_stage:*'>
+<meta name=variant content='?q=webgpu:api,validation,shader_module,entry_point:vertex_undefined_entry_point_and_extra_stage:*'>
+<meta name=variant content='?q=webgpu:api,validation,shader_module,entry_point:fragment_undefined_entry_point_and_extra_stage:*'>
 <meta name=variant content='?q=webgpu:api,validation,shader_module,overrides:id_conflict:*'>
 <meta name=variant content='?q=webgpu:api,validation,shader_module,overrides:name_conflict:*'>
 <meta name=variant content='?q=webgpu:api,validation,state,device_lost,destroy:createBuffer:*'>
@@ -873,6 +876,8 @@
 <meta name=variant content='?q=webgpu:compat,api,validation,texture,createTexture:unsupportedTextureFormats:*'>
 <meta name=variant content='?q=webgpu:compat,api,validation,texture,createTexture:unsupportedTextureViewFormats:*'>
 <meta name=variant content='?q=webgpu:compat,api,validation,texture,createTexture:invalidTextureBindingViewDimension:*'>
+<meta name=variant content='?q=webgpu:compat,api,validation,texture,createTexture:depthOrArrayLayers_incompatible_with_textureBindingViewDimension:*'>
+<meta name=variant content='?q=webgpu:compat,api,validation,texture,createTexture:format_reinterpretation:*'>
 <meta name=variant content='?q=webgpu:compat,api,validation,texture,cubeArray:cube_array:*'>
 <meta name=variant content='?q=webgpu:examples:test_name:*'>
 <meta name=variant content='?q=webgpu:examples:not_implemented_yet,without_plan:*'>
@@ -2029,7 +2034,6 @@
 <meta name=variant content='?q=webgpu:web_platform,copyToTexture,image:copy_subrect_from_2D_Canvas:*'>
 <meta name=variant content='?q=webgpu:web_platform,copyToTexture,video:copy_from_video:*'>
 <meta name=variant content='?q=webgpu:web_platform,external_texture,video:importExternalTexture,sample:*'>
-<meta name=variant content='?q=webgpu:web_platform,external_texture,video:importExternalTexture,sampleWithRotationMetadata:*'>
 <meta name=variant content='?q=webgpu:web_platform,external_texture,video:importExternalTexture,sampleWithVideoFrameWithVisibleRectParam:*'>
 <meta name=variant content='?q=webgpu:web_platform,external_texture,video:importExternalTexture,compute:*'>
 <meta name=variant content='?q=webgpu:web_platform,worker,worker:worker:*'>

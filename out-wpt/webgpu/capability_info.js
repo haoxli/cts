@@ -490,7 +490,7 @@ export function storageTextureBindingTypeInfo(d) {
   };
 }
 /** List of all GPUStorageTextureAccess values. */
-export const kStorageTextureAccessValues = ['write-only'];
+export const kStorageTextureAccessValues = ['read-only', 'read-write', 'write-only'];
 assertTypeTrue();
 
 /** GPUBindGroupLayoutEntry, but only the "union" fields, not the common fields. */
@@ -689,7 +689,7 @@ const [kLimitInfoKeys, kLimitInfoDefaults, kLimitInfoData] =
   'maxVertexAttributes': [, 16, 16],
   'maxVertexBufferArrayStride': [, 2048, 2048],
   'maxInterStageShaderComponents': [, 60, 60],
-  'maxInterStageShaderVariables': [, 16, 16],
+  'maxInterStageShaderVariables': [, 16, 15],
 
   'maxColorAttachments': [, 8, 4],
   'maxColorAttachmentBytesPerSample': [, 32, 32],
@@ -790,3 +790,9 @@ export const kFeatureNameInfo =
 };
 /** List of all GPUFeatureName values. */
 export const kFeatureNames = keysOf(kFeatureNameInfo);
+
+/** List of all known WGSL language features */
+export const kKnownWGSLLanguageFeatures = [
+'readonly_and_readwrite_storage_textures',
+'packed_4x8_integer_dot_product',
+'unrestricted_pointer_parameters'];

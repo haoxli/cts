@@ -15,33 +15,10 @@ Returns the result_struct for the appropriate overload.
 The magnitude of the significand is in the range of [0.5, 1.0) or 0.
 `;import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { GPUTest } from '../../../../../gpu_test.js';
-import { skipUndefined } from '../../../../../util/compare.js';
-import {
-  i32,
+import { TypeF16, TypeF32, TypeI32, TypeVec } from '../../../../../util/conversion.js';
+import { allInputSources, basicExpressionBuilder, run } from '../../expression.js';
 
-  toVector,
-  TypeF32,
-  TypeF16,
-  TypeI32,
-  TypeVec } from
-
-'../../../../../util/conversion.js';
-import { FP } from '../../../../../util/floating_point.js';
-import {
-  frexp,
-  fullF16Range,
-  fullF32Range,
-  vectorF16Range,
-  vectorF32Range } from
-'../../../../../util/math.js';
-import { makeCaseCache } from '../../case_cache.js';
-import {
-  allInputSources,
-  basicExpressionBuilder,
-
-  run } from
-
-'../../expression.js';
+import { d } from './frexp.cache.js';
 
 export const g = makeTestGroup(GPUTest);
 
@@ -54,114 +31,6 @@ function fractBuilder() {
 function expBuilder() {
   return basicExpressionBuilder((value) => `frexp(${value}).exp`);
 }
-
-/* @returns a fract Case for a given scalar or vector input */
-function makeVectorCaseFract(v, trait) {
-  const fp = FP[trait];
-  let toInput;
-  let toOutput;
-  if (v instanceof Array) {
-    // Input is vector
-    toInput = (n) => toVector(n, fp.scalarBuilder);
-    toOutput = (n) => toVector(n, fp.scalarBuilder);
-  } else {
-    // Input is scalar, also wrap it in an array.
-    v = [v];
-    toInput = (n) => fp.scalarBuilder(n[0]);
-    toOutput = (n) => fp.scalarBuilder(n[0]);
-  }
-
-  v = v.map(fp.quantize);
-  if (v.some((e) => e !== 0 && fp.isSubnormal(e))) {
-    return { input: toInput(v), expected: skipUndefined(undefined) };
-  }
-
-  const fs = v.map((e) => {
-    return frexp(e, trait).fract;
-  });
-
-  return { input: toInput(v), expected: toOutput(fs) };
-}
-
-/* @returns an exp Case for a given scalar or vector input */
-function makeVectorCaseExp(v, trait) {
-  const fp = FP[trait];
-  let toInput;
-  let toOutput;
-  if (v instanceof Array) {
-    // Input is vector
-    toInput = (n) => toVector(n, fp.scalarBuilder);
-    toOutput = (n) => toVector(n, i32);
-  } else {
-    // Input is scalar, also wrap it in an array.
-    v = [v];
-    toInput = (n) => fp.scalarBuilder(n[0]);
-    toOutput = (n) => i32(n[0]);
-  }
-
-  v = v.map(fp.quantize);
-  if (v.some((e) => e !== 0 && fp.isSubnormal(e))) {
-    return { input: toInput(v), expected: skipUndefined(undefined) };
-  }
-
-  const fs = v.map((e) => {
-    return frexp(e, trait).exp;
-  });
-
-  return { input: toInput(v), expected: toOutput(fs) };
-}
-
-export const d = makeCaseCache('frexp', {
-  f32_fract: () => {
-    return fullF32Range().map((v) => makeVectorCaseFract(v, 'f32'));
-  },
-  f32_exp: () => {
-    return fullF32Range().map((v) => makeVectorCaseExp(v, 'f32'));
-  },
-  f32_vec2_fract: () => {
-    return vectorF32Range(2).map((v) => makeVectorCaseFract(v, 'f32'));
-  },
-  f32_vec2_exp: () => {
-    return vectorF32Range(2).map((v) => makeVectorCaseExp(v, 'f32'));
-  },
-  f32_vec3_fract: () => {
-    return vectorF32Range(3).map((v) => makeVectorCaseFract(v, 'f32'));
-  },
-  f32_vec3_exp: () => {
-    return vectorF32Range(3).map((v) => makeVectorCaseExp(v, 'f32'));
-  },
-  f32_vec4_fract: () => {
-    return vectorF32Range(4).map((v) => makeVectorCaseFract(v, 'f32'));
-  },
-  f32_vec4_exp: () => {
-    return vectorF32Range(4).map((v) => makeVectorCaseExp(v, 'f32'));
-  },
-  f16_fract: () => {
-    return fullF16Range().map((v) => makeVectorCaseFract(v, 'f16'));
-  },
-  f16_exp: () => {
-    return fullF16Range().map((v) => makeVectorCaseExp(v, 'f16'));
-  },
-  f16_vec2_fract: () => {
-    return vectorF16Range(2).map((v) => makeVectorCaseFract(v, 'f16'));
-  },
-  f16_vec2_exp: () => {
-    return vectorF16Range(2).map((v) => makeVectorCaseExp(v, 'f16'));
-  },
-  f16_vec3_fract: () => {
-    return vectorF16Range(3).map((v) => makeVectorCaseFract(v, 'f16'));
-  },
-  f16_vec3_exp: () => {
-    return vectorF16Range(3).map((v) => makeVectorCaseExp(v, 'f16'));
-  },
-  f16_vec4_fract: () => {
-    return vectorF16Range(4).map((v) => makeVectorCaseFract(v, 'f16'));
-  },
-  f16_vec4_exp: () => {
-    return vectorF16Range(4).map((v) => makeVectorCaseExp(v, 'f16'));
-  }
-});
-
 g.test('f32_fract').
 specURL('https://www.w3.org/TR/WGSL/#float-builtin-functions').
 desc(
