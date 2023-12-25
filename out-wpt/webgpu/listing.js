@@ -1680,6 +1680,12 @@ export const listing = [
   },
   {
     "file": [
+      "idl",
+      "constructable"
+    ]
+  },
+  {
+    "file": [
       "shader"
     ],
     "readme": "Tests for full coverage of the shaders that can be passed to WebGPU."
@@ -3406,6 +3412,14 @@ export const listing = [
       "execution",
       "shader_io",
       "compute_builtins"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "shader_io",
+      "fragment_builtins"
     ]
   },
   {
