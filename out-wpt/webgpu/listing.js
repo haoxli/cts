@@ -1590,6 +1590,14 @@ export const listing = [
       "compat",
       "api",
       "validation",
+      "createBindGroupLayout"
+    ]
+  },
+  {
+    "file": [
+      "compat",
+      "api",
+      "validation",
       "encoding",
       "cmds",
       "copyTextureToBuffer"
@@ -1613,6 +1621,15 @@ export const listing = [
       "encoding",
       "programmable",
       "pipeline_bind_group_compat"
+    ]
+  },
+  {
+    "file": [
+      "compat",
+      "api",
+      "validation",
+      "render_pipeline",
+      "depth_stencil_state"
     ]
   },
   {
