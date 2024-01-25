@@ -254,6 +254,15 @@ export const listing = [
       "operation",
       "memory_sync",
       "texture",
+      "readonly_depth_stencil"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "memory_sync",
+      "texture",
       "same_subresource"
     ]
   },
@@ -2423,6 +2432,26 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "dot4I8Packed"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "dot4U8Packed"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
       "dpdx"
     ]
   },
@@ -2764,6 +2793,46 @@ export const listing = [
       "call",
       "builtin",
       "pack4x8unorm"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "pack4xI8"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "pack4xI8Clamp"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "pack4xU8"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "pack4xU8Clamp"
     ]
   },
   {
@@ -3163,6 +3232,26 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "unpack4xI8"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
+      "unpack4xU8"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "call",
+      "builtin",
       "workgroupBarrier"
     ]
   },
@@ -3469,6 +3558,14 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "shader_io",
+      "workgroup_size"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "shadow"
     ]
   },
@@ -3587,6 +3684,16 @@ export const listing = [
       "call",
       "builtin",
       "acosh"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "arrayLength"
     ]
   },
   {
@@ -3747,6 +3854,16 @@ export const listing = [
       "call",
       "builtin",
       "exp2"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "floor"
     ]
   },
   {
@@ -3943,6 +4060,14 @@ export const listing = [
     "file": [
       "shader",
       "validation",
+      "extension",
+      "pointer_composite_access"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
       "functions",
       "alias_analysis"
     ]
@@ -4000,6 +4125,14 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "break_if"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "builtin"
     ]
   },
@@ -4025,6 +4158,14 @@ export const listing = [
       "validation",
       "parse",
       "const_assert"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "continuing"
     ]
   },
   {
