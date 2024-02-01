@@ -3289,6 +3289,15 @@ export const listing = [
       "execution",
       "expression",
       "unary",
+      "ai_assignment"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
       "bool_conversion"
     ]
   },
@@ -3362,6 +3371,15 @@ export const listing = [
       "expression",
       "unary",
       "i32_conversion"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
+      "indirection"
     ]
   },
   {
@@ -3473,6 +3491,13 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "memory_layout"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "memory_model",
       "adjacent"
     ]
@@ -3573,6 +3598,21 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "stage"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "statement",
+      "compound"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "statement",
       "increment_decrement"
     ]
@@ -3611,6 +3651,14 @@ export const listing = [
       "shader",
       "validation",
       "decl",
+      "compound_statement"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "decl",
       "const"
     ]
   },
@@ -3628,6 +3676,14 @@ export const listing = [
       "validation",
       "decl",
       "ptr_spelling"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "decl",
+      "var"
     ]
   },
   {
@@ -3754,6 +3810,16 @@ export const listing = [
       "call",
       "builtin",
       "atomics"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "barriers"
     ]
   },
   {
@@ -4149,6 +4215,14 @@ export const listing = [
       "shader",
       "validation",
       "parse",
+      "compound"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
       "const"
     ]
   },
@@ -4222,6 +4296,14 @@ export const listing = [
       "validation",
       "parse",
       "pipeline_stage"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "parse",
+      "requires"
     ]
   },
   {
@@ -4374,6 +4456,13 @@ export const listing = [
       "validation",
       "uniformity",
       "uniformity"
+    ]
+  },
+  {
+    "file": [
+      "util",
+      "texture",
+      "color_space_conversions"
     ]
   },
   {
