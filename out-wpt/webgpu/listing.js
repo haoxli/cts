@@ -509,6 +509,14 @@ export const listing = [
       "api",
       "operation",
       "storage_texture",
+      "read_only"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "storage_texture",
       "read_write"
     ]
   },
@@ -656,6 +664,15 @@ export const listing = [
       "capability_checks",
       "limits",
       "maxBindGroups"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "capability_checks",
+      "limits",
+      "maxBindGroupsPlusVertexBuffers"
     ]
   },
   {
@@ -1801,6 +1818,15 @@ export const listing = [
       "expression",
       "binary",
       "af_subtraction"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "binary",
+      "ai_arithmetic"
     ]
   },
   {
@@ -3022,7 +3048,7 @@ export const listing = [
       "expression",
       "call",
       "builtin",
-      "textureDimension"
+      "textureDimensions"
     ]
   },
   {
@@ -3271,6 +3297,15 @@ export const listing = [
       "execution",
       "expression",
       "unary",
+      "address_of_and_indirection"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
       "af_arithmetic"
     ]
   },
@@ -3281,6 +3316,15 @@ export const listing = [
       "expression",
       "unary",
       "af_assignment"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
+      "unary",
+      "ai_arithmetic"
     ]
   },
   {
@@ -3371,15 +3415,6 @@ export const listing = [
       "expression",
       "unary",
       "i32_conversion"
-    ]
-  },
-  {
-    "file": [
-      "shader",
-      "execution",
-      "expression",
-      "unary",
-      "indirection"
     ]
   },
   {
@@ -3524,6 +3559,14 @@ export const listing = [
       "execution",
       "memory_model",
       "coherence"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "memory_model",
+      "texture_intra_invocation_coherence"
     ]
   },
   {
@@ -4126,6 +4169,15 @@ export const listing = [
     "file": [
       "shader",
       "validation",
+      "expression",
+      "unary",
+      "address_of_and_indirection"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
       "extension",
       "pointer_composite_access"
     ]
@@ -4400,6 +4452,14 @@ export const listing = [
       "validation",
       "shader_io",
       "invariant"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "shader_io",
+      "layout_constraints"
     ]
   },
   {
