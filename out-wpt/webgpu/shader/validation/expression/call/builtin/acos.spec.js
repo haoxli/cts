@@ -6,12 +6,10 @@ Validation tests for the ${builtin}() builtin.
 import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { keysOf, objectsToRecord } from '../../../../../../common/util/data_tables.js';
 import {
-  TypeF16,
-  TypeF32,
-  elementType,
-  kAllFloatScalarsAndVectors,
-  kAllConcreteIntegerScalarsAndVectors,
-  kAllAbstractIntegerScalarAndVectors } from
+  Type,
+  kConcreteIntegerScalarsAndVectors,
+  kConvertableToFloatScalarsAndVectors,
+  scalarTypeOf } from
 '../../../../../util/conversion.js';
 import { absBigInt } from '../../../../../util/math.js';
 import { ShaderValidationTest } from '../../../shader_validation_test.js';
@@ -27,10 +25,7 @@ import {
 
 export const g = makeTestGroup(ShaderValidationTest);
 
-const kValuesTypes = objectsToRecord([
-...kAllAbstractIntegerScalarAndVectors,
-...kAllFloatScalarsAndVectors]
-);
+const kValuesTypes = objectsToRecord(kConvertableToFloatScalarsAndVectors);
 
 g.test('values').
 desc(
@@ -52,7 +47,7 @@ unique(
 )
 ).
 beforeAllSubcases((t) => {
-  if (elementType(kValuesTypes[t.params.type]) === TypeF16) {
+  if (scalarTypeOf(kValuesTypes[t.params.type]) === Type.f16) {
     t.selectDeviceOrSkipTestCase('shader-f16');
   }
 }).
@@ -71,7 +66,7 @@ fn((t) => {
 });
 
 // f32 is included here to confirm that validation is failing due to a type issue and not something else.
-const kIntegerArgumentTypes = objectsToRecord([TypeF32, ...kAllConcreteIntegerScalarsAndVectors]);
+const kIntegerArgumentTypes = objectsToRecord([Type.f32, ...kConcreteIntegerScalarsAndVectors]);
 
 g.test('integer_argument').
 desc(
@@ -85,7 +80,7 @@ fn((t) => {
   validateConstOrOverrideBuiltinEval(
     t,
     builtin,
-    /* expectedResult */type === TypeF32,
+    /* expectedResult */type === Type.f32,
     [type.create(0)],
     'constant'
   );

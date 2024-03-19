@@ -21,7 +21,7 @@ import {
 
   camelCaseToSnakeCase } from
 './helper/options.js';
-import { TestDedicatedWorker, TestSharedWorker } from './helper/test_worker.js';
+import { TestDedicatedWorker, TestSharedWorker, TestServiceWorker } from './helper/test_worker.js';
 
 const rootQuerySpec = 'webgpu:*';
 let promptBeforeReload = false;
@@ -66,6 +66,7 @@ setBaseResourcePath('../out/resources');
 const dedicatedWorker =
 options.worker === 'dedicated' ? new TestDedicatedWorker(options) : undefined;
 const sharedWorker = options.worker === 'shared' ? new TestSharedWorker(options) : undefined;
+const serviceWorker = options.worker === 'service' ? new TestServiceWorker(options) : undefined;
 
 const autoCloseOnPass = document.getElementById('autoCloseOnPass');
 const resultsVis = document.getElementById('resultsVis');
@@ -182,6 +183,8 @@ function makeCaseHTML(t) {
       await dedicatedWorker.run(rec, name);
     } else if (sharedWorker) {
       await sharedWorker.run(rec, name);
+    } else if (serviceWorker) {
+      await serviceWorker.run(rec, name);
     } else {
       await t.run(rec);
     }
@@ -547,7 +550,7 @@ function keyValueToPairs([k, v]) {
  */
 function prepareParams(params) {
   const pairsArrays = Object.entries(params).
-  filter(([, v]) => !!v).
+  filter(([, v]) => !!v && v !== '0').
   map(keyValueToPairs);
   const pairs = pairsArrays.flat();
   return new URLSearchParams(pairs).toString();
