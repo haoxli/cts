@@ -172,6 +172,9 @@
 <meta name=variant content='?q=webgpu:api,operation,render_pipeline,sample_mask:fragment_output_mask:*'>
 <meta name=variant content='?q=webgpu:api,operation,render_pipeline,sample_mask:alpha_to_coverage_mask:*'>
 <meta name=variant content='?q=webgpu:api,operation,render_pipeline,vertex_only_render_pipeline:draw_depth_and_stencil_with_vertex_only_pipeline:*'>
+<meta name=variant content='?q=webgpu:api,operation,rendering,3d_texture_slices:one_color_attachment,mip_levels:*'>
+<meta name=variant content='?q=webgpu:api,operation,rendering,3d_texture_slices:multiple_color_attachments,same_mip_level:*'>
+<meta name=variant content='?q=webgpu:api,operation,rendering,3d_texture_slices:multiple_color_attachments,same_slice_with_diff_mip_levels:*'>
 <meta name=variant content='?q=webgpu:api,operation,rendering,basic:clear:*'>
 <meta name=variant content='?q=webgpu:api,operation,rendering,basic:fullscreen_quad:*'>
 <meta name=variant content='?q=webgpu:api,operation,rendering,basic:large_draw:*'>
@@ -764,6 +767,7 @@
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,misc:basic:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,misc:vertex_state_only:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,misc:pipeline_layout,device_mismatch:*'>
+<meta name=variant content='?q=webgpu:api,validation,render_pipeline,misc:external_texture:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,multisample_state:count:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,multisample_state:alpha_to_coverage,count:*'>
 <meta name=variant content='?q=webgpu:api,validation,render_pipeline,multisample_state:alpha_to_coverage,sample_mask:*'>
@@ -1855,11 +1859,18 @@
 <meta name=variant content='?q=webgpu:shader,validation,decl,const:no_indirect_recursion:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,const:no_indirect_recursion_via_array_size:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,const:no_indirect_recursion_via_struct_attribute:*'>
+<meta name=variant content='?q=webgpu:shader,validation,decl,const:type:*'>
+<meta name=variant content='?q=webgpu:shader,validation,decl,const:initializer:*'>
+<meta name=variant content='?q=webgpu:shader,validation,decl,const:function_scope:*'>
+<meta name=variant content='?q=webgpu:shader,validation,decl,let:type:*'>
+<meta name=variant content='?q=webgpu:shader,validation,decl,let:initializer:*'>
+<meta name=variant content='?q=webgpu:shader,validation,decl,let:module_scope:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,override:no_direct_recursion:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,override:no_indirect_recursion:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,override:id:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,override:type:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,override:initializer:*'>
+<meta name=variant content='?q=webgpu:shader,validation,decl,override:function_scope:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,ptr_spelling:let_ptr_explicit_type_matches_var:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,ptr_spelling:let_ptr_reads:*'>
 <meta name=variant content='?q=webgpu:shader,validation,decl,ptr_spelling:let_ptr_writes:*'>

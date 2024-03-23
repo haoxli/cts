@@ -389,6 +389,14 @@ export const listing = [
       "api",
       "operation",
       "rendering",
+      "3d_texture_slices"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "operation",
+      "rendering",
       "basic"
     ]
   },
@@ -3812,6 +3820,14 @@ export const listing = [
       "validation",
       "decl",
       "const"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "decl",
+      "let"
     ]
   },
   {
