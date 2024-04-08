@@ -34,12 +34,14 @@ class TestBaseWorker {
 
   onmessage(ev) {
     const query = ev.data.query;
-    const result = ev.data.result;
-    if (result.logs) {
-      for (const l of result.logs) {
-        Object.setPrototypeOf(l, LogMessageWithStack.prototype);
-      }
-    }
+    const transferredResult = ev.data.result;
+
+    const result = {
+      status: transferredResult.status,
+      timems: transferredResult.timems,
+      logs: transferredResult.logs?.map((l) => new LogMessageWithStack(l))
+    };
+
     this.resolvers.get(query)(result);
     this.resolvers.delete(query);
 
@@ -126,9 +128,12 @@ export class TestServiceWorker extends TestBaseWorker {
   {
     const [suite, name] = query.split(':', 2);
     const fileName = name.split(',').join('/');
+
+    const selfPath = import.meta.url;
+    const selfPathDir = selfPath.substring(0, selfPath.lastIndexOf('/'));
+    // Construct the path to the worker file, then use URL to resolve the `../` components.
     const serviceWorkerURL = new URL(
-      `/out/${suite}/webworker/${fileName}.worker.js`,
-      window.location.href
+      `${selfPathDir}/../../../${suite}/webworker/${fileName}.worker.js`
     ).toString();
 
     // If a registration already exists for this path, it will be ignored.

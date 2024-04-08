@@ -628,6 +628,11 @@ export class ScalarType {
     return this._signed;
   }
 
+  // This allows width to be checked in cases where scalar and vector types are mixed.
+  get width() {
+    return 1;
+  }
+
   /** Constructs a ScalarValue of this type with `value` */
   create(value) {
     switch (typeof value) {
@@ -818,7 +823,7 @@ export class MatrixType {
 
 /** ArrayType describes the type of WGSL Array. */
 export class ArrayType {
-  // Number of elements in the array
+  // Number of elements in the array. Zero represents a runtime-sized array.
   // Element type
 
   // Maps a string representation of a array type to array type.
@@ -855,7 +860,9 @@ export class ArrayType {
   }
 
   toString() {
-    return `array<${this.elementType}, ${this.count}>`;
+    return this.count !== 0 ?
+    `array<${this.elementType}, ${this.count}>` :
+    `array<${this.elementType}>`;
   }
 
   get stride() {
@@ -868,6 +875,16 @@ export class ArrayType {
 
   get alignment() {
     return this.elementType.alignment;
+  }
+
+  /** Constructs an Array of this type with the given values */
+  create(value) {
+    if (value instanceof Array) {
+      assert(value.length === this.count);
+    } else {
+      value = Array(this.count).fill(value);
+    }
+    return new ArrayValue(value.map((v) => this.elementType.create(v)));
   }
 }
 
@@ -1790,6 +1807,11 @@ export class VectorValue {
   }
 }
 
+/** Helper for constructing a new vector with the provided values */
+export function vec(...elements) {
+  return new VectorValue(elements);
+}
+
 /** Helper for constructing a new two-element vector with the provided values */
 export function vec2(x, y) {
   return new VectorValue([x, y]);
@@ -2323,6 +2345,13 @@ const kFloatVec3 = [Type.vec(3, Type.abstractFloat), Type.vec3f, Type.vec3h];
 /// All floating-point vec4 types
 const kFloatVec4 = [Type.vec(4, Type.abstractFloat), Type.vec4f, Type.vec4h];
 
+export const kConcreteF32ScalarsAndVectors = [
+Type.f32,
+Type.vec2f,
+Type.vec3f,
+Type.vec4f];
+
+
 /// All f16 floating-point scalar and vector types
 export const kConcreteF16ScalarsAndVectors = [
 Type.f16,
@@ -2405,6 +2434,13 @@ Type.abstractInt,
 export const kAllNumericScalarsAndVectors = [
 ...kConvertableToFloatScalarsAndVectors,
 ...kConcreteIntegerScalarsAndVectors];
+
+
+/// All the concrete integer and floating point scalars and vectors.
+export const kConcreteNumericScalarsAndVectors = [
+...kConcreteIntegerScalarsAndVectors,
+...kConcreteF16ScalarsAndVectors,
+...kConcreteF32ScalarsAndVectors];
 
 
 /// All the scalar and vector types.
