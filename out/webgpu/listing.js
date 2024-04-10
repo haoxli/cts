@@ -3421,6 +3421,14 @@ export const listing = [
       "shader",
       "execution",
       "expression",
+      "precedence"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "expression",
       "unary",
       "address_of_and_indirection"
     ]
@@ -3994,6 +4002,26 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "all"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "any"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "arrayLength"
     ]
   },
@@ -4304,6 +4332,16 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "insertBits"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "inverseSqrt"
     ]
   },
@@ -4494,6 +4532,16 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "select"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "sign"
     ]
   },
@@ -4515,6 +4563,16 @@ export const listing = [
       "call",
       "builtin",
       "sinh"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "smoothstep"
     ]
   },
   {
@@ -4695,6 +4753,22 @@ export const listing = [
       "call",
       "builtin",
       "workgroupUniformLoad"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "overload_resolution"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "precedence"
     ]
   },
   {
