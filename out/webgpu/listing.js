@@ -3832,6 +3832,13 @@ export const listing = [
     "file": [
       "shader",
       "execution",
+      "value_init"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
       "zero_init"
     ]
   },
@@ -3902,23 +3909,7 @@ export const listing = [
       "shader",
       "validation",
       "decl",
-      "ptr_spelling"
-    ]
-  },
-  {
-    "file": [
-      "shader",
-      "validation",
-      "decl",
       "var"
-    ]
-  },
-  {
-    "file": [
-      "shader",
-      "validation",
-      "decl",
-      "var_access_mode"
     ]
   },
   {
@@ -4639,6 +4630,16 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "refract"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "reverseBits"
     ]
   },
@@ -4909,6 +4910,16 @@ export const listing = [
       "expression",
       "call",
       "builtin",
+      "transpose"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
       "trunc"
     ]
   },
@@ -4980,6 +4991,16 @@ export const listing = [
       "call",
       "builtin",
       "unpack4xU8"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "validation",
+      "expression",
+      "call",
+      "builtin",
+      "value_constructor"
     ]
   },
   {
@@ -5128,14 +5149,6 @@ export const listing = [
       "validation",
       "functions",
       "restrictions"
-    ]
-  },
-  {
-    "file": [
-      "shader",
-      "validation",
-      "parse",
-      "align"
     ]
   },
   {
@@ -5399,15 +5412,15 @@ export const listing = [
       "shader",
       "validation",
       "parse",
-      "var_and_let"
+      "while"
     ]
   },
   {
     "file": [
       "shader",
       "validation",
-      "parse",
-      "while"
+      "shader_io",
+      "align"
     ]
   },
   {
