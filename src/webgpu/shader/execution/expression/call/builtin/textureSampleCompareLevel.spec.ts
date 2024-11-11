@@ -13,12 +13,7 @@ The textureSampleCompareLevel function is the same as textureSampleCompare, exce
 
 import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import { kCompareFunctions } from '../../../../../capability_info.js';
-import {
-  isDepthTextureFormat,
-  isEncodableTextureFormat,
-  kDepthStencilFormats,
-} from '../../../../../format_info.js';
-import { kShaderStages } from '../../../../validation/decl/util.js';
+import { isDepthTextureFormat, kDepthStencilFormats } from '../../../../../format_info.js';
 
 import {
   checkCallResults,
@@ -29,6 +24,9 @@ import {
   generateTextureBuiltinInputs2D,
   kCubeSamplePointMethods,
   kSamplePointMethods,
+  kShortAddressModes,
+  kShortAddressModeToAddressMode,
+  kShortShaderStages,
   makeRandomDepthComparisonTexelGenerator,
   TextureCall,
   vec2,
@@ -60,23 +58,30 @@ Parameters:
   )
   .params(u =>
     u
-      .combine('stage', kShaderStages)
+      .combine('stage', kShortShaderStages)
       .combine('format', kDepthStencilFormats)
       // filter out stencil only formats
       .filter(t => isDepthTextureFormat(t.format))
-      // MAINTENANCE_TODO: Remove when support for depth24plus, depth24plus-stencil8, and depth32float-stencil8 is added.
-      .filter(t => isEncodableTextureFormat(t.format))
-      .combine('minFilter', ['nearest', 'linear'] as const)
+      .combine('filt', ['nearest', 'linear'] as const)
+      .combine('modeU', kShortAddressModes)
+      .combine('modeV', kShortAddressModes)
       .combine('offset', [false, true] as const)
       .beginSubcases()
       .combine('samplePoints', kSamplePointMethods)
-      .combine('addressModeU', ['clamp-to-edge', 'repeat', 'mirror-repeat'] as const)
-      .combine('addressModeV', ['clamp-to-edge', 'repeat', 'mirror-repeat'] as const)
       .combine('compare', kCompareFunctions)
   )
+  .beforeAllSubcases(t => t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format))
   .fn(async t => {
-    const { format, stage, samplePoints, addressModeU, addressModeV, minFilter, compare, offset } =
-      t.params;
+    const {
+      format,
+      stage,
+      samplePoints,
+      modeU,
+      modeV,
+      filt: minFilter,
+      compare,
+      offset,
+    } = t.params;
 
     const size = chooseTextureSize({ minSize: 16, minBlocks: 4, format });
 
@@ -90,8 +95,8 @@ Parameters:
       generator: makeRandomDepthComparisonTexelGenerator(descriptor, compare),
     });
     const sampler: GPUSamplerDescriptor = {
-      addressModeU,
-      addressModeV,
+      addressModeU: kShortAddressModeToAddressMode[modeU],
+      addressModeV: kShortAddressModeToAddressMode[modeV],
       compare,
       minFilter,
       magFilter: minFilter,
@@ -106,7 +111,7 @@ Parameters:
       derivatives: true,
       depthRef: true,
       offset,
-      hashInputs: [stage, format, samplePoints, addressModeU, addressModeV, minFilter, offset],
+      hashInputs: [stage, format, samplePoints, modeU, modeV, minFilter, offset],
     }).map(({ coords, derivativeMult, arrayIndex, depthRef, offset }) => {
       return {
         builtin: 'textureSampleCompareLevel',
@@ -156,20 +161,19 @@ Parameters:
   )
   .params(u =>
     u
-      .combine('stage', kShaderStages)
+      .combine('stage', kShortShaderStages)
       .combine('format', kDepthStencilFormats)
       // filter out stencil only formats
       .filter(t => isDepthTextureFormat(t.format))
-      // MAINTENANCE_TODO: Remove when support for depth24plus, depth24plus-stencil8, and depth32float-stencil8 is added.
-      .filter(t => isEncodableTextureFormat(t.format))
-      .combine('minFilter', ['nearest', 'linear'] as const)
+      .combine('filt', ['nearest', 'linear'] as const)
+      .combine('mode', kShortAddressModes)
       .beginSubcases()
       .combine('samplePoints', kCubeSamplePointMethods)
-      .combine('addressMode', ['clamp-to-edge', 'repeat', 'mirror-repeat'] as const)
       .combine('compare', kCompareFunctions)
   )
+  .beforeAllSubcases(t => t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format))
   .fn(async t => {
-    const { format, stage, samplePoints, addressMode, minFilter, compare } = t.params;
+    const { format, stage, samplePoints, mode, filt: minFilter, compare } = t.params;
 
     const viewDimension: GPUTextureViewDimension = 'cube';
     const size = chooseTextureSize({ minSize: 16, minBlocks: 2, format, viewDimension });
@@ -186,9 +190,9 @@ Parameters:
       generator: makeRandomDepthComparisonTexelGenerator(descriptor, compare),
     });
     const sampler: GPUSamplerDescriptor = {
-      addressModeU: addressMode,
-      addressModeV: addressMode,
-      addressModeW: addressMode,
+      addressModeU: kShortAddressModeToAddressMode[mode],
+      addressModeV: kShortAddressModeToAddressMode[mode],
+      addressModeW: kShortAddressModeToAddressMode[mode],
       compare,
       minFilter,
       magFilter: minFilter,
@@ -202,7 +206,7 @@ Parameters:
       derivatives: true,
       depthRef: true,
       textureBuiltin: 'textureSampleCompareLevel',
-      hashInputs: [stage, format, samplePoints, addressMode, minFilter, compare],
+      hashInputs: [stage, format, samplePoints, mode, minFilter, compare],
     }).map(({ coords, derivativeMult, depthRef }) => {
       return {
         builtin: 'textureSampleCompareLevel',
@@ -263,23 +267,22 @@ Parameters:
   )
   .params(u =>
     u
-      .combine('stage', kShaderStages)
+      .combine('stage', kShortShaderStages)
       .combine('format', kDepthStencilFormats)
       // filter out stencil only formats
       .filter(t => isDepthTextureFormat(t.format))
-      // MAINTENANCE_TODO: Remove when support for depth24plus, depth24plus-stencil8, and depth32float-stencil8 is added.
-      .filter(t => isEncodableTextureFormat(t.format))
-      .combine('minFilter', ['nearest', 'linear'] as const)
+      .combine('filt', ['nearest', 'linear'] as const)
+      .combine('modeU', kShortAddressModes)
+      .combine('modeV', kShortAddressModes)
       .combine('offset', [false, true] as const)
       .beginSubcases()
       .combine('samplePoints', kSamplePointMethods)
       .combine('A', ['i32', 'u32'] as const)
-      .combine('addressModeU', ['clamp-to-edge', 'repeat', 'mirror-repeat'] as const)
-      .combine('addressModeV', ['clamp-to-edge', 'repeat', 'mirror-repeat'] as const)
       .combine('compare', kCompareFunctions)
   )
   .beforeAllSubcases(t => {
     t.skipIfTextureFormatNotSupported(t.params.format);
+    t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format);
   })
   .fn(async t => {
     const {
@@ -287,9 +290,9 @@ Parameters:
       stage,
       samplePoints,
       A,
-      addressModeU,
-      addressModeV,
-      minFilter,
+      modeU,
+      modeV,
+      filt: minFilter,
       compare,
       offset,
     } = t.params;
@@ -307,8 +310,8 @@ Parameters:
       generator: makeRandomDepthComparisonTexelGenerator(descriptor, compare),
     });
     const sampler: GPUSamplerDescriptor = {
-      addressModeU,
-      addressModeV,
+      addressModeU: kShortAddressModeToAddressMode[modeU],
+      addressModeV: kShortAddressModeToAddressMode[modeV],
       compare,
       minFilter,
       magFilter: minFilter,
@@ -324,7 +327,7 @@ Parameters:
       arrayIndex: { num: texture.depthOrArrayLayers, type: A },
       depthRef: true,
       offset,
-      hashInputs: [stage, format, samplePoints, A, addressModeU, addressModeV, minFilter, offset],
+      hashInputs: [stage, format, samplePoints, A, modeU, modeV, minFilter, offset],
     }).map(({ coords, derivativeMult, arrayIndex, depthRef, offset }) => {
       return {
         builtin: 'textureSampleCompareLevel',
@@ -379,24 +382,23 @@ Parameters:
   )
   .params(u =>
     u
-      .combine('stage', kShaderStages)
+      .combine('stage', kShortShaderStages)
       .combine('format', kDepthStencilFormats)
       // filter out stencil only formats
       .filter(t => isDepthTextureFormat(t.format))
-      // MAINTENANCE_TODO: Remove when support for depth24plus, depth24plus-stencil8, and depth32float-stencil8 is added.
-      .filter(t => isEncodableTextureFormat(t.format))
-      .combine('minFilter', ['nearest', 'linear'] as const)
+      .combine('filt', ['nearest', 'linear'] as const)
+      .combine('mode', kShortAddressModes)
       .beginSubcases()
       .combine('samplePoints', kCubeSamplePointMethods)
       .combine('A', ['i32', 'u32'] as const)
-      .combine('addressMode', ['clamp-to-edge', 'repeat', 'mirror-repeat'] as const)
       .combine('compare', kCompareFunctions)
   )
   .beforeAllSubcases(t => {
     t.skipIfTextureViewDimensionNotSupported('cube-array');
+    t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format);
   })
   .fn(async t => {
-    const { format, A, stage, samplePoints, addressMode, minFilter, compare } = t.params;
+    const { format, A, stage, samplePoints, mode, filt: minFilter, compare } = t.params;
 
     const viewDimension: GPUTextureViewDimension = 'cube-array';
     const size = chooseTextureSize({ minSize: 8, minBlocks: 2, format, viewDimension });
@@ -411,9 +413,9 @@ Parameters:
       generator: makeRandomDepthComparisonTexelGenerator(descriptor, compare),
     });
     const sampler: GPUSamplerDescriptor = {
-      addressModeU: addressMode,
-      addressModeV: addressMode,
-      addressModeW: addressMode,
+      addressModeU: kShortAddressModeToAddressMode[mode],
+      addressModeV: kShortAddressModeToAddressMode[mode],
+      addressModeW: kShortAddressModeToAddressMode[mode],
       compare,
       minFilter,
       magFilter: minFilter,
@@ -428,7 +430,7 @@ Parameters:
       textureBuiltin: 'textureSampleCompareLevel',
       arrayIndex: { num: texture.depthOrArrayLayers / 6, type: A },
       depthRef: true,
-      hashInputs: [stage, format, samplePoints, addressMode, minFilter],
+      hashInputs: [stage, format, samplePoints, mode, minFilter],
     }).map(({ coords, derivativeMult, depthRef, arrayIndex }) => {
       return {
         builtin: 'textureSampleCompareLevel',

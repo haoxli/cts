@@ -26,19 +26,16 @@ import {
   canUseAsRenderTarget,
   isCompressedFloatTextureFormat,
   isDepthTextureFormat,
-  isEncodableTextureFormat,
   isMultisampledTextureFormat,
   isStencilTextureFormat,
-  kCompressedTextureFormats,
   kDepthStencilFormats,
-  kEncodableTextureFormats,
+  kAllTextureFormats,
   kTextureFormatInfo,
   textureDimensionAndFormatCompatible } from
 '../../../../../format_info.js';
 import { GPUTest } from '../../../../../gpu_test.js';
 import { maxMipLevelCount, virtualMipSize } from '../../../../../util/texture/base.js';
 import { TexelFormats } from '../../../../types.js';
-import { kShaderStages } from '../../../../validation/decl/util.js';
 
 import {
 
@@ -51,14 +48,13 @@ import {
 
 
   kSamplePointMethods,
+  kShortShaderStages,
   generateTextureBuiltinInputs1D,
   generateTextureBuiltinInputs2D,
   generateTextureBuiltinInputs3D,
 
   createVideoFrameWithRandomDataAndGetTexels } from
 './texture_utils.js';
-
-const kTestableColorFormats = [...kEncodableTextureFormats, ...kCompressedTextureFormats];
 
 export function normalizedCoordToTexelLoadTestCoord(
 descriptor,
@@ -91,8 +87,8 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
-combine('format', kTestableColorFormats).
+combine('stage', kShortShaderStages).
+combine('format', kAllTextureFormats).
 filter((t) => textureDimensionAndFormatCompatible('1d', t.format))
 // 1d textures can't have a height !== 1
 .filter((t) => kTextureFormatInfo[t.format].blockHeight === 1).
@@ -178,8 +174,8 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
-combine('format', kTestableColorFormats).
+combine('stage', kShortShaderStages).
+combine('format', kAllTextureFormats).
 filter((t) => !isCompressedFloatTextureFormat(t.format)).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).
@@ -260,8 +256,8 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
-combine('format', kTestableColorFormats).
+combine('stage', kShortShaderStages).
+combine('format', kAllTextureFormats).
 filter((t) => textureDimensionAndFormatCompatible('3d', t.format)).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).
@@ -346,12 +342,12 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combine('texture_type', [
 'texture_multisampled_2d',
 'texture_depth_multisampled_2d']
 ).
-combine('format', kTestableColorFormats).
+combine('format', kAllTextureFormats).
 filter((t) => isMultisampledTextureFormat(t.format)).
 filter((t) => !isStencilTextureFormat(t.format))
 // Filter out texture_depth_multisampled_2d with non-depth formats
@@ -441,12 +437,10 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combine('format', kDepthStencilFormats)
 // filter out stencil only formats
-.filter((t) => isDepthTextureFormat(t.format))
-// MAINTENANCE_TODO: Remove when support for depth24plus, depth24plus-stencil8, and depth32float-stencil8 is added.
-.filter((t) => isEncodableTextureFormat(t.format)).
+.filter((t) => isDepthTextureFormat(t.format)).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).
 combine('C', ['i32', 'u32']).
@@ -454,6 +448,7 @@ combine('L', ['i32', 'u32'])
 ).
 beforeAllSubcases((t) => {
   t.skipIfTextureLoadNotSupportedForTextureType('texture_depth_2d');
+  t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format);
 }).
 fn(async (t) => {
   const { format, stage, samplePoints, C, L } = t.params;
@@ -523,7 +518,7 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).
 combine('C', ['i32', 'u32']).
@@ -603,8 +598,8 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
-combine('format', kTestableColorFormats)
+combine('stage', kShortShaderStages).
+combine('format', kAllTextureFormats)
 // MAINTENANCE_TODO: Update createTextureFromTexelViews to support stencil8 and remove this filter.
 .filter((t) => t.format !== 'stencil8' && !isCompressedFloatTextureFormat(t.format)).
 combine('texture_type', ['texture_2d_array', 'texture_depth_2d_array']).
@@ -700,7 +695,7 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combineWithParams([...TexelFormats, { format: 'bgra8unorm' }]).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).
@@ -779,7 +774,7 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combineWithParams([...TexelFormats, { format: 'bgra8unorm' }]).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).
@@ -858,7 +853,7 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combineWithParams([...TexelFormats, { format: 'bgra8unorm' }]).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).
@@ -941,7 +936,7 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combineWithParams([...TexelFormats, { format: 'bgra8unorm' }]).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).

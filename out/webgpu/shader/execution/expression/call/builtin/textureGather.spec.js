@@ -27,12 +27,10 @@ A texture gather operation reads from a 2D, 2D array, cube, or cube array textur
 `;import { makeTestGroup } from '../../../../../../common/framework/test_group.js';
 import {
   isDepthTextureFormat,
-  isEncodableTextureFormat,
-  kCompressedTextureFormats,
+  isFilterableAsTextureF32,
   kDepthStencilFormats,
-  kEncodableTextureFormats } from
+  kAllTextureFormats } from
 '../../../../../format_info.js';
-import { kShaderStages } from '../../../../validation/decl/util.js';
 
 import {
   appendComponentTypeForFormatToTextureType,
@@ -45,14 +43,15 @@ import {
   isFillable,
   kCubeSamplePointMethods,
   kSamplePointMethods,
+  kShortAddressModes,
+  kShortAddressModeToAddressMode,
+  kShortShaderStages,
   skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice,
 
 
 
   WGSLTextureSampleTest } from
 './texture_utils.js';
-
-const kTestableColorFormats = [...kEncodableTextureFormats, ...kCompressedTextureFormats];
 
 export const g = makeTestGroup(WGSLTextureSampleTest);
 
@@ -84,24 +83,24 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
-combine('format', kTestableColorFormats).
+combine('stage', kShortShaderStages).
+combine('format', kAllTextureFormats).
 filter((t) => isFillable(t.format)).
-combine('minFilter', ['nearest', 'linear']).
+combine('filt', ['nearest', 'linear']).
+filter((t) => t.filt === 'nearest' || isFilterableAsTextureF32(t.format)).
+combine('modeU', kShortAddressModes).
+combine('modeV', kShortAddressModes).
 combine('offset', [false, true]).
 beginSubcases().
 combine('C', ['i32', 'u32']).
-combine('samplePoints', kSamplePointMethods).
-combine('addressModeU', ['clamp-to-edge', 'repeat', 'mirror-repeat']).
-combine('addressModeV', ['clamp-to-edge', 'repeat', 'mirror-repeat'])
+combine('samplePoints', kSamplePointMethods)
 ).
 beforeAllSubcases((t) => {
   t.skipIfTextureFormatNotSupported(t.params.format);
-  skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(t, t.params.minFilter, t.params.format);
+  skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(t, t.params.filt, t.params.format);
 }).
 fn(async (t) => {
-  const { format, C, samplePoints, stage, addressModeU, addressModeV, minFilter, offset } =
-  t.params;
+  const { format, C, samplePoints, stage, modeU, modeV, filt: minFilter, offset } = t.params;
 
   // We want at least 4 blocks or something wide enough for 3 mip levels.
   const [width, height] = chooseTextureSize({ minSize: 8, minBlocks: 4, format });
@@ -113,8 +112,8 @@ fn(async (t) => {
   };
   const { texels, texture } = await createTextureWithRandomDataAndGetTexels(t, descriptor);
   const sampler = {
-    addressModeU,
-    addressModeV,
+    addressModeU: kShortAddressModeToAddressMode[modeU],
+    addressModeV: kShortAddressModeToAddressMode[modeV],
     minFilter,
     magFilter: minFilter,
     mipmapFilter: minFilter
@@ -127,7 +126,7 @@ fn(async (t) => {
     descriptor,
     offset,
     component: true,
-    hashInputs: [stage, format, C, samplePoints, addressModeU, addressModeV, minFilter, offset]
+    hashInputs: [stage, format, C, samplePoints, modeU, modeV, minFilter, offset]
   }).map(({ coords, component, offset }) => {
     return {
       builtin: 'textureGather',
@@ -182,21 +181,22 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
-combine('format', kTestableColorFormats).
+combine('stage', kShortShaderStages).
+combine('format', kAllTextureFormats).
 filter((t) => isFillable(t.format)).
-combine('minFilter', ['nearest', 'linear']).
+combine('filt', ['nearest', 'linear']).
+filter((t) => t.filt === 'nearest' || isFilterableAsTextureF32(t.format)).
+combine('mode', kShortAddressModes).
 beginSubcases().
 combine('C', ['i32', 'u32']).
-combine('samplePoints', kCubeSamplePointMethods).
-combine('addressMode', ['clamp-to-edge', 'repeat', 'mirror-repeat'])
+combine('samplePoints', kCubeSamplePointMethods)
 ).
 beforeAllSubcases((t) => {
   t.skipIfTextureFormatNotSupported(t.params.format);
-  skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(t, t.params.minFilter, t.params.format);
+  skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(t, t.params.filt, t.params.format);
 }).
 fn(async (t) => {
-  const { format, C, stage, samplePoints, addressMode, minFilter } = t.params;
+  const { format, C, stage, samplePoints, mode, filt: minFilter } = t.params;
 
   const viewDimension = 'cube';
   const [width, height] = chooseTextureSize({ minSize: 8, minBlocks: 2, format, viewDimension });
@@ -211,9 +211,9 @@ fn(async (t) => {
   };
   const { texels, texture } = await createTextureWithRandomDataAndGetTexels(t, descriptor);
   const sampler = {
-    addressModeU: addressMode,
-    addressModeV: addressMode,
-    addressModeW: addressMode,
+    addressModeU: kShortAddressModeToAddressMode[mode],
+    addressModeV: kShortAddressModeToAddressMode[mode],
+    addressModeW: kShortAddressModeToAddressMode[mode],
     minFilter,
     magFilter: minFilter,
     mipmapFilter: minFilter
@@ -225,7 +225,7 @@ fn(async (t) => {
     descriptor,
     component: true,
     textureBuiltin: 'textureGather',
-    hashInputs: [stage, format, C, samplePoints, addressMode, minFilter]
+    hashInputs: [stage, format, C, samplePoints, mode, minFilter]
   }).map(({ coords, component }) => {
     return {
       builtin: 'textureGather',
@@ -290,25 +290,25 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
-combine('format', kTestableColorFormats).
+combine('stage', kShortShaderStages).
+combine('format', kAllTextureFormats).
 filter((t) => isFillable(t.format)).
-combine('minFilter', ['nearest', 'linear']).
+combine('filt', ['nearest', 'linear']).
+filter((t) => t.filt === 'nearest' || isFilterableAsTextureF32(t.format)).
+combine('modeU', kShortAddressModes).
+combine('modeV', kShortAddressModes).
 combine('offset', [false, true]).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).
 combine('C', ['i32', 'u32']).
-combine('A', ['i32', 'u32']).
-combine('addressModeU', ['clamp-to-edge', 'repeat', 'mirror-repeat']).
-combine('addressModeV', ['clamp-to-edge', 'repeat', 'mirror-repeat'])
+combine('A', ['i32', 'u32'])
 ).
 beforeAllSubcases((t) => {
   t.skipIfTextureFormatNotSupported(t.params.format);
-  skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(t, t.params.minFilter, t.params.format);
+  skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(t, t.params.filt, t.params.format);
 }).
 fn(async (t) => {
-  const { format, stage, samplePoints, C, A, addressModeU, addressModeV, minFilter, offset } =
-  t.params;
+  const { format, stage, samplePoints, C, A, modeU, modeV, filt: minFilter, offset } = t.params;
 
   // We want at least 4 blocks or something wide enough for 3 mip levels.
   const [width, height] = chooseTextureSize({ minSize: 8, minBlocks: 4, format });
@@ -322,8 +322,8 @@ fn(async (t) => {
   };
   const { texels, texture } = await createTextureWithRandomDataAndGetTexels(t, descriptor);
   const sampler = {
-    addressModeU,
-    addressModeV,
+    addressModeU: kShortAddressModeToAddressMode[modeU],
+    addressModeV: kShortAddressModeToAddressMode[modeV],
     minFilter,
     magFilter: minFilter,
     mipmapFilter: minFilter
@@ -337,17 +337,7 @@ fn(async (t) => {
     arrayIndex: { num: texture.depthOrArrayLayers, type: A },
     offset,
     component: true,
-    hashInputs: [
-    stage,
-    format,
-    samplePoints,
-    C,
-    A,
-    addressModeU,
-    addressModeV,
-    minFilter,
-    offset]
-
+    hashInputs: [stage, format, samplePoints, C, A, modeU, modeV, minFilter, offset]
   }).map(({ coords, component, arrayIndex, offset }) => {
     return {
       builtin: 'textureGather',
@@ -407,23 +397,24 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
-combine('format', kTestableColorFormats).
+combine('stage', kShortShaderStages).
+combine('format', kAllTextureFormats).
 filter((t) => isFillable(t.format)).
-combine('minFilter', ['nearest', 'linear']).
+combine('filt', ['nearest', 'linear']).
+filter((t) => t.filt === 'nearest' || isFilterableAsTextureF32(t.format)).
+combine('mode', kShortAddressModes).
 beginSubcases().
 combine('samplePoints', kCubeSamplePointMethods).
 combine('C', ['i32', 'u32']).
-combine('A', ['i32', 'u32']).
-combine('addressMode', ['clamp-to-edge', 'repeat', 'mirror-repeat'])
+combine('A', ['i32', 'u32'])
 ).
 beforeAllSubcases((t) => {
   t.skipIfTextureFormatNotSupported(t.params.format);
   t.skipIfTextureViewDimensionNotSupported('cube-array');
-  skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(t, t.params.minFilter, t.params.format);
+  skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(t, t.params.filt, t.params.format);
 }).
 fn(async (t) => {
-  const { format, C, A, stage, samplePoints, addressMode, minFilter } = t.params;
+  const { format, C, A, stage, samplePoints, mode, filt: minFilter } = t.params;
 
   const viewDimension = 'cube-array';
   const size = chooseTextureSize({ minSize: 8, minBlocks: 2, format, viewDimension });
@@ -437,9 +428,9 @@ fn(async (t) => {
   };
   const { texels, texture } = await createTextureWithRandomDataAndGetTexels(t, descriptor);
   const sampler = {
-    addressModeU: addressMode,
-    addressModeV: addressMode,
-    addressModeW: addressMode,
+    addressModeU: kShortAddressModeToAddressMode[mode],
+    addressModeV: kShortAddressModeToAddressMode[mode],
+    addressModeW: kShortAddressModeToAddressMode[mode],
     minFilter,
     magFilter: minFilter,
     mipmapFilter: minFilter
@@ -452,7 +443,7 @@ fn(async (t) => {
     component: true,
     textureBuiltin: 'textureGather',
     arrayIndex: { num: texture.depthOrArrayLayers / 6, type: A },
-    hashInputs: [stage, format, C, samplePoints, addressMode, minFilter]
+    hashInputs: [stage, format, C, samplePoints, mode, minFilter]
   }).map(({ coords, component, arrayIndex }) => {
     return {
       builtin: 'textureGather',
@@ -511,21 +502,19 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combine('format', kDepthStencilFormats)
 // filter out stencil only formats
-.filter((t) => isDepthTextureFormat(t.format))
-// MAINTENANCE_TODO: Remove when support for depth24plus, depth24plus-stencil8, and depth32float-stencil8 is added.
-.filter((t) => isEncodableTextureFormat(t.format)).
-combine('minFilter', ['nearest', 'linear']).
+.filter((t) => isDepthTextureFormat(t.format)).
+combine('modeU', kShortAddressModes).
+combine('modeV', kShortAddressModes).
 combine('offset', [false, true]).
 beginSubcases().
-combine('samplePoints', kSamplePointMethods).
-combine('addressModeU', ['clamp-to-edge', 'repeat', 'mirror-repeat']).
-combine('addressModeV', ['clamp-to-edge', 'repeat', 'mirror-repeat'])
+combine('samplePoints', kSamplePointMethods)
 ).
+beforeAllSubcases((t) => t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format)).
 fn(async (t) => {
-  const { format, stage, samplePoints, addressModeU, addressModeV, minFilter, offset } = t.params;
+  const { format, stage, samplePoints, modeU, modeV, offset } = t.params;
 
   // We want at least 4 blocks or something wide enough for 3 mip levels.
   const [width, height] = chooseTextureSize({ minSize: 8, minBlocks: 4, format });
@@ -537,11 +526,8 @@ fn(async (t) => {
   };
   const { texels, texture } = await createTextureWithRandomDataAndGetTexels(t, descriptor);
   const sampler = {
-    addressModeU,
-    addressModeV,
-    minFilter,
-    magFilter: minFilter,
-    mipmapFilter: minFilter
+    addressModeU: kShortAddressModeToAddressMode[modeU],
+    addressModeV: kShortAddressModeToAddressMode[modeV]
   };
 
   const calls = generateTextureBuiltinInputs2D(50, {
@@ -550,7 +536,7 @@ fn(async (t) => {
     sampler,
     descriptor,
     offset,
-    hashInputs: [stage, format, samplePoints, addressModeU, addressModeV, minFilter, offset]
+    hashInputs: [stage, format, samplePoints, modeU, modeV, offset]
   }).map(({ coords, offset }) => {
     return {
       builtin: 'textureGather',
@@ -597,19 +583,17 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combine('format', kDepthStencilFormats)
 // filter out stencil only formats
-.filter((t) => isDepthTextureFormat(t.format))
-// MAINTENANCE_TODO: Remove when support for depth24plus, depth24plus-stencil8, and depth32float-stencil8 is added.
-.filter((t) => isEncodableTextureFormat(t.format)).
-combine('minFilter', ['nearest', 'linear']).
+.filter((t) => isDepthTextureFormat(t.format)).
+combine('mode', kShortAddressModes).
 beginSubcases().
-combine('samplePoints', kCubeSamplePointMethods).
-combine('addressMode', ['clamp-to-edge', 'repeat', 'mirror-repeat'])
+combine('samplePoints', kCubeSamplePointMethods)
 ).
+beforeAllSubcases((t) => t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format)).
 fn(async (t) => {
-  const { format, stage, samplePoints, addressMode, minFilter } = t.params;
+  const { format, stage, samplePoints, mode } = t.params;
 
   const viewDimension = 'cube';
   const [width, height] = chooseTextureSize({ minSize: 8, minBlocks: 2, format, viewDimension });
@@ -624,12 +608,9 @@ fn(async (t) => {
   };
   const { texels, texture } = await createTextureWithRandomDataAndGetTexels(t, descriptor);
   const sampler = {
-    addressModeU: addressMode,
-    addressModeV: addressMode,
-    addressModeW: addressMode,
-    minFilter,
-    magFilter: minFilter,
-    mipmapFilter: minFilter
+    addressModeU: kShortAddressModeToAddressMode[mode],
+    addressModeV: kShortAddressModeToAddressMode[mode],
+    addressModeW: kShortAddressModeToAddressMode[mode]
   };
 
   const calls = generateSamplePointsCube(50, {
@@ -637,7 +618,7 @@ fn(async (t) => {
     sampler,
     descriptor,
     textureBuiltin: 'textureGather',
-    hashInputs: [stage, format, samplePoints, addressMode, minFilter]
+    hashInputs: [stage, format, samplePoints, mode]
   }).map(({ coords, component }) => {
     return {
       builtin: 'textureGather',
@@ -695,27 +676,23 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combine('format', kDepthStencilFormats)
 // filter out stencil only formats
-.filter((t) => isDepthTextureFormat(t.format))
-// MAINTENANCE_TODO: Remove when support for depth24plus, depth24plus-stencil8, and depth32float-stencil8 is added.
-.filter((t) => isEncodableTextureFormat(t.format)).
-combine('minFilter', ['nearest', 'linear']).
+.filter((t) => isDepthTextureFormat(t.format)).
+combine('modeU', kShortAddressModes).
+combine('modeV', kShortAddressModes).
 combine('offset', [false, true]).
 beginSubcases().
 combine('samplePoints', kSamplePointMethods).
-combine('A', ['i32', 'u32']).
-combine('addressModeU', ['clamp-to-edge', 'repeat', 'mirror-repeat']).
-combine('addressModeV', ['clamp-to-edge', 'repeat', 'mirror-repeat'])
+combine('A', ['i32', 'u32'])
 ).
 beforeAllSubcases((t) => {
   t.skipIfTextureFormatNotSupported(t.params.format);
-  skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(t, t.params.minFilter, t.params.format);
+  t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format);
 }).
 fn(async (t) => {
-  const { format, stage, samplePoints, A, addressModeU, addressModeV, minFilter, offset } =
-  t.params;
+  const { format, stage, samplePoints, A, modeU, modeV, offset } = t.params;
 
   // We want at least 4 blocks or something wide enough for 3 mip levels.
   const [width, height] = chooseTextureSize({ minSize: 8, minBlocks: 4, format });
@@ -729,11 +706,8 @@ fn(async (t) => {
   };
   const { texels, texture } = await createTextureWithRandomDataAndGetTexels(t, descriptor);
   const sampler = {
-    addressModeU,
-    addressModeV,
-    minFilter,
-    magFilter: minFilter,
-    mipmapFilter: minFilter
+    addressModeU: kShortAddressModeToAddressMode[modeU],
+    addressModeV: kShortAddressModeToAddressMode[modeV]
   };
 
   const calls = generateTextureBuiltinInputs2D(50, {
@@ -743,7 +717,7 @@ fn(async (t) => {
     descriptor,
     arrayIndex: { num: texture.depthOrArrayLayers, type: A },
     offset,
-    hashInputs: [stage, format, samplePoints, A, addressModeU, addressModeV, minFilter, offset]
+    hashInputs: [stage, format, samplePoints, A, modeU, modeV, offset]
   }).map(({ coords, arrayIndex, offset }) => {
     return {
       builtin: 'textureGather',
@@ -795,23 +769,21 @@ Parameters:
 ).
 params((u) =>
 u.
-combine('stage', kShaderStages).
+combine('stage', kShortShaderStages).
 combine('format', kDepthStencilFormats)
 // filter out stencil only formats
-.filter((t) => isDepthTextureFormat(t.format))
-// MAINTENANCE_TODO: Remove when support for depth24plus, depth24plus-stencil8, and depth32float-stencil8 is added.
-.filter((t) => isEncodableTextureFormat(t.format)).
-combine('minFilter', ['nearest', 'linear']).
+.filter((t) => isDepthTextureFormat(t.format)).
+combine('mode', kShortAddressModes).
 beginSubcases().
 combine('samplePoints', kCubeSamplePointMethods).
-combine('A', ['i32', 'u32']).
-combine('addressMode', ['clamp-to-edge', 'repeat', 'mirror-repeat'])
+combine('A', ['i32', 'u32'])
 ).
 beforeAllSubcases((t) => {
   t.skipIfTextureViewDimensionNotSupported('cube-array');
+  t.selectDeviceForTextureFormatOrSkipTestCase(t.params.format);
 }).
 fn(async (t) => {
-  const { format, A, stage, samplePoints, addressMode, minFilter } = t.params;
+  const { format, A, stage, samplePoints, mode } = t.params;
 
   const viewDimension = 'cube-array';
   const size = chooseTextureSize({ minSize: 8, minBlocks: 2, format, viewDimension });
@@ -825,12 +797,9 @@ fn(async (t) => {
   };
   const { texels, texture } = await createTextureWithRandomDataAndGetTexels(t, descriptor);
   const sampler = {
-    addressModeU: addressMode,
-    addressModeV: addressMode,
-    addressModeW: addressMode,
-    minFilter,
-    magFilter: minFilter,
-    mipmapFilter: minFilter
+    addressModeU: kShortAddressModeToAddressMode[mode],
+    addressModeV: kShortAddressModeToAddressMode[mode],
+    addressModeW: kShortAddressModeToAddressMode[mode]
   };
 
   const calls = generateSamplePointsCube(50, {
@@ -839,7 +808,7 @@ fn(async (t) => {
     descriptor,
     textureBuiltin: 'textureGather',
     arrayIndex: { num: texture.depthOrArrayLayers / 6, type: A },
-    hashInputs: [stage, format, samplePoints, addressMode, minFilter]
+    hashInputs: [stage, format, samplePoints, mode]
   }).map(({ coords, arrayIndex }) => {
     return {
       builtin: 'textureGather',
