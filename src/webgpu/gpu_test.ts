@@ -21,12 +21,7 @@ import {
   unreachable,
 } from '../common/util/util.js';
 
-import {
-  getDefaultLimits,
-  kLimits,
-  kQueryTypeInfo,
-  WGSLLanguageFeature,
-} from './capability_info.js';
+import { kLimits, kQueryTypeInfo, WGSLLanguageFeature } from './capability_info.js';
 import { InterpolationType, InterpolationSampling } from './constants.js';
 import {
   kTextureFormatInfo,
@@ -41,7 +36,13 @@ import {
 import { checkElementsEqual, checkElementsBetween } from './util/check_contents.js';
 import { CommandBufferMaker, EncoderType } from './util/command_buffer_maker.js';
 import { ScalarType } from './util/conversion.js';
-import { DevicePool, DeviceProvider, UncanonicalizedDeviceDescriptor } from './util/device_pool.js';
+import {
+  CanonicalDeviceDescriptor,
+  DescriptorModifier,
+  DevicePool,
+  DeviceProvider,
+  UncanonicalizedDeviceDescriptor,
+} from './util/device_pool.js';
 import { align, roundDown } from './util/math.js';
 import { physicalMipSizeFromTexture, virtualMipSize } from './util/texture/base.js';
 import {
@@ -61,6 +62,17 @@ import {
 import { createTextureFromTexelViews } from './util/texture.js';
 import { reifyExtent3D, reifyOrigin3D } from './util/unions.js';
 
+// Declarations for WebGPU items we want tests for that are not yet officially part of the spec.
+declare global {
+  // MAINTENANCE_TODO: remove once added to @webgpu/types
+  interface GPUSupportedLimits {
+    readonly maxStorageBuffersInFragmentStage?: number;
+    readonly maxStorageTexturesInFragmentStage?: number;
+    readonly maxStorageBuffersInVertexStage?: number;
+    readonly maxStorageTexturesInVertexStage?: number;
+  }
+}
+
 const devicePool = new DevicePool();
 
 // MAINTENANCE_TODO: When DevicePool becomes able to provide multiple devices at once, use the
@@ -72,7 +84,7 @@ export type ResourceState = (typeof kResourceStateValues)[number];
 export const kResourceStates: readonly ResourceState[] = kResourceStateValues;
 
 /** Various "convenient" shorthands for GPUDeviceDescriptors for selectDevice functions. */
-type DeviceSelectionDescriptor =
+export type DeviceSelectionDescriptor =
   | UncanonicalizedDeviceDescriptor
   | GPUFeatureName
   | undefined
@@ -126,10 +138,6 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
     return globalTestConfig.compatibility;
   }
 
-  getDefaultLimits() {
-    return getDefaultLimits(this.isCompatibility ? 'compatibility' : 'core');
-  }
-
   /**
    * Some tests or cases need particular feature flags or limits to be enabled.
    * Call this function with a descriptor or feature name (or `undefined`) to select a
@@ -137,11 +145,15 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
    *
    * If the request isn't supported, throws a SkipTestCase exception to skip the entire test case.
    */
-  selectDeviceOrSkipTestCase(descriptor: DeviceSelectionDescriptor): void {
+  selectDeviceOrSkipTestCase(
+    descriptor: DeviceSelectionDescriptor,
+    descriptorModifier?: DescriptorModifier
+  ): void {
     assert(this.provider === undefined, "Can't selectDeviceOrSkipTestCase() multiple times");
     this.provider = devicePool.acquire(
       this.recorder,
-      initUncanonicalizedDeviceDescriptor(descriptor)
+      initUncanonicalizedDeviceDescriptor(descriptor),
+      descriptorModifier
     );
     // Suppress uncaught promise rejection (we'll catch it later).
     this.provider.catch(() => {});
@@ -202,7 +214,8 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
 
     this.mismatchedProvider = mismatchedDevicePool.acquire(
       this.recorder,
-      initUncanonicalizedDeviceDescriptor(descriptor)
+      initUncanonicalizedDeviceDescriptor(descriptor),
+      undefined
     );
     // Suppress uncaught promise rejection (we'll catch it later).
     this.mismatchedProvider.catch(() => {});
@@ -300,6 +313,14 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
     }
   }
 
+  /** Skips this test case if a depth texture can not be used with a non-comparison sampler. */
+  skipIfDepthTextureCanNotBeUsedWithNonComparisonSampler() {
+    this.skipIf(
+      this.isCompatibility,
+      'depth textures are not usable with non-comparison samplers in compatibility mode'
+    );
+  }
+
   /** Skips this test case if the `langFeature` is *not* supported. */
   skipIfLanguageFeatureNotSupported(langFeature: WGSLLanguageFeature) {
     if (!this.hasLanguageFeature(langFeature)) {
@@ -350,16 +371,8 @@ export class GPUTestBase extends Fixture<GPUTestSubcaseBatchState> {
     return globalTestConfig.compatibility;
   }
 
-  getDefaultLimits() {
-    return getDefaultLimits(this.isCompatibility ? 'compatibility' : 'core');
-  }
-
-  getDefaultLimit(limit: (typeof kLimits)[number]) {
-    return this.getDefaultLimits()[limit].default;
-  }
-
   makeLimitVariant(limit: (typeof kLimits)[number], variant: ValueTestVariant) {
-    return makeValueTestVariant(this.device.limits[limit], variant);
+    return makeValueTestVariant(this.device.limits[limit]!, variant);
   }
 
   canCallCopyTextureToBufferWithTextureFormat(format: GPUTextureFormat) {
@@ -1269,6 +1282,82 @@ export class GPUTest extends GPUTestBase {
 }
 
 /**
+ * Gets the adapter limits as a standard JavaScript object.
+ */
+function getAdapterLimitsAsDeviceRequiredLimits(adapter: GPUAdapter) {
+  const requiredLimits: Record<string, GPUSize64> = {};
+  const adapterLimits = adapter.limits as unknown as Record<string, GPUSize64>;
+  for (const key in adapter.limits) {
+    // MAINTENANCE_TODO: Remove this once minSubgroupSize is removed from
+    // chromium.
+    if (key === 'maxSubgroupSize' || key === 'minSubgroupSize') {
+      continue;
+    }
+    requiredLimits[key] = adapterLimits[key];
+  }
+  return requiredLimits;
+}
+
+function setAllLimitsToAdapterLimits(
+  adapter: GPUAdapter,
+  desc: CanonicalDeviceDescriptor | undefined
+) {
+  const descWithMaxLimits: CanonicalDeviceDescriptor = {
+    requiredFeatures: [],
+    defaultQueue: {},
+    ...desc,
+    requiredLimits: getAdapterLimitsAsDeviceRequiredLimits(adapter),
+  };
+  return descWithMaxLimits;
+}
+
+/**
+ * Used by MaxLimitsTest to request a device with all the max limits of the adapter.
+ */
+export class MaxLimitsGPUTestSubcaseBatchState extends GPUTestSubcaseBatchState {
+  override selectDeviceOrSkipTestCase(
+    descriptor: DeviceSelectionDescriptor,
+    descriptorModifier?: DescriptorModifier
+  ): void {
+    const mod: DescriptorModifier = {
+      descriptorModifier(adapter: GPUAdapter, desc: CanonicalDeviceDescriptor | undefined) {
+        desc = descriptorModifier?.descriptorModifier
+          ? descriptorModifier.descriptorModifier(adapter, desc)
+          : desc;
+        return setAllLimitsToAdapterLimits(adapter, desc);
+      },
+      keyModifier(baseKey: string) {
+        return `${baseKey}:MaxLimits`;
+      },
+    };
+    super.selectDeviceOrSkipTestCase(initUncanonicalizedDeviceDescriptor(descriptor), mod);
+  }
+}
+
+export type MaxLimitsTestMixinType = {
+  // placeholder. Change to an interface if we need MaxLimits specific methods.
+};
+
+export function MaxLimitsTestMixin<F extends FixtureClass<GPUTestBase>>(
+  Base: F
+): FixtureClassWithMixin<F, MaxLimitsTestMixinType> {
+  class MaxLimitsImpl
+    extends (Base as FixtureClassInterface<GPUTestBase>)
+    implements MaxLimitsTestMixinType
+  {
+    //
+    public static override MakeSharedState(
+      recorder: TestCaseRecorder,
+      params: TestParams
+    ): GPUTestSubcaseBatchState {
+      return new MaxLimitsGPUTestSubcaseBatchState(recorder, params);
+    }
+  }
+
+  return MaxLimitsImpl as unknown as FixtureClassWithMixin<F, MaxLimitsTestMixinType>;
+}
+
+/**
  * Texture expectation mixin can be applied on top of GPUTest to add texture
  * related expectation helpers.
  */
@@ -1486,11 +1575,11 @@ type LinearCopyParameters = {
   data: Uint8Array;
 };
 
-export function TextureTestMixin<F extends FixtureClass<GPUTest>>(
+export function TextureTestMixin<F extends FixtureClass<GPUTestBase>>(
   Base: F
 ): FixtureClassWithMixin<F, TextureTestMixinType> {
   class TextureExpectations
-    extends (Base as FixtureClassInterface<GPUTest>)
+    extends (Base as FixtureClassInterface<GPUTestBase>)
     implements TextureTestMixinType
   {
     /**

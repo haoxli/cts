@@ -2,7 +2,11 @@
 * AUTO-GENERATED - DO NOT EDIT. Source: https://github.com/gpuweb/cts
 **/import { kUnitCaseParamsBuilder } from '../../../../../common/framework/params_builder.js';import { makeTestGroup } from '../../../../../common/framework/test_group.js';import { getGPU } from '../../../../../common/util/navigator_gpu.js';
 import { assert, range, reorder } from '../../../../../common/util/util.js';
-import { getDefaultLimitsForAdapter } from '../../../../capability_info.js';
+import {
+  getDefaultLimits,
+  getDefaultLimitsForAdapter } from
+
+'../../../../capability_info.js';
 import { GPUTestBase } from '../../../../gpu_test.js';
 
 
@@ -42,6 +46,20 @@ export function getPipelineTypeForBindingCombination(bindingCombination) {
       return 'createRenderPipelineWithFragmentStage';
     case 'compute':
       return 'createComputePipeline';
+  }
+}
+
+export function getStageVisibilityForBinidngCombination(bindingCombination) {
+  switch (bindingCombination) {
+    case 'vertex':
+      return GPUShaderStage.VERTEX;
+    case 'fragment':
+      return GPUShaderStage.FRAGMENT;
+    case 'vertexAndFragmentWithPossibleVertexStageOverflow':
+    case 'vertexAndFragmentWithPossibleFragmentStageOverflow':
+      return GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX;
+    case 'compute':
+      return GPUShaderStage.COMPUTE;
   }
 }
 
@@ -346,6 +364,14 @@ export class LimitTestsImpl extends GPUTestBase {
   get device() {
     assert(this._device !== undefined, 'device is only valid in _testThenDestroyDevice callback');
     return this._device;
+  }
+
+  getDefaultLimits() {
+    return getDefaultLimits(this.isCompatibility ? 'compatibility' : 'core');
+  }
+
+  getDefaultLimit(limit) {
+    return this.getDefaultLimits()[limit].default;
   }
 
   async requestDeviceWithLimits(
@@ -1099,6 +1125,35 @@ export class LimitTestsImpl extends GPUTestBase {
     `;
     const module = device.createShaderModule({ code });
     return { module, code };
+  }
+
+  skipIfNotEnoughStorageBuffersInStage(visibility, numRequired) {
+    const { device } = this;
+    this.skipIf(
+      this.isCompatibility &&
+      // If we're using the fragment stage
+      (visibility & GPUShaderStage.FRAGMENT) !== 0 &&
+      // If perShaderStage and inFragment stage are equal we want to
+      // allow the test to run as otherwise we can't test overMaximum and overLimit
+      device.limits.maxStorageBuffersPerShaderStage >
+      device.limits.maxStorageBuffersInFragmentStage &&
+      // They aren't equal so if there aren't enough supported in the fragment then skip
+      !(device.limits.maxStorageBuffersInFragmentStage >= numRequired),
+      `maxStorageBuffersInFragmentShader = ${device.limits.maxStorageBuffersInFragmentStage} which is less than ${numRequired}`
+    );
+
+    this.skipIf(
+      this.isCompatibility &&
+      // If we're using the vertex stage
+      (visibility & GPUShaderStage.VERTEX) !== 0 &&
+      // If perShaderStage and inVertex stage are equal we want to
+      // allow the test to run as otherwise we can't test overMaximum and overLimit
+      device.limits.maxStorageBuffersPerShaderStage >
+      device.limits.maxStorageBuffersInVertexStage &&
+      // They aren't equal so if there aren't enough supported in the vertex then skip
+      !(device.limits.maxStorageBuffersInVertexStage >= numRequired),
+      `maxStorageBuffersInVertexShader = ${device.limits.maxStorageBuffersInVertexStage} which is less than ${numRequired}`
+    );
   }
 }
 

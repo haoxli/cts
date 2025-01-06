@@ -21,12 +21,7 @@ import {
   unreachable } from
 '../common/util/util.js';
 
-import {
-  getDefaultLimits,
-
-  kQueryTypeInfo } from
-
-'./capability_info.js';
+import { kQueryTypeInfo } from './capability_info.js';
 
 import {
   kTextureFormatInfo,
@@ -41,7 +36,13 @@ import {
 import { checkElementsEqual, checkElementsBetween } from './util/check_contents.js';
 import { CommandBufferMaker } from './util/command_buffer_maker.js';
 
-import { DevicePool } from './util/device_pool.js';
+import {
+
+
+  DevicePool } from
+
+
+'./util/device_pool.js';
 import { align, roundDown } from './util/math.js';
 import { physicalMipSizeFromTexture, virtualMipSize } from './util/texture/base.js';
 import {
@@ -60,6 +61,17 @@ import {
 './util/texture/texture_ok.js';
 import { createTextureFromTexelViews } from './util/texture.js';
 import { reifyExtent3D, reifyOrigin3D } from './util/unions.js';
+
+// Declarations for WebGPU items we want tests for that are not yet officially part of the spec.
+
+
+
+
+
+
+
+
+
 
 const devicePool = new DevicePool();
 
@@ -126,10 +138,6 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
     return globalTestConfig.compatibility;
   }
 
-  getDefaultLimits() {
-    return getDefaultLimits(this.isCompatibility ? 'compatibility' : 'core');
-  }
-
   /**
    * Some tests or cases need particular feature flags or limits to be enabled.
    * Call this function with a descriptor or feature name (or `undefined`) to select a
@@ -137,11 +145,15 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
    *
    * If the request isn't supported, throws a SkipTestCase exception to skip the entire test case.
    */
-  selectDeviceOrSkipTestCase(descriptor) {
+  selectDeviceOrSkipTestCase(
+  descriptor,
+  descriptorModifier)
+  {
     assert(this.provider === undefined, "Can't selectDeviceOrSkipTestCase() multiple times");
     this.provider = devicePool.acquire(
       this.recorder,
-      initUncanonicalizedDeviceDescriptor(descriptor)
+      initUncanonicalizedDeviceDescriptor(descriptor),
+      descriptorModifier
     );
     // Suppress uncaught promise rejection (we'll catch it later).
     this.provider.catch(() => {});
@@ -202,7 +214,8 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
 
     this.mismatchedProvider = mismatchedDevicePool.acquire(
       this.recorder,
-      initUncanonicalizedDeviceDescriptor(descriptor)
+      initUncanonicalizedDeviceDescriptor(descriptor),
+      undefined
     );
     // Suppress uncaught promise rejection (we'll catch it later).
     this.mismatchedProvider.catch(() => {});
@@ -300,6 +313,14 @@ export class GPUTestSubcaseBatchState extends SubcaseBatchState {
     }
   }
 
+  /** Skips this test case if a depth texture can not be used with a non-comparison sampler. */
+  skipIfDepthTextureCanNotBeUsedWithNonComparisonSampler() {
+    this.skipIf(
+      this.isCompatibility,
+      'depth textures are not usable with non-comparison samplers in compatibility mode'
+    );
+  }
+
   /** Skips this test case if the `langFeature` is *not* supported. */
   skipIfLanguageFeatureNotSupported(langFeature) {
     if (!this.hasLanguageFeature(langFeature)) {
@@ -348,14 +369,6 @@ export class GPUTestBase extends Fixture {
 
   get isCompatibility() {
     return globalTestConfig.compatibility;
-  }
-
-  getDefaultLimits() {
-    return getDefaultLimits(this.isCompatibility ? 'compatibility' : 'core');
-  }
-
-  getDefaultLimit(limit) {
-    return this.getDefaultLimits()[limit].default;
   }
 
   makeLimitVariant(limit, variant) {
@@ -1266,6 +1279,82 @@ export class GPUTest extends GPUTestBase {
     assert(this.provider !== undefined, 'internal error: GPUDevice missing?');
     this.provider.expectDeviceLost(reason);
   }
+}
+
+/**
+ * Gets the adapter limits as a standard JavaScript object.
+ */
+function getAdapterLimitsAsDeviceRequiredLimits(adapter) {
+  const requiredLimits = {};
+  const adapterLimits = adapter.limits;
+  for (const key in adapter.limits) {
+    // MAINTENANCE_TODO: Remove this once minSubgroupSize is removed from
+    // chromium.
+    if (key === 'maxSubgroupSize' || key === 'minSubgroupSize') {
+      continue;
+    }
+    requiredLimits[key] = adapterLimits[key];
+  }
+  return requiredLimits;
+}
+
+function setAllLimitsToAdapterLimits(
+adapter,
+desc)
+{
+  const descWithMaxLimits = {
+    requiredFeatures: [],
+    defaultQueue: {},
+    ...desc,
+    requiredLimits: getAdapterLimitsAsDeviceRequiredLimits(adapter)
+  };
+  return descWithMaxLimits;
+}
+
+/**
+ * Used by MaxLimitsTest to request a device with all the max limits of the adapter.
+ */
+export class MaxLimitsGPUTestSubcaseBatchState extends GPUTestSubcaseBatchState {
+  selectDeviceOrSkipTestCase(
+  descriptor,
+  descriptorModifier)
+  {
+    const mod = {
+      descriptorModifier(adapter, desc) {
+        desc = descriptorModifier?.descriptorModifier ?
+        descriptorModifier.descriptorModifier(adapter, desc) :
+        desc;
+        return setAllLimitsToAdapterLimits(adapter, desc);
+      },
+      keyModifier(baseKey) {
+        return `${baseKey}:MaxLimits`;
+      }
+    };
+    super.selectDeviceOrSkipTestCase(initUncanonicalizedDeviceDescriptor(descriptor), mod);
+  }
+}
+
+
+
+
+
+export function MaxLimitsTestMixin(
+Base)
+{
+  class MaxLimitsImpl extends
+  Base
+
+  {
+    //
+    static MakeSharedState(
+    recorder,
+    params)
+    {
+      return new MaxLimitsGPUTestSubcaseBatchState(recorder, params);
+    }
+  }
+
+  return MaxLimitsImpl;
 }
 
 /**
