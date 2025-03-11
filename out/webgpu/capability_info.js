@@ -592,16 +592,22 @@ export function textureBindingEntries(includeUndefined) {
  *
  * Note: Generates different `access` options, but not `format` or `viewDimension` options.
  */
-export function storageTextureBindingEntries() {
+export function storageTextureBindingEntries(format) {
   return [
-  { storageTexture: { access: 'write-only', format: 'r32float' } },
-  { storageTexture: { access: 'read-only', format: 'r32float' } },
-  { storageTexture: { access: 'read-write', format: 'r32float' } }];
+  { storageTexture: { access: 'write-only', format } },
+  { storageTexture: { access: 'read-only', format } },
+  { storageTexture: { access: 'read-write', format } }];
 
 }
 /** Generate a list of possible texture-or-storageTexture-typed BGLEntry values. */
-export function sampledAndStorageBindingEntries(includeUndefined) {
-  return [...textureBindingEntries(includeUndefined), ...storageTextureBindingEntries()];
+export function sampledAndStorageBindingEntries(
+includeUndefined,
+format = 'r32float')
+{
+  return [
+  ...textureBindingEntries(includeUndefined),
+  ...storageTextureBindingEntries(format)];
+
 }
 /**
  * Generate a list of possible BGLEntry values of every type, but not variants with different:
@@ -610,11 +616,14 @@ export function sampledAndStorageBindingEntries(includeUndefined) {
  * - texture.viewDimension
  * - storageTexture.viewDimension
  */
-export function allBindingEntries(includeUndefined) {
+export function allBindingEntries(
+includeUndefined,
+format = 'r32float')
+{
   return [
   ...bufferBindingEntries(includeUndefined),
   ...samplerBindingEntries(includeUndefined),
-  ...sampledAndStorageBindingEntries(includeUndefined)];
+  ...sampledAndStorageBindingEntries(includeUndefined, format)];
 
 }
 
@@ -801,12 +810,16 @@ export function getDefaultLimits(featureLevel) {
 }
 
 export function getDefaultLimitsForAdapter(adapter) {
-  // MAINTENANCE_TODO: Remove casts when GPUAdapter IDL has isCompatibilityMode.
-  return getDefaultLimits(
-    adapter.isCompatibilityMode ?
-    'compatibility' :
-    'core'
-  );
+  // MAINTENANCE_TODO: Remove casts once we have a standardized way to do this
+  // (see https://github.com/gpuweb/gpuweb/pull/5037#issuecomment-2576110161).
+  const adapterExtensions = adapter;
+
+
+  const featureLevel =
+  adapterExtensions.featureLevel === 'core' || adapter.features.has('core-features-and-limits') ?
+  'core' :
+  'compatibility';
+  return getDefaultLimits(featureLevel);
 }
 
 const kEachStage = [

@@ -66,14 +66,12 @@ and limit the number of permutations needed to calculate the final result.`
         [kStride / 2, 2, 1],
       ] as const)
   )
-  .beforeAllSubcases(t => {
-    const features: GPUFeatureName[] = ['subgroups' as GPUFeatureName];
-    if (t.params.type === 'f16') {
-      features.push('shader-f16');
-    }
-    t.selectDeviceOrSkipTestCase(features);
-  })
   .fn(async t => {
+    t.skipIfDeviceDoesNotHaveFeature('subgroups' as GPUFeatureName);
+    if (t.params.type === 'f16') {
+      t.skipIfDeviceDoesNotHaveFeature('shader-f16');
+    }
+
     await runAccuracyTest(
       t,
       t.params.case,
@@ -187,16 +185,12 @@ TODO: support vec3 types.
       ] as const)
       .combine('operation', kOperations)
   )
-  .beforeAllSubcases(t => {
-    const features: GPUFeatureName[] = ['subgroups' as GPUFeatureName];
+  .fn(async t => {
+    t.skipIfDeviceDoesNotHaveFeature('subgroups' as GPUFeatureName);
     const type = kDataTypes[t.params.type];
     if (type.requiresF16()) {
-      features.push('shader-f16');
+      t.skipIfDeviceDoesNotHaveFeature('shader-f16');
     }
-    t.selectDeviceOrSkipTestCase(features);
-  })
-  .fn(async t => {
-    const type = kDataTypes[t.params.type];
     let numEles = 1;
     if (type instanceof VectorType) {
       numEles = type.width;
@@ -323,10 +317,8 @@ g.test('compute,split')
       .combine('operation', kOperations)
       .combine('wgSize', kWGSizes)
   )
-  .beforeAllSubcases(t => {
-    t.selectDeviceOrSkipTestCase('subgroups' as GPUFeatureName);
-  })
   .fn(async t => {
+    t.skipIfDeviceDoesNotHaveFeature('subgroups' as GPUFeatureName);
     const testcase = kPredicateCases[t.params.case];
     const outputUintsPerElement = 1;
     const inputData = new Uint32Array([0]); // no input data
@@ -515,10 +507,8 @@ g.test('fragment')
       .combine('quadIndex', [0, 1, 2, 3] as const)
       .combineWithParams([{ format: 'rgba32uint' }] as const)
   )
-  .beforeAllSubcases(t => {
-    t.selectDeviceOrSkipTestCase('subgroups' as GPUFeatureName);
-  })
   .fn(async t => {
+    t.skipIfDeviceDoesNotHaveFeature('subgroups' as GPUFeatureName);
     interface SubgroupProperties extends GPUAdapterInfo {
       subgroupMinSize: number;
       subgroupMaxSize: number;
@@ -527,29 +517,6 @@ g.test('fragment')
     const innerTexels = (t.params.size[0] - 1) * (t.params.size[1] - 1);
     t.skipIf(innerTexels < subgroupMinSize, 'Too few texels to be reliable');
     t.skipIf(subgroupMaxSize === 4 && t.params.quadIndex !== 0, 'Duplicate test');
-
-    const fsShader = `
-enable subgroups;
-
-@group(0) @binding(0)
-var<storage> inputs : array<u32>;
-
-@fragment
-fn main(
-  @builtin(position) pos : vec4f,
-  @builtin(subgroup_invocation_id) id : u32
-) -> @location(0) vec4u {
-  let linear = u32(pos.x) + u32(pos.y) * ${t.params.size[0]};
-  let subgroup_id = subgroupBroadcastFirst(linear + 1);
-
-  // Filter out possible helper invocations.
-  let x_in_range = u32(pos.x) < (${t.params.size[0]} - 1);
-  let y_in_range = u32(pos.y) < (${t.params.size[1]} - 1);
-  let in_range = x_in_range && y_in_range;
-
-  let value = select(${kIdentity}, inputs[linear], in_range);
-  return vec4u(${t.params.op}(value), id, subgroup_id, 0);
-};`;
 
     // Max possible subgroup size is 128 which is too large so we reduce the
     // multiplication by a factor of 4. We populate one element of each quad with a
@@ -568,6 +535,29 @@ fn main(
         }
       }),
     ]);
+
+    const fsShader = `
+enable subgroups;
+
+@group(0) @binding(0)
+var<uniform> inputs : array<vec4u, ${inputData.length}>;
+
+@fragment
+fn main(
+  @builtin(position) pos : vec4f,
+  @builtin(subgroup_invocation_id) id : u32
+) -> @location(0) vec4u {
+  let linear = u32(pos.x) + u32(pos.y) * ${t.params.size[0]};
+  let subgroup_id = subgroupBroadcastFirst(linear + 1);
+
+  // Filter out possible helper invocations.
+  let x_in_range = u32(pos.x) < (${t.params.size[0]} - 1);
+  let y_in_range = u32(pos.y) < (${t.params.size[1]} - 1);
+  let in_range = x_in_range && y_in_range;
+
+  let value = select(${kIdentity}, inputs[linear].x, in_range);
+  return vec4u(${t.params.op}(value), id, subgroup_id, 0);
+};`;
 
     await runFragmentTest(
       t,

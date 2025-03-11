@@ -2,8 +2,13 @@ import { keysOf } from '../../../../../../common/util/data_tables.js';
 import { assert, range, unreachable } from '../../../../../../common/util/util.js';
 import { Float16Array } from '../../../../../../external/petamoriken/float16/float16.js';
 import {
+  ColorTextureFormat,
   EncodableTextureFormat,
+  getBlockInfoForColorTextureFormat,
+  getBlockInfoForTextureFormat,
+  getTextureFormatType,
   is32Float,
+  isColorTextureFormat,
   isCompressedFloatTextureFormat,
   isCompressedTextureFormat,
   isDepthOrStencilTextureFormat,
@@ -12,9 +17,8 @@ import {
   isSintOrUintFormat,
   isStencilTextureFormat,
   kEncodableTextureFormats,
-  kTextureFormatInfo,
 } from '../../../../../format_info.js';
-import { GPUTest, GPUTestSubcaseBatchState } from '../../../../../gpu_test.js';
+import { AllFeaturesMaxLimitsGPUTest, GPUTest } from '../../../../../gpu_test.js';
 import {
   align,
   clamp,
@@ -117,39 +121,20 @@ const isUnencodableDepthFormat = (format: GPUTextureFormat) =>
  * Skips a subcase if the filter === 'linear' and the format is type
  * 'unfilterable-float' and we cannot enable filtering.
  */
-export function skipIfNeedsFilteringAndIsUnfilterableOrSelectDevice(
-  t: GPUTestSubcaseBatchState,
-  filter: GPUFilterMode,
-  format: GPUTextureFormat
-) {
-  const features = new Set<GPUFeatureName | undefined>();
-  features.add(kTextureFormatInfo[format].feature);
-
-  if (filter === 'linear') {
-    t.skipIf(isDepthTextureFormat(format), 'depth texture are unfilterable');
-
-    const type = kTextureFormatInfo[format].color?.type;
-    if (type === 'unfilterable-float') {
-      assert(is32Float(format));
-      features.add('float32-filterable');
-    }
-  }
-
-  if (features.size > 0) {
-    t.selectDeviceOrSkipTestCase(Array.from(features));
-  }
-}
-
-/**
- * Skips a test if filter === 'linear' and the format is not filterable
- */
-export function skipIfNeedsFilteringAndIsUnfilterable(
+export function skipIfTextureFormatNotSupportedOrNeedsFilteringAndIsUnfilterable(
   t: GPUTest,
   filter: GPUFilterMode,
   format: GPUTextureFormat
 ) {
+  t.skipIfTextureFormatNotSupported(format);
   if (filter === 'linear') {
-    t.skipIf(isDepthTextureFormat(format), 'depth textures are unfilterable');
+    t.skipIf(isDepthTextureFormat(format), 'depth texture are unfilterable');
+
+    const type = getTextureFormatType(format);
+    if (type === 'unfilterable-float') {
+      assert(is32Float(format));
+      t.skipIfDeviceDoesNotHaveFeature('float32-filterable');
+    }
   }
 }
 
@@ -166,28 +151,11 @@ export function isFillable(format: GPUTextureFormat) {
  * Returns if a texture format can potentially be filtered and can be filled with random data.
  */
 export function isPotentiallyFilterableAndFillable(format: GPUTextureFormat) {
-  const info = kTextureFormatInfo[format];
-  const type = info.color?.type ?? info.depth?.type;
+  const type = getTextureFormatType(format);
   const canPotentiallyFilter =
     type === 'float' || type === 'unfilterable-float' || type === 'depth';
   const result = canPotentiallyFilter && isFillable(format);
   return result;
-}
-
-/**
- * skips the test if the texture format is not supported or not available or not filterable.
- */
-export function skipIfTextureFormatNotSupportedNotAvailableOrNotFilterable(
-  t: GPUTestSubcaseBatchState,
-  format: GPUTextureFormat
-) {
-  t.skipIfTextureFormatNotSupported(format);
-  const info = kTextureFormatInfo[format];
-  if (info.color?.type === 'unfilterable-float') {
-    t.selectDeviceOrSkipTestCase('float32-filterable');
-  } else {
-    t.selectDeviceForTextureFormatOrSkipTestCase(format);
-  }
 }
 
 const builtinNeedsMipLevelWeights = (builtin: TextureBuiltin) =>
@@ -491,11 +459,13 @@ export async function queryMipLevelMixWeightsForDevice(t: GPUTest, stage: Shader
   });
 
   const storageBuffer = t.createBufferTracked({
+    label: 'queryMipLevelMixWeightsForDevice:storageBuffer',
     size: 4 * 4 * (kMipLevelWeightSteps + 1),
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
   });
 
   const resultBuffer = t.createBufferTracked({
+    label: 'queryMipLevelMixWeightsForDevice:resultBuffer',
     size: align(storageBuffer.size, 256), // padded for copyTextureToBuffer
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
   });
@@ -510,7 +480,7 @@ export async function queryMipLevelMixWeightsForDevice(t: GPUTest, stage: Shader
       ],
     });
 
-  const encoder = device.createCommandEncoder();
+  const encoder = device.createCommandEncoder({ label: 'queryMipLevelMixWeightsForDevice' });
   switch (stage) {
     case 'compute': {
       const pipeline = device.createComputePipeline({
@@ -786,7 +756,7 @@ function getWeightForMipLevel(
 /**
  * Used for textureNumSamples, textureNumLevels, textureNumLayers, textureDimension
  */
-export class WGSLTextureQueryTest extends GPUTest {
+export class WGSLTextureQueryTest extends AllFeaturesMaxLimitsGPUTest {
   skipIfNoStorageTexturesInStage(stage: ShaderStage) {
     if (this.isCompatibility) {
       this.skipIf(
@@ -901,9 +871,9 @@ struct VOut {
           ? 'unfilterable-float'
           : isStencilTextureFormat(texture.format)
           ? 'uint'
-          : texture.sampleCount > 1 && kTextureFormatInfo[texture.format].color?.type === 'float'
+          : texture.sampleCount > 1 && getTextureFormatType(texture.format) === 'float'
           ? 'unfilterable-float'
-          : kTextureFormatInfo[texture.format].color?.type ?? 'unfilterable-float';
+          : getTextureFormatType(texture.format) ?? 'unfilterable-float';
       entries.push({
         binding: 0,
         visibility,
@@ -979,15 +949,17 @@ struct VOut {
     });
 
     const resultBuffer = this.createBufferTracked({
+      label: 'executeAndExpectResult:resultBuffer',
       size: align(expected.length * 4, 256),
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
 
     let storageBuffer: GPUBuffer | undefined;
-    const encoder = device.createCommandEncoder();
+    const encoder = device.createCommandEncoder({ label: 'executeAndExpectResult' });
 
     if (stage === 'compute') {
       storageBuffer = this.createBufferTracked({
+        label: 'executeAndExpectResult:storageBuffer',
         size: resultBuffer.size,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
       });
@@ -1042,7 +1014,7 @@ struct VOut {
 /**
  * Used for textureSampleXXX
  */
-export class WGSLTextureSampleTest extends GPUTest {
+export class WGSLTextureSampleTest extends AllFeaturesMaxLimitsGPUTest {
   override async init(): Promise<void> {
     await super.init();
   }
@@ -1123,9 +1095,8 @@ const kTextureTypeInfo = {
   },
 } as const;
 
-function getTextureFormatTypeInfo(format: GPUTextureFormat) {
-  const info = kTextureFormatInfo[format];
-  const type = info.color?.type ?? info.depth?.type ?? info.stencil?.type;
+export function getTextureFormatTypeInfo(format: GPUTextureFormat) {
+  const type = getTextureFormatType(format);
   assert(!!type);
   return kTextureTypeInfo[type];
 }
@@ -1240,11 +1211,11 @@ function createRandomTexelViewViaBytes(info: {
   sampleCount: number;
 }): TexelView {
   const { format } = info;
-  const formatInfo = kTextureFormatInfo[format];
+  const formatInfo = getBlockInfoForTextureFormat(format);
   const rep = kTexelRepresentationInfo[info.format as EncodableTextureFormat];
   assert(!!rep);
-  const bytesPerBlock = (formatInfo.color?.bytes ?? formatInfo.stencil?.bytes)!;
-  assert(bytesPerBlock > 0);
+  const { bytesPerBlock } = formatInfo;
+  assert(bytesPerBlock !== undefined && bytesPerBlock > 0);
   const size = physicalMipSize(reifyExtent3D(info.size), info.format, '2d', 0);
   const blocksAcross = Math.ceil(size.width / formatInfo.blockWidth);
   const blocksDown = Math.ceil(size.height / formatInfo.blockHeight);
@@ -1299,15 +1270,15 @@ function createRandomTexelView(
   },
   options?: RandomTextureOptions | undefined
 ): TexelView {
-  assert(!isCompressedTextureFormat(info.format));
-  const formatInfo = kTextureFormatInfo[info.format];
-  const type = formatInfo.color?.type ?? formatInfo.depth?.type ?? formatInfo.stencil?.type;
+  const { format } = info;
+  assert(!isCompressedTextureFormat(format));
+  const type = getTextureFormatType(format);
   const canFillWithRandomTypedData =
     !options &&
-    isEncodableTextureFormat(info.format) &&
-    ((info.format.includes('norm') && type !== 'depth') ||
-      info.format.includes('16float') ||
-      (info.format.includes('32float') && type !== 'depth') ||
+    isEncodableTextureFormat(format) &&
+    ((format.includes('norm') && type !== 'depth') ||
+      format.includes('16float') ||
+      (format.includes('32float') && type !== 'depth') ||
       type === 'sint' ||
       type === 'uint');
 
@@ -2473,8 +2444,8 @@ export async function checkCallResults<T extends Dimensionality>(
     });
 
     const isFloatType = (format: GPUTextureFormat) => {
-      const info = kTextureFormatInfo[format];
-      return info.color?.type === 'float' || info.depth?.type === 'depth';
+      const type = getTextureFormatType(format);
+      return type === 'float' || type === 'depth';
     };
     const fix5 = (n: number) => (isFloatType(format) ? n.toFixed(5) : n.toString());
     const fix5v = (arr: number[]) => arr.map(v => fix5(v)).join(', ');
@@ -2563,7 +2534,7 @@ export async function checkCallResults<T extends Dimensionality>(
                     break;
                   case 'textureSampleCompareLevel':
                     debugCall.builtin = 'textureSampleLevel';
-                    debugCall.levelType = 'f';
+                    debugCall.levelType = 'u';
                     debugCall.mipLevel = 0;
                     break;
                   default:
@@ -2778,9 +2749,8 @@ const sumOfCharCodesOfString = (s: unknown) =>
  * See Spec:
  * https://registry.khronos.org/OpenGL/extensions/KHR/KHR_texture_compression_astc_hdr.txt
  */
-function makeAstcBlockFiller(format: GPUTextureFormat) {
-  const info = kTextureFormatInfo[format];
-  const bytesPerBlock = info.color!.bytes;
+function makeAstcBlockFiller(format: ColorTextureFormat) {
+  const { bytesPerBlock } = getBlockInfoForColorTextureFormat(format);
   return (data: Uint8Array, offset: number, hashBase: number) => {
     // set the block to be a void-extent block
     data.set(
@@ -2807,9 +2777,8 @@ function makeAstcBlockFiller(format: GPUTextureFormat) {
 /**
  * Makes a function that fills a block portion of a Uint8Array with random bytes.
  */
-function makeRandomBytesBlockFiller(format: GPUTextureFormat) {
-  const info = kTextureFormatInfo[format];
-  const bytesPerBlock = info.color!.bytes;
+function makeRandomBytesBlockFiller(format: ColorTextureFormat) {
+  const { bytesPerBlock } = getBlockInfoForColorTextureFormat(format);
   return (data: Uint8Array, offset: number, hashBase: number) => {
     const end = offset + bytesPerBlock;
     for (let i = offset; i < end; ++i) {
@@ -2818,7 +2787,7 @@ function makeRandomBytesBlockFiller(format: GPUTextureFormat) {
   };
 }
 
-function getBlockFiller(format: GPUTextureFormat) {
+function getBlockFiller(format: ColorTextureFormat) {
   if (format.startsWith('astc')) {
     return makeAstcBlockFiller(format);
   } else {
@@ -2830,8 +2799,9 @@ function getBlockFiller(format: GPUTextureFormat) {
  * Fills a texture with random data.
  */
 function fillTextureWithRandomData(device: GPUDevice, texture: GPUTexture) {
+  assert(isColorTextureFormat(texture.format));
   assert(!isCompressedFloatTextureFormat(texture.format));
-  const info = kTextureFormatInfo[texture.format];
+  const info = getBlockInfoForColorTextureFormat(texture.format as ColorTextureFormat);
   const hashBase =
     sumOfCharCodesOfString(texture.format) +
     sumOfCharCodesOfString(texture.dimension) +
@@ -2839,8 +2809,8 @@ function fillTextureWithRandomData(device: GPUDevice, texture: GPUTexture) {
     texture.height +
     texture.depthOrArrayLayers +
     texture.mipLevelCount;
-  const bytesPerBlock = info.color!.bytes;
-  const fillBlock = getBlockFiller(texture.format);
+  const bytesPerBlock = info.bytesPerBlock;
+  const fillBlock = getBlockFiller(texture.format as ColorTextureFormat);
   for (let mipLevel = 0; mipLevel < texture.mipLevelCount; ++mipLevel) {
     const size = physicalMipSizeFromTexture(texture, mipLevel);
     const blocksAcross = Math.ceil(size[0] / info.blockWidth);
@@ -2961,7 +2931,11 @@ export async function readTextureToTexelViews(
       fn textureLoadCubeAs2DArray(tex: texture_cube<${componentType}>, coord: vec2u, layer: u32) -> ${resultType} {
         // convert texel coord normalized coord
         let size = textureDimensions(tex, 0);
-        let uv = (vec2f(coord) + 0.5) / vec2f(size.xy);
+
+        // Offset by 0.75 instead of the more common 0.5 for converting from texel to normalized texture coordinate
+        // because we're using textureGather. 0.5 would indicate the center of a texel but based on precision issues
+        // the "gather" could go in any direction from that center. Off center it should go in an expected direction.
+        let uv = (vec2f(coord) + 0.75) / vec2f(size.xy);
 
         // convert uv + layer into cube coord
         let cubeCoord = faceMat[layer] * vec3f(uv, 1.0);
@@ -3003,14 +2977,14 @@ export async function readTextureToTexelViews(
         }
       `,
     });
-    const info = kTextureFormatInfo[texture.format];
-    const sampleType = info.depth
+    const type = getTextureFormatType(texture.format);
+    const sampleType = isDepthTextureFormat(texture.format)
       ? 'unfilterable-float' // depth only supports unfilterable-float if not a comparison.
-      : info.stencil
+      : isStencilTextureFormat(texture.format)
       ? 'uint'
-      : info.color.type === 'float'
+      : type === 'float'
       ? 'unfilterable-float'
-      : info.color.type;
+      : type;
     const bindGroupLayout = device.createBindGroupLayout({
       entries: [
         {
@@ -3052,7 +3026,7 @@ export async function readTextureToTexelViews(
     viewDimensionToPipelineMap.set(id, pipeline);
   }
 
-  const encoder = device.createCommandEncoder();
+  const encoder = device.createCommandEncoder({ label: 'readTextureToTexelViews' });
 
   const readBuffers = [];
   for (let mipLevel = 0; mipLevel < texture.mipLevelCount; ++mipLevel) {
@@ -3060,17 +3034,20 @@ export async function readTextureToTexelViews(
 
     const uniformValues = new Uint32Array([texture.sampleCount, 0, 0, 0]); // min size is 16 bytes
     const uniformBuffer = t.createBufferTracked({
+      label: 'readTextureToTexelViews:uniformBuffer',
       size: uniformValues.byteLength,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 
     const storageBuffer = t.createBufferTracked({
+      label: 'readTextureToTexelViews:storageBuffer',
       size: size[0] * size[1] * size[2] * 4 * 4 * texture.sampleCount, // rgba32float
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
     });
 
     const readBuffer = t.createBufferTracked({
+      label: 'readTextureToTexelViews:readBuffer',
       size: storageBuffer.size,
       usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
     });
@@ -3480,7 +3457,7 @@ async function identifySamplePoints<T extends Dimensionality>(
   const letter = (idx: number) => String.fromCodePoint(idx < 30 ? 97 + idx : idx + 9600 - 30); // 97: 'a'
   let idCount = 0;
 
-  const { blockWidth, blockHeight } = kTextureFormatInfo[texture.descriptor.format];
+  const { blockWidth, blockHeight } = getBlockInfoForTextureFormat(texture.descriptor.format);
   // range + concatenate results.
   const rangeCat = <T>(num: number, fn: (i: number) => T) => range(num, fn).join('');
   const joinFn = (arr: string[], fn: (i: number) => string) => {
@@ -3688,7 +3665,7 @@ export function chooseTextureSize({
   format: GPUTextureFormat;
   viewDimension?: GPUTextureViewDimension;
 }) {
-  const { blockWidth, blockHeight } = kTextureFormatInfo[format];
+  const { blockWidth, blockHeight } = getBlockInfoForTextureFormat(format);
   const width = align(Math.max(minSize, blockWidth * minBlocks), blockWidth);
   const height =
     viewDimension === '1d' ? 1 : align(Math.max(minSize, blockHeight * minBlocks), blockHeight);
@@ -4851,6 +4828,7 @@ function createTextureCallsRunner<T extends Dimensionality>(
   });
 
   const dataBuffer = t.createBufferTracked({
+    label: 'createTextureCallsRunner:dataBuffer',
     size: data.length * 4,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.UNIFORM,
   });
@@ -4974,7 +4952,7 @@ ${stageWGSL}
   // So, if we don't need filtering, don't request a filtering sampler. If we require
   // filtering then check if the format is 32float format and if float32-filterable
   // is enabled.
-  const info = kTextureFormatInfo[format ?? 'rgba8unorm'];
+  const type = getTextureFormatType(format ?? 'rgba8unorm');
   const isFiltering =
     !!sampler &&
     (sampler.minFilter === 'linear' ||
@@ -4986,7 +4964,7 @@ ${stageWGSL}
     ? 'unfilterable-float'
     : isStencilTextureFormat(format)
     ? 'uint'
-    : info.color?.type ?? 'float';
+    : type ?? 'float';
   if (isFiltering && sampleType === 'unfilterable-float') {
     assert(is32Float(format));
     assert(t.device.features.has('float32-filterable'));
@@ -5108,6 +5086,7 @@ ${stageWGSL}
 
   const run = async (gpuTexture: GPUTexture | GPUExternalTexture) => {
     const resultBuffer = t.createBufferTracked({
+      label: 'createTextureCallsRunner:resultBuffer',
       size: align(calls.length * 16, 256),
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
@@ -5134,10 +5113,11 @@ ${stageWGSL}
     });
 
     let storageBuffer: GPUBuffer | undefined;
-    const encoder = t.device.createCommandEncoder();
+    const encoder = t.device.createCommandEncoder({ label: 'createTextureCallsRunner' });
 
     if (stage === 'compute') {
       storageBuffer = t.createBufferTracked({
+        label: 'createTextureCallsRunner:storageBuffer',
         size: resultBuffer.size,
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
       });

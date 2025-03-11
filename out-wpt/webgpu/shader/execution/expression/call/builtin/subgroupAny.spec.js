@@ -131,10 +131,8 @@ combine('wgSize', kWGSizes).
 beginSubcases().
 combine('case', [...iterRange(kNumCases, (x) => x)])
 ).
-beforeAllSubcases((t) => {
-  t.selectDeviceOrSkipTestCase('subgroups');
-}).
 fn(async (t) => {
+  t.skipIfDeviceDoesNotHaveFeature('subgroups');
   const wgThreads = t.params.wgSize[0] * t.params.wgSize[1] * t.params.wgSize[2];
 
   const wgsl = `
@@ -197,10 +195,8 @@ beginSubcases().
 combine('wgSize', kWGSizes).
 combine('case', [...iterRange(kNumCases, (x) => x)])
 ).
-beforeAllSubcases((t) => {
-  t.selectDeviceOrSkipTestCase('subgroups');
-}).
 fn(async (t) => {
+  t.skipIfDeviceDoesNotHaveFeature('subgroups');
   const testcase = kPredicateCases[t.params.predicate];
   const wgThreads = t.params.wgSize[0] * t.params.wgSize[1] * t.params.wgSize[2];
 
@@ -331,10 +327,8 @@ beginSubcases().
 combine('case', [...iterRange(kNumCases, (x) => x)]).
 combineWithParams([{ format: 'rg32uint' }])
 ).
-beforeAllSubcases((t) => {
-  t.selectDeviceOrSkipTestCase('subgroups');
-}).
 fn(async (t) => {
+  t.skipIfDeviceDoesNotHaveFeature('subgroups');
   const numInputs = t.params.size[0] * t.params.size[1];
   const inputData = generateInputData(t.params.case, numInputs);
 
@@ -342,7 +336,7 @@ fn(async (t) => {
 enable subgroups;
 
 @group(0) @binding(0)
-var<storage, read_write> inputs : array<u32>;
+var<uniform> inputs : array<vec4u, ${inputData.length}>;
 
 @fragment
 fn main(
@@ -357,7 +351,7 @@ fn main(
   let x_in_range = u32(pos.x) < (${t.params.size[0]} - 1);
   let y_in_range = u32(pos.y) < (${t.params.size[1]} - 1);
   let in_range = x_in_range && y_in_range;
-  let input = select(0u, inputs[linear], in_range);
+  let input = select(0u, inputs[linear].x, in_range);
 
   let res = select(0u, 1u, subgroupAny(bool(input)));
   return vec2u(res, subgroup_id);

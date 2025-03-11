@@ -42,8 +42,17 @@ g.test('default')
     const device = await t.requestDeviceTracked(adapter, ...args);
     assert(device !== null);
 
-    // Default device should have no features.
-    t.expect(device.features.size === 0, 'Default device should not have any features');
+    if (device.features.size === 1) {
+      t.expect(
+        device.features.has('core-features-and-limits'),
+        'Default device should not have any features other than "core-features-and-limits"'
+      );
+    } else {
+      t.expect(
+        device.features.size === 0,
+        'Default device should not have any features other than "core-features-and-limits"'
+      );
+    }
     // All limits should be defaults.
     const limitInfo = getDefaultLimitsForAdapter(adapter);
     for (const limit of kLimits) {
@@ -491,30 +500,38 @@ g.test('always_returns_device')
 
     Note: This is a regression test for a Chrome bug crbug.com/349062459
     Checking that a requestDevice always return a device is checked in other tests above
-    but those tests have 'compatibilityMode: true' set for them by the API that getGPU
+    but those tests have 'featureLevel: "compatibility"' set for them by the API that getGPU
     returns when the test suite is run in compatibility mode.
 
     This test tries to force both compat and core separately so both code paths are
     tested in the same browser configuration.
   `
   )
-  .params(u => u.combine('compatibilityMode', [false, true] as const))
+  .params(u => u.combine('featureLevel', ['core', 'compatibility'] as const))
   .fn(async t => {
-    const { compatibilityMode } = t.params;
+    const { featureLevel } = t.params;
     const gpu = getGPU(t.rec);
-    // MAINTENANCE_TODO: Remove this cast compatibilityMode is added.
-    const adapter = await gpu.requestAdapter({ compatibilityMode } as GPURequestAdapterOptions);
+    const adapter = await gpu.requestAdapter({
+      featureLevel,
+    } as GPURequestAdapterOptions);
     if (adapter) {
-      if (!compatibilityMode) {
-        // This check is to make sure something lower-level is not forcing compatibility mode
-        // MAINTENANCE_TODO: Remove this cast compatibilityMode is added.
+      const device = await t.requestDeviceTracked(adapter);
+      assert(device instanceof GPUDevice, 'requestDevice must return a device or throw');
+
+      if (featureLevel === 'core') {
+        // This check is to make sure something lower-level is not forcing compatibility mode.
+
+        // MAINTENANCE_TODO: Simplify this check (and typecast) once we standardize how to do this.
+        const adapterExtensions = adapter as unknown as {
+          featureLevel?: string;
+        };
         t.expect(
-          !(adapter as unknown as { isCompatibilityMode?: boolean }).isCompatibilityMode,
-          'must not be compatibility mode'
+          // Old version of Compat design.
+          adapterExtensions.featureLevel === 'core' ||
+            // Current version of Compat design.
+            device.features.has('core-features-and-limits'),
+          'must not get a Compatibility adapter if not requested'
         );
       }
-      const device = await t.requestDeviceTracked(adapter);
-      t.expect(device instanceof GPUDevice, 'requestDevice must return a device or throw');
-      device.destroy();
     }
   });

@@ -24,18 +24,20 @@ import {
   texBindingTypeInfo,
 } from '../../capability_info.js';
 import { GPUConst } from '../../constants.js';
-import { kAllTextureFormats, kTextureFormatInfo } from '../../format_info.js';
-import { kResourceStates, MaxLimitsTestMixin } from '../../gpu_test.js';
+import { kPossibleStorageTextureFormats } from '../../format_info.js';
+import { kResourceStates } from '../../gpu_test.js';
 import { getTextureDimensionFromView } from '../../util/texture/base.js';
 
-import { ValidationTest } from './validation_test.js';
+import { AllFeaturesMaxLimitsValidationTest } from './validation_test.js';
+
+const kTestFormat: GPUTextureFormat = 'r32float';
 
 function clone<T extends GPUTextureDescriptor>(descriptor: T): T {
   return JSON.parse(JSON.stringify(descriptor));
 }
 
 function skipIfResourceNotSupportedInStages(
-  t: ValidationTest,
+  t: AllFeaturesMaxLimitsValidationTest,
   entry: BGLEntry,
   visibility: number
 ) {
@@ -67,9 +69,7 @@ function skipIfResourceNotSupportedInStages(
   }
 }
 
-export const g = makeTestGroup(MaxLimitsTestMixin(ValidationTest));
-
-const kStorageTextureFormats = kAllTextureFormats.filter(f => kTextureFormatInfo[f].color?.storage);
+export const g = makeTestGroup(AllFeaturesMaxLimitsValidationTest);
 
 g.test('binding_count_mismatch')
   .desc('Test that the number of entries must match the number of entries in the BindGroupLayout.')
@@ -144,7 +144,7 @@ g.test('binding_must_contain_resource_defined_in_layout')
   .params(u =>
     u //
       .combine('resourceType', kBindableResources)
-      .combine('entry', allBindingEntries(false))
+      .combine('entry', allBindingEntries(false, kTestFormat))
   )
   .fn(t => {
     const { resourceType, entry } = t.params;
@@ -195,7 +195,7 @@ g.test('texture_binding_must_have_correct_usage')
   .desc('Tests that texture bindings must have the correct usage.')
   .paramsSubcasesOnly(u =>
     u //
-      .combine('entry', sampledAndStorageBindingEntries(false))
+      .combine('entry', sampledAndStorageBindingEntries(false, kTestFormat))
       .combine('usage', kTextureUsages)
       .unless(({ entry, usage }) => {
         const info = texBindingTypeInfo(entry);
@@ -207,6 +207,11 @@ g.test('texture_binding_must_have_correct_usage')
     const { entry, usage } = t.params;
     const info = texBindingTypeInfo(entry);
 
+    t.skipIf(
+      t.isCompatibility && info.resource === 'sampledTexMS',
+      "The test requires 'r32float' multisampled support which compat mode doesn't guarantee."
+    );
+
     const bindGroupLayout = t.device.createBindGroupLayout({
       entries: [{ binding: 0, visibility: GPUShaderStage.COMPUTE, ...entry }],
     });
@@ -217,7 +222,7 @@ g.test('texture_binding_must_have_correct_usage')
 
     const descriptor = {
       size: { width: 16, height: 16, depthOrArrayLayers: 1 },
-      format: 'r32float' as const,
+      format: kTestFormat,
       usage: appliedUsage,
       sampleCount: info.resource === 'sampledTexMS' ? 4 : 1,
     };
@@ -601,7 +606,7 @@ g.test('texture,resource_state')
   .paramsSubcasesOnly(u =>
     u
       .combine('state', kResourceStates)
-      .combine('entry', sampledAndStorageBindingEntries(true))
+      .combine('entry', sampledAndStorageBindingEntries(true, kTestFormat))
       .combine('visibilityMask', [kAllShaderStages, GPUConst.ShaderStage.COMPUTE] as const)
   )
   .fn(t => {
@@ -656,9 +661,7 @@ g.test('bind_group_layout,device_mismatch')
     'Tests createBindGroup cannot be called with a bind group layout created from another device'
   )
   .paramsSubcasesOnly(u => u.combine('mismatched', [true, false]))
-  .beforeAllSubcases(t => {
-    t.selectMismatchedDeviceOrSkipTestCase(undefined);
-  })
+  .beforeAllSubcases(t => t.usesMismatchedDevice())
   .fn(t => {
     const mismatched = t.params.mismatched;
 
@@ -716,9 +719,7 @@ g.test('binding_resources,device_mismatch')
       ])
       .combine('visibilityMask', [kAllShaderStages, GPUConst.ShaderStage.COMPUTE] as const)
   )
-  .beforeAllSubcases(t => {
-    t.selectMismatchedDeviceOrSkipTestCase(undefined);
-  })
+  .beforeAllSubcases(t => t.usesMismatchedDevice())
   .fn(t => {
     const { entry, resource0Mismatched, resource1Mismatched, visibilityMask } = t.params;
 
@@ -864,15 +865,12 @@ g.test('storage_texture,format')
   )
   .params(u =>
     u //
-      .combine('storageTextureFormat', kStorageTextureFormats)
-      .combine('resourceFormat', kStorageTextureFormats)
+      .combine('storageTextureFormat', kPossibleStorageTextureFormats)
+      .combine('resourceFormat', kPossibleStorageTextureFormats)
   )
-  .beforeAllSubcases(t => {
-    const { storageTextureFormat, resourceFormat } = t.params;
-    t.skipIfTextureFormatNotUsableAsStorageTexture(storageTextureFormat, resourceFormat);
-  })
   .fn(t => {
     const { storageTextureFormat, resourceFormat } = t.params;
+    t.skipIfTextureFormatNotUsableAsStorageTexture(storageTextureFormat, resourceFormat);
 
     const bindGroupLayout = t.device.createBindGroupLayout({
       entries: [
@@ -1129,9 +1127,7 @@ g.test('buffer,effective_buffer_binding_size')
 g.test('sampler,device_mismatch')
   .desc(`Tests createBindGroup cannot be called with a sampler created from another device.`)
   .paramsSubcasesOnly(u => u.combine('mismatched', [true, false]))
-  .beforeAllSubcases(t => {
-    t.selectMismatchedDeviceOrSkipTestCase(undefined);
-  })
+  .beforeAllSubcases(t => t.usesMismatchedDevice())
   .fn(t => {
     const { mismatched } = t.params;
 

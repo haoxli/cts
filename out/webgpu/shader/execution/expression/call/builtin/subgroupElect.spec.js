@@ -62,10 +62,8 @@ filter)
 g.test('compute,all_active').
 desc('Test subgroupElect in compute shader with all active invocations').
 params((u) => u.combine('wgSize', kWGSizes)).
-beforeAllSubcases((t) => {
-  t.selectDeviceOrSkipTestCase('subgroups');
-}).
 fn(async (t) => {
+  t.skipIfDeviceDoesNotHaveFeature('subgroups');
   const wgThreads = t.params.wgSize[0] * t.params.wgSize[1] * t.params.wgSize[2];
 
   const wgsl = `
@@ -120,10 +118,8 @@ desc('Test subgroupElect in compute shader with partially active invocations').
 params((u) =>
 u.combine('predicate', keysOf(kPredicateCases)).beginSubcases().combine('wgSize', kWGSizes)
 ).
-beforeAllSubcases((t) => {
-  t.selectDeviceOrSkipTestCase('subgroups');
-}).
 fn(async (t) => {
+  t.skipIfDeviceDoesNotHaveFeature('subgroups');
   const testcase = kPredicateCases[t.params.predicate];
   const wgThreads = t.params.wgSize[0] * t.params.wgSize[1] * t.params.wgSize[2];
 
@@ -186,10 +182,8 @@ combine('id', [...iterRange(128, (x) => x)]).
 beginSubcases().
 combine('wgSize', kWGSizes)
 ).
-beforeAllSubcases((t) => {
-  t.selectDeviceOrSkipTestCase('subgroups');
-}).
 fn(async (t) => {
+  t.skipIfDeviceDoesNotHaveFeature('subgroups');
   const wgThreads = t.params.wgSize[0] * t.params.wgSize[1] * t.params.wgSize[2];
 
 
@@ -336,10 +330,8 @@ combine('size', kFramebufferSizes).
 beginSubcases().
 combineWithParams([{ format: 'rgba32uint' }])
 ).
-beforeAllSubcases((t) => {
-  t.selectDeviceOrSkipTestCase('subgroups');
-}).
 fn(async (t) => {
+  t.skipIfDeviceDoesNotHaveFeature('subgroups');
 
 
 
@@ -351,7 +343,7 @@ fn(async (t) => {
 enable subgroups;
 
 @group(0) @binding(0)
-var<storage, read_write> inputs : array<u32>; // unused
+var<uniform> inputs : array<vec4u, 1>; // unused
 
 @fragment
 fn main(

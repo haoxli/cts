@@ -1,3 +1,5 @@
+import { assert } from '../util/util.js';
+
 export type TestConfig = {
   /**
    * Enable debug-level logs (normally logged via `Fixture.debug()`).
@@ -45,6 +47,11 @@ export type TestConfig = {
   forceFallbackAdapter: boolean;
 
   /**
+   * Enforce the default limits on the adapter
+   */
+  enforceDefaultLimits: boolean;
+
+  /**
    * Whether to enable the `logToWebSocket` function used for out-of-band test logging.
    */
   logToWebSocket: boolean;
@@ -59,5 +66,17 @@ export const globalTestConfig: TestConfig = {
   unrollConstEvalLoops: false,
   compatibility: false,
   forceFallbackAdapter: false,
+  enforceDefaultLimits: false,
   logToWebSocket: false,
 };
+
+// Check if a device is a compatibility device.
+// Note: The CTS generally, requires that if globalTestConfig.compatibility
+// is true then the device MUST be a compatibility device since the CTS
+// is trying to test that compatibility devices have the correct validation.
+export function isCompatibilityDevice(device: GPUDevice) {
+  if (globalTestConfig.compatibility) {
+    assert(!device.features.has('core-features-and-limits'));
+  }
+  return globalTestConfig.compatibility;
+}

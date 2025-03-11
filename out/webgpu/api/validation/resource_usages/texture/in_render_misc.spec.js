@@ -5,8 +5,7 @@ Texture Usages Validation Tests on All Kinds of WebGPU Subresource Usage Scopes.
 `;import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { unreachable } from '../../../../../common/util/util.js';
 import { kTextureUsages } from '../../../../capability_info.js';
-import { MaxLimitsTestMixin } from '../../../../gpu_test.js';
-import { ValidationTest } from '../../validation_test.js';
+import { AllFeaturesMaxLimitsValidationTest } from '../../validation_test.js';
 import {
 
   kTextureBindingTypes,
@@ -28,7 +27,7 @@ numRequired)
   );
 }
 
-class F extends ValidationTest {
+class F extends AllFeaturesMaxLimitsValidationTest {
   createBindGroupLayoutForTest(
   textureUsage,
   sampleType,
@@ -86,7 +85,7 @@ class F extends ValidationTest {
   }
 }
 
-export const g = makeTestGroup(MaxLimitsTestMixin(F));
+export const g = makeTestGroup(F);
 
 const kTextureSize = 16;
 const kTextureLayers = 3;
@@ -626,8 +625,8 @@ fn((t) => {
     GPUTextureUsage.COPY_SRC |
     GPUTextureUsage.COPY_DST |
     GPUTextureUsage.TEXTURE_BINDING |
-    GPUTextureUsage.STORAGE_BINDING |
-    GPUTextureUsage.RENDER_ATTACHMENT,
+    GPUTextureUsage.STORAGE_BINDING | (
+    bindingType === 'color-attachment' ? GPUTextureUsage.RENDER_ATTACHMENT : 0),
     size: [kTextureSize, kTextureSize, 1],
     ...(t.isCompatibility && {
       textureBindingViewDimension: '2d-array'

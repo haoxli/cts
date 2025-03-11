@@ -9,7 +9,7 @@ Memory Synchronization Tests for Texture: read before write, read after write, a
 `;import { makeTestGroup } from '../../../../../common/framework/test_group.js';
 import { assert, memcpy, unreachable } from '../../../../../common/util/util.js';
 
-import { GPUTest, MaxLimitsTestMixin } from '../../../../gpu_test.js';
+import { AllFeaturesMaxLimitsGPUTest } from '../../../../gpu_test.js';
 import { align } from '../../../../util/math.js';
 import { getTextureCopyLayout } from '../../../../util/texture/layout.js';
 import {
@@ -31,7 +31,7 @@ import {
   kOpInfo } from
 './texture_sync_test.js';
 
-export const g = makeTestGroup(MaxLimitsTestMixin(GPUTest));
+export const g = makeTestGroup(AllFeaturesMaxLimitsGPUTest);
 
 const fullscreenQuadWGSL = `
   struct VertexOutput {
@@ -63,6 +63,12 @@ function writeOpNeedsStorageTexture({ op, in: context }) {
   return (
     op === 'storage' && (context === 'render-pass-encoder' || context === 'render-bundle-encoder'));
 
+}
+
+function getVisibilityForContext(context) {
+  return context === 'render-bundle-encoder' || context === 'render-pass-encoder' ?
+  GPUShaderStage.FRAGMENT :
+  GPUShaderStage.COMPUTE;
 }
 
 class TextureSyncTestHelper extends OperationContextHelper {
@@ -169,19 +175,19 @@ class TextureSyncTestHelper extends OperationContextHelper {
             format: this.kTextureFormat,
             usage: GPUTextureUsage.COPY_SRC | GPUTextureUsage.STORAGE_BINDING
           });
-
+          const visibility = getVisibilityForContext(context);
           const bindGroupLayout = this.device.createBindGroupLayout({
             entries: [
             {
               binding: 0,
-              visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
+              visibility,
               texture: {
                 sampleType: 'unfilterable-float'
               }
             },
             {
               binding: 1,
-              visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
+              visibility,
               storageTexture: {
                 access: 'write-only',
                 format: this.kTextureFormat
@@ -440,11 +446,12 @@ class TextureSyncTestHelper extends OperationContextHelper {
           break;
         }
       case 'storage':{
+          const visibility = getVisibilityForContext(context);
           const bindGroupLayout = this.device.createBindGroupLayout({
             entries: [
             {
               binding: 0,
-              visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
+              visibility,
               storageTexture: {
                 access: 'write-only',
                 format: this.kTextureFormat
