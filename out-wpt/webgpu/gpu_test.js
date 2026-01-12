@@ -18,7 +18,8 @@ import {
 
 
 
-  unreachable } from
+  unreachable,
+  hasFeature } from
 '../common/util/util.js';
 
 import { kQueryTypeInfo } from './capability_info.js';
@@ -31,15 +32,15 @@ import {
   getRequiredFeatureForTextureFormat,
   isTextureFormatUsableAsRenderAttachment,
   isTextureFormatMultisampled,
-  is32Float,
-  isSintOrUintFormat,
   isTextureFormatResolvable,
   isDepthTextureFormat,
   isStencilTextureFormat,
   textureViewDimensionAndFormatCompatibleForDevice,
   textureDimensionAndFormatCompatibleForDevice,
   isTextureFormatUsableWithStorageAccessMode,
-  isTextureFormatUsableWithCopyExternalImageToTexture } from
+  isTextureFormatUsableWithCopyExternalImageToTexture,
+  isTextureFormatFilterable,
+  isTextureFormatBlendable } from
 './format_info.js';
 import { checkElementsEqual, checkElementsBetween } from './util/check_contents.js';
 import { CommandBufferMaker } from './util/command_buffer_maker.js';
@@ -460,7 +461,10 @@ export class GPUTestBase extends Fixture {
    * Note: Try to use one of the more specific skipIf tests if possible.
    */
   skipIfDeviceDoesNotHaveFeature(feature) {
-    this.skipIf(!this.device.features.has(feature), `device does not have feature: '${feature}'`);
+    this.skipIf(
+      !hasFeature(this.device.features, feature),
+      `device does not have feature: '${feature}'`
+    );
   }
 
   /**
@@ -497,7 +501,7 @@ export class GPUTestBase extends Fixture {
       }
       const feature = getRequiredFeatureForTextureFormat(format);
       this.skipIf(
-        !!feature && !this.device.features.has(feature),
+        !!feature && !hasFeature(this.device.features, feature),
         `texture format '${format}' requires feature: '${feature}'`
       );
     }
@@ -600,26 +604,14 @@ export class GPUTestBase extends Fixture {
   skipIfTextureFormatNotBlendable(...formats) {
     for (const format of formats) {
       if (format === undefined) continue;
-      this.skipIf(isSintOrUintFormat(format), 'sint/uint formats are not blendable');
-      if (is32Float(format)) {
-        this.skipIf(
-          !this.device.features.has('float32-blendable'),
-          `texture format '${format}' is not blendable`
-        );
-      }
+      this.skipIf(!isTextureFormatBlendable(this.device, format), `${format} is not blendable`);
     }
   }
 
   skipIfTextureFormatNotFilterable(...formats) {
     for (const format of formats) {
       if (format === undefined) continue;
-      this.skipIf(isSintOrUintFormat(format), 'sint/uint formats are not filterable');
-      if (is32Float(format)) {
-        this.skipIf(
-          !this.device.features.has('float32-filterable'),
-          `texture format '${format}' is not filterable`
-        );
-      }
+      this.skipIf(!isTextureFormatFilterable(this.device, format), `${format} is not filterable`);
     }
   }
 
@@ -670,6 +662,16 @@ export class GPUTestBase extends Fixture {
   hasLanguageFeature(langFeature) {
     const lf = getGPU(this.rec).wgslLanguageFeatures;
     return lf !== undefined && lf.has(langFeature);
+  }
+
+  /** Skips this test case if the GPUTextureUsage `TRANSIENT_ATTACHMENT` is *not* supported. */
+  // MAINTENANCE_TODO(#4509): Remove this when TRANSIENT_ATTACHMENT is added to the WebGPU spec.
+  skipIfTransientAttachmentNotSupported() {
+    const isTransientAttachmentSupported = ('TRANSIENT_ATTACHMENT' in GPUTextureUsage);
+    this.skipIf(
+      !isTransientAttachmentSupported,
+      'GPUTextureUsage TRANSIENT_ATTACHMENT is not supported'
+    );
   }
 
   /**
