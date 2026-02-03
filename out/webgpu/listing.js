@@ -1345,6 +1345,15 @@ export const listing = [
       "api",
       "validation",
       "encoding",
+      "programmable",
+      "pipeline_immediate"
+    ]
+  },
+  {
+    "file": [
+      "api",
+      "validation",
+      "encoding",
       "queries",
       "begin_end"
     ]
@@ -4190,6 +4199,14 @@ export const listing = [
       "execution",
       "statement",
       "phony"
+    ]
+  },
+  {
+    "file": [
+      "shader",
+      "execution",
+      "statement",
+      "swizzle_assignment"
     ]
   },
   {
