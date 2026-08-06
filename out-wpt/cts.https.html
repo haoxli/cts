@@ -2178,6 +2178,9 @@
 <meta name=variant content='?q=webgpu:shader,execution,statement,swizzle_assignment:swizzle_compound_assignment:*'>
 <meta name=variant content='?q=webgpu:shader,execution,statement,swizzle_assignment:eval_order:*'>
 <meta name=variant content='?q=webgpu:shader,execution,statement,swizzle_assignment:compound_eval_order:*'>
+<meta name=variant content='?q=webgpu:shader,execution,statement,swizzle_assignment:dynamic_index_into_swizzle:*'>
+<meta name=variant content='?q=webgpu:shader,execution,statement,swizzle_assignment:indexed_swizzle_eval_order:*'>
+<meta name=variant content='?q=webgpu:shader,execution,statement,swizzle_assignment:indexed_swizzle_compound_eval_order:*'>
 <meta name=variant content='?q=webgpu:shader,execution,value_init:scalars:*'>
 <meta name=variant content='?q=webgpu:shader,execution,value_init:vec:*'>
 <meta name=variant content='?q=webgpu:shader,execution,value_init:mat:*'>
@@ -3054,8 +3057,9 @@
 <meta name=variant content='?q=webgpu:shader,validation,shader_io,builtins:duplicates:*'>
 <meta name=variant content='?q=webgpu:shader,validation,shader_io,builtins:missing_vertex_position:*'>
 <meta name=variant content='?q=webgpu:shader,validation,shader_io,builtins:reuse_builtin_name:*'>
-<meta name=variant content='?q=webgpu:shader,validation,shader_io,builtins:parse:*'>
+<meta name=variant content='?q=webgpu:shader,validation,shader_io,builtins:parse_builtin:*'>
 <meta name=variant content='?q=webgpu:shader,validation,shader_io,builtins:placement:*'>
+<meta name=variant content='?q=webgpu:shader,validation,shader_io,builtins:parse_frag_depth:*'>
 <meta name=variant content='?q=webgpu:shader,validation,shader_io,entry_point:missing_attribute_on_param:*'>
 <meta name=variant content='?q=webgpu:shader,validation,shader_io,entry_point:missing_attribute_on_param_struct:*'>
 <meta name=variant content='?q=webgpu:shader,validation,shader_io,entry_point:missing_attribute_on_return_type:*'>
@@ -3154,7 +3158,10 @@
 <meta name=variant content='?q=webgpu:shader,validation,statement,swizzle_assignment:invalid_type_mismatch:*'>
 <meta name=variant content='?q=webgpu:shader,validation,statement,swizzle_assignment:invalid_mixed_letter_schemes:*'>
 <meta name=variant content='?q=webgpu:shader,validation,statement,swizzle_assignment:invalid_address_of_swizzle_view:*'>
-<meta name=variant content='?q=webgpu:shader,validation,statement,swizzle_assignment:invalid_index_into_swizzle_view:*'>
+<meta name=variant content='?q=webgpu:shader,validation,statement,swizzle_assignment:index_into_swizzle_view:*'>
+<meta name=variant content='?q=webgpu:shader,validation,statement,swizzle_assignment:dynamic_index_into_swizzle_view:*'>
+<meta name=variant content='?q=webgpu:shader,validation,statement,swizzle_assignment:pointer_swizzle_assignment:*'>
+<meta name=variant content='?q=webgpu:shader,validation,statement,swizzle_assignment:chained_swizzle:*'>
 <meta name=variant content='?q=webgpu:shader,validation,statement,while:condition_type:*'>
 <meta name=variant content='?q=webgpu:shader,validation,statement,while:parse:*'>
 <meta name=variant content='?q=webgpu:shader,validation,types,alias:no_direct_recursion:*'>
