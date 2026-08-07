@@ -216,7 +216,9 @@ ${range(numStorageTexturesInStage[stage], i => {
   const { textureId, texelValue } = addTexture(stage, texNum, true);
   expected[stage].push([texelValue | (stage << 15), 0]);
   const xCoord = (i + maxTestableCombosPerStage) % width;
-  return `          case ${i + maxTestableCombosPerStage}u: { return textureLoad(${textureId}, vec2u(${xCoord}u, 0u)); }`;
+  return `          case ${
+    i + maxTestableCombosPerStage
+  }u: { return textureLoad(${textureId}, vec2u(${xCoord}u, 0u)); }`;
 }).join('\n')}
           default: { return vec4f(0); }
         }
